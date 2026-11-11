@@ -12,9 +12,13 @@ staff submit.
 
 ## Scope
 
-- A TL sees every team that contains at least one active user they manage. A
-  managed user is one linked through the `italian_tl`/`albanian_tl` field,
-  a member of a team the TL belongs to, or a member of a team the TL leads.
+- A TL sees every active team that contains at least one active user they manage. A
+  managed user is one linked through the `italian_tl`/`albanian_tl` field
+  (`Team.team_leader` and shared `TeamMembership` are calendar-only and grant no
+  engagement scope).
+- A TL linked to only a subset (e.g., 1 member) of a multi-member team sees that
+  team scoped strictly to their own linked member(s), never teammates under
+  another TL.
 - A person in several teams counts in each team (overtime is billed per team).
 - Managed users with no team are excluded. Deactivated users are excluded.
   The TL's own requests are excluded (someone else decides them).
@@ -185,8 +189,16 @@ the aging buckets and the evidence-only signals. The weights are duplicated in
 
 - Team totals sum across teams, so a person in two teams is counted twice in
   Team Size. This follows the per-team billing rule.
-- A TL's old snapshot for a team they no longer manage is kept until the next
-  recompute, with stale numbers.
+- When all active linked members of a team move away from a leader (or are
+  deactivated/promoted), unfrozen snapshots for that (leader, team) are pruned
+  immediately (`plugins/engagement/signals.py`, `_refresh`, and
+  `recompute_tl_metrics`), and zero-size rows are never served. Frozen past
+  snapshots (`team_size > 0`) remain as immutable KPI history and record
+  `manager_changed_at` (shown as `Changed manager · <date>` in the team
+  breakdown table; cleared if a member is later assigned back, and never
+  stamped when the team itself was archived).
+- Snapshot staleness compares `sorted(member_ids)` as well as `team_size`, so
+  a 1-for-1 member swap triggers recomputation immediately.
 - `candidate_leader_ids` scans every `UserProfile` once per staff read to find
   leaders (FK targets, TL roles, `role_codes`). A single query, but linear in the
   user count. If that grows, move the role-code check into SQL.

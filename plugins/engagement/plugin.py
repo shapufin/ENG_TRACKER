@@ -73,3 +73,13 @@ class EngagementPlugin(BasePlugin):
             ],
         })
         return metadata
+
+    def ready(self):
+        from . import signals
+
+        signals.connect()
+
+    def disable(self):
+        from . import signals
+
+        signals.disconnect()

@@ -108,4 +108,23 @@ describe("TeamBreakdownTable", () => {
 
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
+
+  it("shows a Changed manager date badge on frozen transferred snapshots and omits it otherwise", () => {
+    const { rerender } = render(<TeamBreakdownTable rows={[ROW]} />);
+    expect(screen.queryByText(/changed manager/i)).not.toBeInTheDocument();
+
+    rerender(
+      <TeamBreakdownTable
+        rows={[
+          {
+            ...ROW,
+            manager_changed: true,
+            manager_changed_at: "2026-11-11",
+          },
+        ]}
+      />
+    );
+    expect(screen.getByText(/changed manager/i)).toBeInTheDocument();
+    expect(screen.getByText(/2026/)).toBeInTheDocument();
+  });
 });

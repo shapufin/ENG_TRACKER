@@ -4,12 +4,19 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { toneSurfaceClass } from "@/components/ui/tone";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
-import { CalendarDays, HeartHandshake, Users2 } from "lucide-react";
+import { ArrowRightLeft, CalendarDays, HeartHandshake, Users2 } from "lucide-react";
 import type { EngagementTeamBreakdownRow } from "../types/engagement";
 
 interface TeamBreakdownTableProps {
   rows: EngagementTeamBreakdownRow[];
 }
+
+const formatChangeDate = (isoDate: string | null | undefined): string => {
+  if (!isoDate) return "";
+  const parsed = new Date(`${isoDate}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return isoDate;
+  return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+};
 
 const sumMetric = (
   row: EngagementTeamBreakdownRow,
@@ -56,7 +63,34 @@ export const TeamBreakdownTable: React.FC<TeamBreakdownTableProps> = ({ rows }) 
         id: "team",
         accessorKey: "team_name",
         header: "Team",
-        cell: ({ row }) => <span className="font-medium">{row.original.team_name}</span>,
+        cell: ({ row }) => {
+          const changedDate = formatChangeDate(row.original.manager_changed_at);
+          const changedLabel = changedDate ? `Changed manager · ${changedDate}` : "Changed manager";
+          return (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-medium">{row.original.team_name}</span>
+              {row.original.manager_changed && (
+                <span
+                  role="status"
+                  aria-label={
+                    changedDate
+                      ? `Team changed manager on ${changedDate}; frozen historical snapshot`
+                      : "Team changed manager; frozen historical snapshot"
+                  }
+                  title={
+                    changedDate
+                      ? `Team changed manager on ${changedDate}; frozen historical snapshot`
+                      : "Team changed manager; frozen historical snapshot"
+                  }
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${toneSurfaceClass.warning}`}
+                >
+                  <ArrowRightLeft className="h-3 w-3 shrink-0" aria-hidden="true" />
+                  {changedLabel}
+                </span>
+              )}
+            </div>
+          );
+        },
       },
       {
         id: "leader",

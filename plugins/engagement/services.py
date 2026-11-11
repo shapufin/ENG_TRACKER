@@ -206,15 +206,15 @@ TL_ROLE_CODES = ('italian_tl', 'albanian_tl')
 
 
 def candidate_leader_ids():
-    """Users who may manage staff: team leaders, FK targets, and TL-role holders.
+    """Users who may manage staff: FK targets and TL-role holders.
 
     Filtered in SQL. `UserRole` is authoritative; `UserProfile.role_codes` is a
     cache of it, so it is not scanned. Legacy flags are still honoured.
+    `Team.team_leader` (`led_teams`) is calendar-only and grants no scope.
     """
     return set(
         User.objects.filter(
-            Q(led_teams__is_active=True)
-            | Q(italian_team_members__isnull=False)
+            Q(italian_team_members__isnull=False)
             | Q(albanian_team_members__isnull=False)
             | Q(profile__is_italian_tl_role=True)
             | Q(profile__is_albanian_tl_role=True)
@@ -224,8 +224,8 @@ def candidate_leader_ids():
 
 
 def leader_team_pairs(leader_ids=None, scope=None):
-    """(leader, team) pairs worth a snapshot: teams the leader leads, plus every
-    team that contains at least one managed user. Fixed number of queries."""
+    """(leader, team) pairs worth a snapshot: active teams that contain at least
+    one active managed user of the leader. Fixed number of queries."""
     ids = candidate_leader_ids() if leader_ids is None else set(leader_ids)
     leaders = {
         u.id: u for u in User.objects.filter(id__in=ids, is_active=True).select_related('profile')
@@ -238,14 +238,11 @@ def leader_team_pairs(leader_ids=None, scope=None):
         is_deleted=False, user_profile__user_id__in=everyone_managed
     ).values_list('user_profile__user_id', 'team_id'):
         member_teams[user_id].add(team_id)
-    led = defaultdict(set)
-    for leader_id, team_id in Team.objects.filter(is_deleted=False, is_active=True, team_leader_id__in=leaders).values_list('team_leader_id', 'id'):
-        led[leader_id].add(team_id)
 
     team_ids = set()
     team_sets = {}
     for leader_id in leaders:
-        team_sets[leader_id] = set(led[leader_id]) | {t for m in managed[leader_id] for t in member_teams[m]}
+        team_sets[leader_id] = {t for m in managed[leader_id] for t in member_teams[m]}
         team_ids |= team_sets[leader_id]
     teams = {t.id: t for t in Team.objects.filter(is_deleted=False, is_active=True, id__in=team_ids)}
     return [(leaders[lid], teams[tid]) for lid in sorted(leaders) for tid in sorted(team_sets[lid]) if tid in teams]
@@ -574,27 +571,32 @@ def compute_tl_metric(leader, team, month, scope=None):
     if late_closure_penalty and engagement_score is not None:
         engagement_score = round(max(0.0, engagement_score - late_closure_penalty), 2)
 
+    sorted_member_ids = sorted(member_ids)
+    defaults = {
+        'team_name': team.name,
+        'team_code': team.code,
+        'metrics': metrics,
+        'team_size': len(sorted_member_ids),
+        'member_ids': sorted_member_ids,
+        'active_submitters': len(submitter_ids),
+        'approval_rate_pct': approval_rate_pct,
+        'resubmission_count': sum(m['resubmission_count'] for m in metrics.values()),
+        'engagement_score': engagement_score,
+        'closure_on_time': closure_on_time,
+        'late_closure_penalty': late_closure_penalty,
+        'decisions_during_leave': _decisions_during_leave(leader, member_ids, month_start, month_end),
+        'decisions_on_holidays': _decisions_on_holidays(leader, member_ids, month_start, month_end, holidays),
+        'next_deadline_at': next_deadline,
+        'computed_at': now,
+        **sub_scores,
+    }
+    if sorted_member_ids:
+        defaults['manager_changed_at'] = None
     snapshot, _ = TLApprovalMetric.objects.update_or_create(
         leader=leader,
         team=team,
         month=month_start.date(),
-        defaults={
-            'team_name': team.name,
-            'team_code': team.code,
-            'metrics': metrics,
-            'team_size': len(member_ids),
-            'active_submitters': len(submitter_ids),
-            'approval_rate_pct': approval_rate_pct,
-            'resubmission_count': sum(m['resubmission_count'] for m in metrics.values()),
-            'engagement_score': engagement_score,
-            'closure_on_time': closure_on_time,
-            'late_closure_penalty': late_closure_penalty,
-            'decisions_during_leave': _decisions_during_leave(leader, member_ids, month_start, month_end),
-            'decisions_on_holidays': _decisions_on_holidays(leader, member_ids, month_start, month_end, holidays),
-            'next_deadline_at': next_deadline,
-            'computed_at': now,
-            **sub_scores,
-        },
+        defaults=defaults,
     )
     return snapshot
 
@@ -697,6 +699,7 @@ def stale_snapshot_ids(rows, scope=None):
             row.computed_at < cutoffs[row.month] <= now  # the closure verdict arrived
             or (row.next_deadline_at and now >= row.next_deadline_at)
             or len(member_ids) != row.team_size
+            or sorted(member_ids) != (row.member_ids or [])
             or any(last_touched.get(user_id, row.computed_at) > row.computed_at for user_id in member_ids)
         ):
             stale.add(row.pk)
@@ -707,20 +710,71 @@ def is_stale(snapshot):
     return snapshot.pk in stale_snapshot_ids([snapshot])
 
 
+def sync_manager_change_markers(leader_ids, team_ids=None, *, now=None, today=None, scope=None):
+    """Prune unfrozen empty snapshots and stamp/clear `manager_changed_at` on frozen ones.
+
+    When all active linked members of an active team leave a leader:
+    - Unfrozen snapshots are deleted immediately so the team stops showing.
+    - Frozen snapshots stay as audit history and record `manager_changed_at`
+      (never stamped when the team itself was archived).
+    When a leader regains at least one active linked member in that team,
+    `manager_changed_at` is cleared.
+    """
+    leader_ids = {lid for lid in (leader_ids or ()) if lid is not None}
+    if not leader_ids:
+        return
+    qs = TLApprovalMetric.objects.filter(leader_id__in=leader_ids, team__isnull=False).select_related('team')
+    if team_ids is not None:
+        team_ids = {tid for tid in team_ids if tid is not None}
+        if not team_ids:
+            return
+        qs = qs.filter(team_id__in=team_ids)
+    rows = list(qs)
+    if not rows:
+        return
+
+    now = now or _now()
+    today = today or business_today()
+    members = member_sets_for(rows, scope)
+    delete_pks, stamp_pks, clear_pks = [], [], []
+    for row in rows:
+        member_ids = members.get((row.leader_id, row.team_id), set())
+        if member_ids:
+            if row.manager_changed_at is not None:
+                clear_pks.append(row.pk)
+            continue
+        if is_frozen(row.month, row.computed_at, now):
+            if row.team.is_active and row.manager_changed_at is None:
+                stamp_pks.append(row.pk)
+        else:
+            delete_pks.append(row.pk)
+
+    if delete_pks:
+        TLApprovalMetric.objects.filter(pk__in=delete_pks).delete()
+    if stamp_pks:
+        TLApprovalMetric.objects.filter(pk__in=stamp_pks).update(manager_changed_at=today)
+    if clear_pks:
+        TLApprovalMetric.objects.filter(pk__in=clear_pks).update(manager_changed_at=None)
+
+
 def finalize_frozen_snapshots(dry_run=False):
     """Give every snapshot past its freeze its one final recompute. Returns how many.
 
-    Reads do this lazily; this is the deploy-time backfill and a cron safety net.
-    Rows whose team was purged are history and are never touched.
+    Rows whose team was purged are history and are never touched. Unfinalized
+    rows with zero current members are deleted instead of freezing empty rows.
     """
     now = _now()
     scope = ReadScope()
     count = 0
-    rows = TLApprovalMetric.objects.filter(team__isnull=False, leader__is_active=True).select_related('leader', 'team')
+    rows = list(TLApprovalMetric.objects.filter(team__isnull=False, leader__is_active=True).select_related('leader', 'team'))
+    members = member_sets_for(rows, scope)
     for row in rows:
         if not is_past_freeze(row.month, now) or is_frozen(row.month, row.computed_at, now):
             continue
         count += 1
         if not dry_run:
-            compute_tl_metric(row.leader, row.team, row.month, scope)
+            if members.get((row.leader_id, row.team_id)):
+                compute_tl_metric(row.leader, row.team, row.month, scope)
+            else:
+                TLApprovalMetric.objects.filter(pk=row.pk).delete()
     return count

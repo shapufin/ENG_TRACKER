@@ -25,9 +25,11 @@ from .pdf_export import build_report_pdf
 from .serializers import TLApprovalMetricSerializer
 from .services import (
     ReadScope,
+    _now,
     aggregate_rows,
     compute_tl_metric,
     ensure_current_month_snapshots,
+    member_sets_for,
     monthly_rollup,
     stale_snapshot_ids,
 )
@@ -69,7 +71,10 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
     def _base_queryset(self, request):
         # Deactivated TLs drop off every read surface: their rows are no longer
         # refreshed, so showing them would present numbers that can silently age.
-        qs = TLApprovalMetric.objects.select_related('leader', 'team').filter(leader__is_active=True)
+        # Zero-size snapshots carry no members or metrics and are never served.
+        qs = TLApprovalMetric.objects.select_related('leader', 'team').filter(
+            leader__is_active=True, team_size__gt=0
+        )
         user = request.user
         if user.is_staff or user.is_superuser:
             ensure_current_month_snapshots(scope=self._scope())
@@ -83,13 +88,42 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
     def _refresh(self, rows):
         """Recompute stale snapshots in place before serving them.
 
-        Returns (rows, refreshed): `refreshed` is True when at least one row was
-        recomputed by this read, so the page can say the numbers just changed.
+        Unfrozen snapshots whose leader no longer manages any active member in
+        that team are deleted instead of keeping empty rows. Frozen snapshots
+        lazily record `manager_changed_at` if signals were bypassed.
+        Returns (rows, refreshed).
         """
         rows = list(rows)
+        if not rows:
+            return [], False
         scope = self._scope()
         stale = stale_snapshot_ids(rows, scope)
-        fresh = [compute_tl_metric(row.leader, row.team, row.month, scope) if row.pk in stale else row for row in rows]
+        members = member_sets_for(rows, scope)
+        now = _now()
+        today = business_today()
+        fresh = []
+        delete_pks, stamp_pks, clear_pks = [], [], []
+        for row in rows:
+            has_members = bool(members.get((row.leader_id, row.team_id))) if row.team_id is not None else True
+            if row.pk in stale:
+                if not has_members:
+                    delete_pks.append(row.pk)
+                    continue
+                row = compute_tl_metric(row.leader, row.team, row.month, scope)
+            elif row.team_id is not None and row.team.is_active and is_frozen(row.month, row.computed_at, now):
+                if not has_members and row.manager_changed_at is None:
+                    row.manager_changed_at = today
+                    stamp_pks.append(row.pk)
+                elif has_members and row.manager_changed_at is not None:
+                    row.manager_changed_at = None
+                    clear_pks.append(row.pk)
+            fresh.append(row)
+        if delete_pks:
+            TLApprovalMetric.objects.filter(pk__in=delete_pks).delete()
+        if stamp_pks:
+            TLApprovalMetric.objects.filter(pk__in=stamp_pks).update(manager_changed_at=today)
+        if clear_pks:
+            TLApprovalMetric.objects.filter(pk__in=clear_pks).update(manager_changed_at=None)
         return fresh, bool(stale)
 
     def _ensure_fresh(self, rows):
