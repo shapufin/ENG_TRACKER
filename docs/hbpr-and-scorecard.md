@@ -484,3 +484,5 @@ riskiest option for no user-visible gain); `UserViewSet.bulk_update` (complexity
 ## Organigrama for HBPR (2026-10-30)
 
 HBPR is no longer denied Organigrama. `tree_builder.build_hbpr_tree` prunes the company tree to `get_hbpr_scope().user_ids` plus the Manager above each (so the chart keeps its root); the lazy `subtree` check uses the same set (`hbpr_visible_user_ids`). A multi-role TL/HR/staff keeps their own higher scope. The page shows a "Filter by team leader" select when the tree holds more than one Line Manager. Pinned by `plugins/organigrama/tests/test_hbpr_scope.py`. Skills matrix pages (matrix, coverage, gaps, exports) omit Managers via `matrix_user_ids`.
+
+**Moving a member between Line Managers (2026-11-11):** nothing is deleted or re-owned. Leader-authored records (idle flags, absences, PIPs, nominations, meetings, review deliveries) stay with the author; the EPR cycle follows the employee; frozen months never change. Table and the open-item handover gap: `docs/team-lifecycle.md`, test `plugins/tl_scorecard/test_leader_moves.py`.

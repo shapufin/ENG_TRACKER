@@ -194,3 +194,5 @@ the aging buckets and the evidence-only signals. The weights are duplicated in
   it is neither decided nor pending. All reject paths set `approved_at`
   (`core/mixins/permissions.py` `perform_reject`); legacy rows created outside the
   API could still have it null.
+
+**Leader moves (2026-11-11):** `TLApprovalMetric` rows belong to (leader, team, month) and are never rewritten by a move; provisional months recompute from the current links, frozen months are final. See `docs/team-lifecycle.md` ("Moving a member...").
