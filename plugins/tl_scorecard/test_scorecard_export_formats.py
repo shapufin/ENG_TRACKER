@@ -215,3 +215,49 @@ class ReportKpiStatusTests(SimpleTestCase):
         reviews = next(r for r in rows if r['metric'].startswith('Management reviews'))
         self.assertEqual(reviews['target'], 6)
         self.assertEqual(reviews['status'], 'On track')
+
+
+class EprEvidenceExportTests(HbprScorecardBase):
+    """Stage dates, who recorded them and HBPR attendance are exported; review
+    content (summary, link) only to the leader and staff, never to the HBPR."""
+
+    def setUp(self):
+        super().setUp()
+        from django.utils import timezone
+        from .models import EPRCycle, EPRGoal, EPRStageRecord
+
+        self.cycle, _ = EPRCycle.objects.get_or_create(user=self.member, year=date.today().year)
+        EPRCycle.objects.filter(pk=self.cycle.pk).update(
+            goal_setting_completed_at=timezone.now(), mid_year_completed_at=timezone.now())
+        EPRGoal.objects.create(cycle=self.cycle, description='Reduce backlog')
+        EPRStageRecord.objects.create(
+            cycle=self.cycle, stage='mid_year', summary='Private review notes',
+            reference_url='https://workday.example/x', recorded_by=self.tl, hbpr_present=True)
+
+    def _sheet_text(self, user, leader=True):
+        params = {'file_format': 'xlsx'}
+        if leader:
+            params['leader_id'] = self.tl.id
+        request = self.factory.get('/x/', params)
+        force_authenticate(request, user=user)
+        resp = TLScorecardViewSet.as_view({'get': 'export'})(request)
+        self.assertEqual(resp.status_code, 200)
+        wb = load_workbook(io.BytesIO(resp.content))
+        return ' | '.join(
+            str(c) for row in wb['Governance'].iter_rows(values_only=True) for c in row if c)
+
+    def test_leader_export_has_dates_attendance_goals_and_review_content(self):
+        text = self._sheet_text(self.tl, leader=False)
+        today = date.today().isoformat()
+        self.assertIn(today, text)  # stage completion date, not just "Done"
+        self.assertIn('Reduce backlog', text)
+        self.assertIn('Private review notes', text)
+        self.assertIn('https://workday.example/x', text)
+        self.assertIn('HBPR present', text)
+
+    def test_hbpr_export_never_contains_review_content(self):
+        text = self._sheet_text(self.hbpr)
+        self.assertIn(date.today().isoformat(), text)
+        self.assertIn('HBPR present', text)
+        self.assertNotIn('Private review notes', text)
+        self.assertNotIn('https://workday.example/x', text)

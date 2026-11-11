@@ -72,13 +72,20 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
   const [editing, setEditing] = useState<HbprEvidence | null>(null);
   const [packOpen, setPackOpen] = useState(false);
   const [cadenceOpen, setCadenceOpen] = useState(false);
+  const [intent, setIntent] = useState<"held" | "cancelled">("held");
 
   const assignment = partnership?.assignment ?? null;
 
-  const openCreate = () => {
+  const openCreate = (next: "held" | "cancelled" = "held") => {
     setEditing(null);
+    setIntent(next);
     setDialogOpen(true);
   };
+  // The slot that was due, capped at today: evidence cannot be dated in the future.
+  const today = new Date().toISOString().slice(0, 10);
+  const dueDate = assignment?.next_due_on ?? null;
+  const suggestedDate = dueDate && dueDate < today ? dueDate : today;
+  const dueReached = Boolean(dueDate && dueDate <= today);
   const openEdit = (row: HbprEvidence) => {
     setEditing(row);
     setDialogOpen(true);
@@ -109,7 +116,7 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
               </Button>
             )}
             {canAuthor && (
-              <Button variant="outline" size="sm" onClick={openCreate}>
+              <Button variant="outline" size="sm" onClick={() => openCreate("held")}>
                 <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
                 Log cadence meeting
               </Button>
@@ -168,12 +175,38 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
                   />
                   {formatDate(assignment.next_due_on)}
                 </dd>
+                {assignment.next_due_moved_from && (
+                  <dd className="text-muted-foreground mt-1">
+                    Moved from {formatDate(assignment.next_due_moved_from)} (public holiday)
+                  </dd>
+                )}
               </div>
               <div>
                 <dt className="text-muted-foreground">Entries logged</dt>
                 <dd className="mt-0.5 font-medium tabular-nums">{assignment.evidence_count}</dd>
               </div>
             </dl>
+
+            {canAuthor && assignment.next_due_on && (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Button size="sm" onClick={() => openCreate("held")}>
+                  Meeting held
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!dueReached}
+                  title={dueReached ? undefined : "Available once the meeting date has arrived"}
+                  onClick={() => openCreate("cancelled")}
+                >
+                  Cancel meeting
+                </Button>
+                <span className="text-muted-foreground text-xs">
+                  Due {formatDate(assignment.next_due_on)}. Cancelling needs a reason and moves to
+                  the next slot.
+                </span>
+              </div>
+            )}
 
             <div className="mt-4 flex flex-wrap gap-2">
               <Badge variant={assignment.epr_mid_year ? "success" : "warning"}>
@@ -210,6 +243,7 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
                           <span className="text-sm font-medium tabular-nums">
                             {formatDate(row.occurred_on)}
                           </span>
+                          {row.status === "cancelled" && <Badge variant="warning">Cancelled</Badge>}
                         </div>
                         {row.reporting_year && (
                           <p className="text-muted-foreground mt-1 text-xs">
@@ -230,6 +264,12 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
                       )}
                     </div>
 
+                    {row.status === "cancelled" && row.cancel_reason && (
+                      <p className="mt-3 text-sm break-words whitespace-pre-line">
+                        <span className="text-muted-foreground">Reason: </span>
+                        {row.cancel_reason}
+                      </p>
+                    )}
                     {row.shared_summary && (
                       <p className="mt-3 text-sm break-words whitespace-pre-line">
                         {row.shared_summary}
@@ -269,6 +309,8 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
               defaultYear={year}
               mode={editing ? "edit" : "create"}
               initial={editing ?? undefined}
+              intent={intent}
+              suggestedDate={suggestedDate}
               onSave={(data) => (editing ? onUpdate(editing.id, data) : onCreate(data))}
             />
           )}

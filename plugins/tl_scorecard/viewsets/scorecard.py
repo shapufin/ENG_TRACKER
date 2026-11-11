@@ -348,7 +348,10 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             scope = get_hbpr_scope(request.user)
             if scope is not None:
                 subject_ids = set(team_member_ids) & scope.user_ids
-        governance = governance_records(leader, team_member_ids, month.year, subject_ids)
+        governance = governance_records(
+            leader, team_member_ids, month.year, subject_ids,
+            include_review_content=is_staff_user(request.user) or leader.id == request.user.id,
+        )
         period_label = date.fromisoformat(scorecard['month']).strftime('%B %Y')
 
         # HBPR ↔ Line Manager governance evidence for this leader (the Line Manager authors
@@ -361,13 +364,16 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         evidence_rows = [
             {
                 'kind_display': row.get_kind_display(),
+                'status': row.status,
+                'cancel_reason': row.cancel_reason,
+                'recorded_by': row.recorded_by.get_full_name() or row.recorded_by.username,
                 'occurred_on': row.occurred_on.isoformat(),
                 'reporting_year': row.reporting_year,
                 'shared_summary': row.shared_summary,
                 'action_items': row.action_items,
                 'reference_url': row.reference_url,
             }
-            for row in evidence_qs.order_by('-occurred_on', '-id')
+            for row in evidence_qs.select_related('recorded_by').order_by('-occurred_on', '-id')
         ]
 
         # Leave and overtime are denied to HBPR-only viewers (CLAUDE.md), so their

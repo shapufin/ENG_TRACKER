@@ -412,6 +412,10 @@ class HbprGovernanceEvidence(TrackedFieldsMixin, BaseModel):
     kind = models.CharField(max_length=20, choices=KIND_CHOICES)
     occurred_on = models.DateField()
     reporting_year = models.PositiveIntegerField(null=True, blank=True)
+    STATUS_CHOICES = [('held', 'Held'), ('cancelled', 'Cancelled')]
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='held')
+    cancel_reason = models.TextField(
+        blank=True, help_text='Why a cadence slot was not held; required when cancelled.')
     shared_summary = models.TextField(blank=True)
     action_items = models.TextField(blank=True)
     reference_url = models.URLField(blank=True)
@@ -434,6 +438,13 @@ class HbprGovernanceEvidence(TrackedFieldsMixin, BaseModel):
                     | models.Q(kind='cadence_meeting', reporting_year__isnull=True)
                 ),
                 name='hbpr_evidence_year_matches_kind',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(status='held')
+                    | models.Q(status='cancelled', kind='cadence_meeting')
+                ),
+                name='hbpr_evidence_only_cadence_cancelled',
             ),
             models.UniqueConstraint(
                 fields=['assignment', 'kind', 'reporting_year'],

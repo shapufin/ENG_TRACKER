@@ -27,6 +27,10 @@ interface HbprEvidenceDialogProps {
   mode?: "create" | "edit";
   initial?: HbprEvidence;
   defaultYear?: number;
+  /** Create a cancelled slot (needs a reason) instead of a held meeting. */
+  intent?: "held" | "cancelled";
+  /** Prefills the date, e.g. the slot that was due. */
+  suggestedDate?: string;
 }
 
 /**
@@ -42,10 +46,15 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
   mode = "create",
   initial,
   defaultYear,
+  intent = "held",
+  suggestedDate,
 }) => {
   const isEdit = mode === "edit";
+  const status = isEdit ? (initial?.status ?? "held") : intent;
+  const cancelled = status === "cancelled";
+  const [cancelReason, setCancelReason] = useState(initial?.cancel_reason ?? "");
   const [kind, setKind] = useState<HbprEvidenceKind>(initial?.kind ?? "cadence_meeting");
-  const [occurredOn, setOccurredOn] = useState(initial?.occurred_on ?? todayIso());
+  const [occurredOn, setOccurredOn] = useState(initial?.occurred_on ?? suggestedDate ?? todayIso());
   const [year, setYear] = useState(
     String(initial?.reporting_year ?? defaultYear ?? new Date().getFullYear())
   );
@@ -58,7 +67,8 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
   const yearValue = Number(year);
   const yearValid =
     !needsYear || (Number.isInteger(yearValue) && yearValue >= 2000 && yearValue <= 2100);
-  const canSubmit = Boolean(occurredOn) && yearValid;
+  const canSubmit =
+    Boolean(occurredOn) && yearValid && (!cancelled || Boolean(cancelReason.trim()));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +78,8 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
       await onSave({
         assignment: assignmentId,
         kind,
+        status,
+        cancel_reason: cancelled ? cancelReason.trim() : "",
         occurred_on: occurredOn,
         reporting_year: needsYear ? yearValue : null,
         shared_summary: summary.trim(),
@@ -86,11 +98,15 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={isEdit ? "Edit log entry" : "Log cadence meeting"}
-      description="Logged by the assigned Line Manager. Your HBPR and staff can read it."
+      title={isEdit ? "Edit log entry" : cancelled ? "Cancel meeting" : "Log cadence meeting"}
+      description={
+        cancelled
+          ? "The slot is recorded as not held, with your reason. It counts as handled, so the next date moves on."
+          : "Logged by the assigned Line Manager. Your HBPR and staff can read it."
+      }
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
-      submitLabel={isEdit ? "Save changes" : "Save entry"}
+      submitLabel={isEdit ? "Save changes" : cancelled ? "Cancel meeting" : "Save entry"}
       submitDisabled={!canSubmit}
     >
       <div className="space-y-4">
@@ -120,7 +136,7 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <FieldLabel htmlFor="hbpr-evidence-date" required>
-              {needsYear ? "Participation date" : "Meeting date"}
+              {needsYear ? "Participation date" : cancelled ? "Slot date" : "Meeting date"}
             </FieldLabel>
             <Input
               id="hbpr-evidence-date"
@@ -151,7 +167,22 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
           )}
         </div>
 
-        <div className="space-y-2">
+        {cancelled && (
+          <div className="space-y-2">
+            <FieldLabel htmlFor="hbpr-evidence-cancel-reason" required>
+              Reason
+            </FieldLabel>
+            <Textarea
+              id="hbpr-evidence-cancel-reason"
+              rows={3}
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Why the meeting did not take place."
+            />
+          </div>
+        )}
+
+        <div className={cancelled ? "hidden" : "space-y-2"}>
           <FieldLabel htmlFor="hbpr-evidence-summary">Summary</FieldLabel>
           <Textarea
             id="hbpr-evidence-summary"
@@ -162,7 +193,7 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
           />
         </div>
 
-        <div className="space-y-2">
+        <div className={cancelled ? "hidden" : "space-y-2"}>
           <FieldLabel htmlFor="hbpr-evidence-actions">Action items</FieldLabel>
           <Textarea
             id="hbpr-evidence-actions"
@@ -173,7 +204,7 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
           />
         </div>
 
-        <div className="space-y-2">
+        <div className={cancelled ? "hidden" : "space-y-2"}>
           <FieldLabel htmlFor="hbpr-evidence-reference">Reference link</FieldLabel>
           <Input
             id="hbpr-evidence-reference"

@@ -24,6 +24,7 @@ from .scope import scoreable_member_ids
 from .models import (
     Absence,
     EPRCycle,
+    EPRStageRecord,
     IdleFlag,
     Meeting,
     PIPRecord,
@@ -387,8 +388,10 @@ def build_year_end_pack(assignment, year: int, evidence_qs) -> dict:
         .select_related('recorded_by')
         .order_by('occurred_on', 'id')
     )
-    meetings = [r for r in rows if r.kind == 'cadence_meeting'
-                and r.occurred_on.year == year]
+    cadence_rows = [r for r in rows if r.kind == 'cadence_meeting'
+                    and r.occurred_on.year == year]
+    meetings = [r for r in cadence_rows if r.status == 'held']
+    cancelled = [r for r in cadence_rows if r.status == 'cancelled']
     epr_mid = next(
         (r for r in rows if r.kind == 'epr_mid_year' and r.reporting_year == year), None)
     epr_end = next(
@@ -425,6 +428,7 @@ def build_year_end_pack(assignment, year: int, evidence_qs) -> dict:
             'action_items': r.action_items,
             'reference_url': r.reference_url,
             'recorded_by_name': _pack_name(r.recorded_by),
+            'cancel_reason': r.cancel_reason,
         }
 
     return {
@@ -442,7 +446,9 @@ def build_year_end_pack(assignment, year: int, evidence_qs) -> dict:
         'cadence_expected': expected,
         'cadence_held': held,
         'coverage_pct': round((held / expected) * 100, 1) if expected else None,
+        'cadence_cancelled': len(cancelled),
         'meetings': [_row(r) for r in meetings],
+        'cancelled_meetings': [_row(r) for r in cancelled],
         'epr_mid_year': _row(epr_mid),
         'epr_year_end': _row(epr_end),
         'employee_epr': employee_epr_presence(assignment.albanian_tl, year),
@@ -547,7 +553,9 @@ def escalation_candidates(leader, subject_ids=None, include_leave=True) -> list[
     return candidates
 
 
-def governance_records(leader, team_member_ids, year: int, subject_ids=None) -> dict:
+def governance_records(
+    leader, team_member_ids, year: int, subject_ids=None, include_review_content=True,
+) -> dict:
     """Row-level detail (not just counts) for the export workbook's
     Governance sheet — open PIPs, open absences, pending promotion flags,
     and in-progress EPR cycles for this TL's team. Reuses the same
@@ -556,7 +564,11 @@ def governance_records(leader, team_member_ids, year: int, subject_ids=None) -> 
 
     ``subject_ids`` (when given) limits PIP/absence/promotion rows to those
     employees, so a viewer scoped to a subset never sees a record about someone
-    outside it just because the TL once wrote it."""
+    outside it just because the TL once wrote it.
+
+    EPR rows carry the stage dates, who recorded them and HBPR attendance;
+    ``include_review_content`` (the leader and staff only, never an HBPR) adds the
+    stage summary and reference link."""
     def _limit(qs, field):
         return qs if subject_ids is None else qs.filter(**{f'{field}__in': subject_ids})
 
@@ -576,22 +588,55 @@ def governance_records(leader, team_member_ids, year: int, subject_ids=None) -> 
         for p in _limit(PromotionFlag.objects.filter(nominated_by=leader, status='nominated'), 'employee_id')
         .select_related('employee')
     ]
+    cycles = list(
+        _limit(EPRCycle.objects.filter(user_id__in=team_member_ids, year=year), 'user_id')
+        .select_related('user').prefetch_related('goals', 'stage_records__recorded_by')
+    )
+    stage_labels = dict(EPRStageRecord.STAGE_CHOICES)
+
+    def _on(stamp):
+        return stamp.date().isoformat() if stamp else None
+
+    def _attended(cycle, stage):
+        return any(r.hbpr_present for r in cycle.stage_records.all() if r.stage == stage)
+
     in_progress_cycles = [
         {
             'employee': str(c.user), 'year': c.year,
             'goal_setting_done': c.goal_setting_completed_at is not None,
             'mid_year_done': c.mid_year_completed_at is not None,
             'final_review_done': c.final_review_completed_at is not None,
+            'goal_setting_on': _on(c.goal_setting_completed_at),
+            'mid_year_on': _on(c.mid_year_completed_at),
+            'final_review_on': _on(c.final_review_completed_at),
+            'hbpr_mid_year': _attended(c, 'mid_year'),
+            'hbpr_final_review': _attended(c, 'final_review'),
             'goal_count': len(c.goals.all()),
+            'goal_titles': [g.description for g in c.goals.all()],
         }
-        for c in _limit(EPRCycle.objects.filter(user_id__in=team_member_ids, year=year), 'user_id')
-        .select_related('user').prefetch_related('goals')
+        for c in cycles
+    ]
+    stage_evidence = [
+        {
+            'employee': str(c.user), 'year': c.year,
+            'stage': stage_labels.get(r.stage, r.stage),
+            'completed_on': _on(getattr(c, f'{r.stage}_completed_at')),
+            'recorded_by': _pack_name(r.recorded_by),
+            'hbpr_present': r.hbpr_present,
+            'shared_with_employee': r.shared_with_employee,
+            'reference_url': r.reference_url if include_review_content else '',
+            'has_reference': bool(r.reference_url),
+            'summary': r.summary if include_review_content else '',
+        }
+        for c in cycles
+        for r in sorted(c.stage_records.all(), key=lambda rec: rec.id)
     ]
     return {
         'open_pips': open_pips,
         'open_absences': open_absences,
         'pending_promotions': pending_promotions,
         'epr_cycles': in_progress_cycles,
+        'epr_stage_evidence': stage_evidence,
     }
 
 

@@ -204,14 +204,26 @@ def _build_trend_sheet(wb, fmt, trend):
     ws.insert_chart("H1", columns)
 
 
+def _stage_cell(row, stage):
+    """The stage's completion date, falling back to Done/Pending for older payloads."""
+    return row.get(f"{stage}_on") or ("Done" if row.get(f"{stage}_done") else "Pending")
+
+
+def _attended_cell(row, flag, done_key):
+    if not row.get(done_key):
+        return "—"
+    return "Yes" if row.get(flag) else "No"
+
+
 def _build_governance_sheet(wb, fmt, governance):
     """Four banded, filterable tables. An empty table keeps a "None open" row."""
     ws = wb.add_worksheet("Governance")
     ws.hide_gridlines(2)
     _print_setup(ws)
     ws.set_column("A:A", 26)
-    ws.set_column("B:E", 20)
-    ws.merge_range("A1:E1", "Governance records", fmt.title)
+    ws.set_column("B:H", 20)
+    ws.set_column("I:I", 50)
+    ws.merge_range("A1:I1", "Governance records", fmt.title)
     ws.set_row(0, 30)
 
     sections = [
@@ -226,13 +238,31 @@ def _build_governance_sheet(wb, fmt, governance):
          ["Employee", "Nominated on"], governance["pending_promotions"],
          [lambda r: r["employee"], lambda r: r["nominated_on"]]),
         ("EPR cycles", "EPRCycles",
-         ["Employee", "Goal setting", "Mid-year", "Final review", "Goals"], governance["epr_cycles"],
+         ["Employee", "Year", "Goal setting", "Mid-year", "HBPR at mid-year", "Final review",
+          "HBPR at final review", "Goals", "Goal titles"], governance["epr_cycles"],
          [
              lambda r: r["employee"],
-             lambda r: "Done" if r["goal_setting_done"] else "Pending",
-             lambda r: "Done" if r["mid_year_done"] else "Pending",
-             lambda r: "Done" if r["final_review_done"] else "Pending",
+             lambda r: r.get("year", ""),
+             lambda r: _stage_cell(r, "goal_setting"),
+             lambda r: _stage_cell(r, "mid_year"),
+             lambda r: _attended_cell(r, "hbpr_mid_year", "mid_year_done"),
+             lambda r: _stage_cell(r, "final_review"),
+             lambda r: _attended_cell(r, "hbpr_final_review", "final_review_done"),
              lambda r: r["goal_count"],
+             lambda r: "; ".join(r.get("goal_titles", [])) or "—",
+         ]),
+        ("EPR stage evidence", "EPRStageEvidence",
+         ["Employee", "Stage", "Completed on", "Recorded by", "HBPR present", "Shared with employee",
+          "Reference", "Summary"], governance.get("epr_stage_evidence", []),
+         [
+             lambda r: r["employee"],
+             lambda r: r["stage"],
+             lambda r: r["completed_on"] or "—",
+             lambda r: r["recorded_by"] or "—",
+             lambda r: "Yes" if r["hbpr_present"] else "No",
+             lambda r: "Yes" if r["shared_with_employee"] else "No",
+             lambda r: r["reference_url"] or ("Recorded (hidden)" if r["has_reference"] else "—"),
+             lambda r: r["summary"] or "—",
          ]),
     ]
 
@@ -266,13 +296,14 @@ def _build_hbpr_evidence_sheet(wb, fmt, evidence):
     ws.set_column("A:A", 22)
     ws.set_column("B:B", 14)
     ws.set_column("C:C", 10)
-    ws.set_column("D:D", 40)
-    ws.set_column("E:E", 40)
-    ws.set_column("F:F", 26)
+    ws.set_column("D:D", 12)
+    ws.set_column("E:F", 26)
+    ws.set_column("G:H", 40)
+    ws.set_column("I:I", 26)
 
     headers = [
-        "Kind", "Occurred on", "Year", "Shared summary",
-        "Action items", "Reference",
+        "Kind", "Occurred on", "Year", "Status", "Cancel reason", "Recorded by",
+        "Shared summary", "Action items", "Reference",
     ]
     ws.merge_range(0, 0, 0, len(headers) - 1, "HBPR ↔ Line Manager partnership log", fmt.header)
     for col, label in enumerate(headers):
@@ -286,9 +317,12 @@ def _build_hbpr_evidence_sheet(wb, fmt, evidence):
         ws.write(row, 0, item["kind_display"], fmt.cell_center)
         ws.write(row, 1, item["occurred_on"], fmt.cell_center)
         ws.write(row, 2, item["reporting_year"] or "—", fmt.cell_center)
-        ws.write(row, 3, xlsx_safe(item["shared_summary"]) or "—", fmt.cell)
-        ws.write(row, 4, xlsx_safe(item["action_items"]) or "—", fmt.cell)
-        ws.write(row, 5, xlsx_safe(item["reference_url"]) or "—", fmt.cell)
+        ws.write(row, 3, "Cancelled" if item.get("status") == "cancelled" else "Held", fmt.cell_center)
+        ws.write(row, 4, xlsx_safe(item.get("cancel_reason", "")) or "—", fmt.cell)
+        ws.write(row, 5, xlsx_safe(item.get("recorded_by", "")) or "—", fmt.cell)
+        ws.write(row, 6, xlsx_safe(item["shared_summary"]) or "—", fmt.cell)
+        ws.write(row, 7, xlsx_safe(item["action_items"]) or "—", fmt.cell)
+        ws.write(row, 8, xlsx_safe(item["reference_url"]) or "—", fmt.cell)
         row += 1
 
 

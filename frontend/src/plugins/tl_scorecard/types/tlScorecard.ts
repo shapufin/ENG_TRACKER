@@ -319,7 +319,10 @@ export interface YearEndEvidencePack {
   cadence_expected: number;
   cadence_held: number;
   coverage_pct: number | null;
+  /** Slots skipped with a reason: not held, but accounted for. */
+  cadence_cancelled?: number;
   meetings: YearEndPackEvidenceRow[];
+  cancelled_meetings?: YearEndPackEvidenceRow[];
   epr_mid_year: YearEndPackEvidenceRow | null;
   epr_year_end: YearEndPackEvidenceRow | null;
   /** One row per scoreable employee: when each stage was held and whether the HBPR attended. */
@@ -387,6 +390,9 @@ export interface HbprOverview {
   leaders: HbprLeaderRow[];
 }
 
+/** A cadence slot is either held or cancelled with a reason; EPR rows are always held. */
+export type HbprEvidenceStatus = "held" | "cancelled";
+
 export interface HbprEvidence {
   id: number;
   assignment: number;
@@ -396,6 +402,8 @@ export interface HbprEvidence {
   cadence_display?: string;
   kind: HbprEvidenceKind;
   kind_display: string;
+  status: HbprEvidenceStatus;
+  cancel_reason: string;
   occurred_on: string;
   reporting_year: number | null;
   shared_summary: string;
@@ -406,6 +414,7 @@ export interface HbprEvidence {
   updated_by: number | null;
   updated_by_name: string | null;
   next_due_on: string | null;
+  next_due_moved_from?: string | null;
   cadence_status: HbprCadenceStatus;
   created_at: string;
   updated_at: string;
@@ -428,6 +437,8 @@ export interface HbprPartnershipAssignment {
   effective_from: string;
   last_meeting_on: string | null;
   next_due_on: string | null;
+  /** Set when the due date was a public holiday and the slot moved to the next one. */
+  next_due_moved_from?: string | null;
   cadence_status: HbprCadenceStatus;
   epr_mid_year: boolean;
   epr_year_end: boolean;
@@ -451,6 +462,8 @@ export interface HbprPartnership {
 export interface HbprEvidencePayload {
   assignment: number;
   kind: HbprEvidenceKind;
+  status?: HbprEvidenceStatus;
+  cancel_reason?: string;
   occurred_on: string;
   reporting_year?: number | null;
   shared_summary?: string;

@@ -191,7 +191,34 @@ class HbprAlbanianTlAssignment(TrackedFieldsMixin, BaseModel):
             return f"{prefix} ({weekday_name})"
         return dict(CADENCE_CHOICES).get(self.cadence, self.cadence)
 
+    # Holiday pushes stop here: a run of holidays longer than this never loops forever.
+    _MAX_HOLIDAY_PUSHES = 6
+
     def next_due_on(self, *, last_meeting_on: date | None) -> date:
+        """Next cadence date after the last slot, moved past public holidays."""
+        return self.next_due_slot(last_meeting_on=last_meeting_on)[0]
+
+    def next_due_slot(self, *, last_meeting_on: date | None) -> tuple[date, date | None]:
+        """``(due, moved_from)``: the next slot, and the holiday date it replaced.
+
+        A due date that is a global public holiday moves to the following slot of
+        the same cadence (weekly +1 week, biweekly +2, monthly next month), and
+        repeats while that one is a holiday too. ``moved_from`` is the first
+        holiday hit, ``None`` when nothing moved.
+        """
+        from apps.leave_management.models.core import global_holiday_dates
+
+        due = self._raw_next_due(last_meeting_on=last_meeting_on)
+        holidays = global_holiday_dates(due, due + timedelta(days=366))
+        moved_from = None
+        for _ in range(self._MAX_HOLIDAY_PUSHES):
+            if due not in holidays:
+                break
+            moved_from = moved_from or due
+            due = self._raw_next_due(last_meeting_on=due)
+        return due, moved_from
+
+    def _raw_next_due(self, *, last_meeting_on: date | None) -> date:
         """Next cadence date after the last meeting (or the start date)."""
         anchor = last_meeting_on or self.effective_from
 

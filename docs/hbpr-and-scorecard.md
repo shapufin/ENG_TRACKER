@@ -70,7 +70,25 @@ Review rejects `goal_titles`, and standalone `epr-goals/` is read-only so goals 
 never bypass checkpoint locks.
 
 Cadence (`weekly`/`biweekly`/`monthly`) is per assignment. `next_due_on`: +7d / +14d /
-same day next month clamped to month end, from the last cadence meeting or the start.
+same day next month clamped to month end, from the last cadence slot (held or cancelled) or
+the start. **Holidays (2026-11-11):** `next_due_slot()` returns `(due, moved_from)`; a due date on
+a global public holiday moves to the following slot of the same cadence (up to six times) and the
+UI says "Moved from <date> (public holiday)".
+
+**Cancelled slots (2026-11-11).** `HbprGovernanceEvidence.status` is `held` (default) or
+`cancelled`; a cancelled cadence meeting needs `cancel_reason`, EPR rows can never be cancelled
+(check constraint + serializer). A cancelled slot is dated the slot that was missed, moves the next
+due date on, and is NOT counted as held: the year-end pack returns `cadence_held`,
+`cadence_cancelled` and `cancelled_meetings` separately and `coverage_pct` stays held/expected.
+The Line Manager uses "Meeting held" (date prefilled with the due slot, capped at today) or
+"Cancel meeting" on the partnership card.
+
+**Employee EPR attendance (2026-11-11).** `EPRStageRecord.hbpr_present` is set by ticking "HR
+business partner attended" when completing Mid-year or Final Review. That also creates the
+Line Manager's `epr_mid_year` / `epr_year_end` partnership row (once per assignment and year,
+recorded by whoever completed the stage), so those rows are not entered by hand any more.
+The year-end pack's `employee_epr` lists each scoreable employee's stage dates and attendance
+(no review text). Existing stages completed before the flag existed are not backfilled.
 `cadence_status` has exactly one definition
 (`apps/users/services/hbpr_assignments.cadence_status`). Due/overdue is UI-only.
 
@@ -213,6 +231,17 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
   default current year) returns `stages`, `cycles_started`, `cycles_with_5plus_goals`,
   `stages_completed` and `stages_with_evidence` for `scoreable_member_ids(leader)`.
   Line Managers are excluded, as everywhere in the scorecard.
+
+## Evidence exports (2026-11-11)
+
+The scorecard export (`export?file_format=xlsx|pdf`) is the evidence handed over, so it carries the
+dates, not only Done/Pending: the Governance sheet lists each employee's Goal setting, Mid-year
+and Final review **completion dates**, HBPR attendance at Mid-year and Final, the goal count and
+titles, plus an "EPR stage evidence" table (stage, completed on, recorded by, HBPR present,
+shared with employee, reference, summary). The summary and reference link are included only for
+the leader and staff (`include_review_content`); an HBPR export shows dates, recorder and
+attendance but never review content. The partnership log sheet adds status, cancel reason and
+recorded by. Tested by `EprEvidenceExportTests`.
 
 ## Operations
 

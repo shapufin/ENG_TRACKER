@@ -65,6 +65,16 @@ class PartnershipBase(TestCase):
 
 
 class PartnershipReadTests(PartnershipBase):
+    def test_last_meeting_ignores_a_cancelled_slot_but_next_due_moves_on(self):
+        from datetime import timedelta
+        held = self.today - timedelta(days=14)
+        cancelled = self.today - timedelta(days=7)
+        self._evidence(occurred_on=held)
+        self._evidence(occurred_on=cancelled, status='cancelled', cancel_reason='HBPR on leave')
+        data = self._get(self.tl).data['assignment']
+        self.assertEqual(str(data['last_meeting_on']), str(held))
+        self.assertEqual(str(data['next_due_on']), str(cancelled + timedelta(days=7)))
+
     def test_al_tl_sees_their_assignment_and_hbpr(self):
         data = self._get(self.tl).data
         self.assertEqual(data['assignment']['hbpr']['name'], 'Elda Partner')

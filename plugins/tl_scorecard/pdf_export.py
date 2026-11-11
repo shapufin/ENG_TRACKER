@@ -140,6 +140,14 @@ def _risks_section(story, scorecard):
     })
 
 
+def _stage_with_hbpr(row, stage):
+    """Completion date, plus whether the HBPR attended Mid-year / Final Review."""
+    done_on = row.get(f'{stage}_on')
+    if not done_on:
+        return 'Done' if row.get(f'{stage}_done') else 'Pending'
+    return f"{done_on}{' (HBPR)' if row.get('hbpr_' + stage) else ''}"
+
+
 def _governance_section(story, governance):
     pdf.section_title(story, 'Governance records')
     tables = [
@@ -153,11 +161,15 @@ def _governance_section(story, governance):
          [[r['employee'], r['nominated_on']] for r in governance['pending_promotions']]),
         ('EPR cycles', ['Employee', 'Goal setting', 'Mid-year', 'Final review', 'Goals'],
          [[r['employee'],
-           'Done' if r['goal_setting_done'] else 'Pending',
-           'Done' if r['mid_year_done'] else 'Pending',
-           'Done' if r['final_review_done'] else 'Pending',
+           r.get('goal_setting_on') or ('Done' if r['goal_setting_done'] else 'Pending'),
+           _stage_with_hbpr(r, 'mid_year'),
+           _stage_with_hbpr(r, 'final_review'),
            r['goal_count']]
           for r in governance['epr_cycles']]),
+        ('EPR stage evidence', ['Employee', 'Stage', 'Completed on', 'Recorded by', 'HBPR present'],
+         [[r['employee'], r['stage'], r['completed_on'] or NO_DATA, r['recorded_by'] or NO_DATA,
+           'Yes' if r['hbpr_present'] else 'No']
+          for r in governance.get('epr_stage_evidence', [])]),
     ]
     for title, headers, rows in tables:
         pdf.paragraph(story, title)
@@ -168,10 +180,13 @@ def _governance_section(story, governance):
 def _partnership_section(story, hbpr_evidence):
     pdf.section_title(story, 'Partnership log')
     pdf.data_table(
-        story, ['Kind', 'Date', 'Shared summary', 'Action items'],
-        [[row['kind_display'], row['occurred_on'], row['shared_summary'] or NO_DATA,
+        story, ['Kind', 'Date', 'Status', 'Shared summary / reason', 'Action items'],
+        [[row['kind_display'], row['occurred_on'],
+          'Cancelled' if row.get('status') == 'cancelled' else 'Held',
+          (row.get('cancel_reason') if row.get('status') == 'cancelled' else row['shared_summary'])
+          or NO_DATA,
           row['action_items'] or NO_DATA] for row in hbpr_evidence],
-        col_widths=[34, 22, 62, 60],
+        col_widths=[30, 20, 20, 56, 52],
     )
 
 
