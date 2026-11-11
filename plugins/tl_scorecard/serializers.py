@@ -485,16 +485,17 @@ class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
     hbpr = serializers.IntegerField(source='assignment.hbpr_id', read_only=True)
     cadence = serializers.CharField(source='assignment.cadence', read_only=True)
     next_due_on = serializers.SerializerMethodField()
+    next_due_moved_from = serializers.SerializerMethodField()
     cadence_status = serializers.SerializerMethodField()
 
     class Meta:
         model = HbprGovernanceEvidence
         fields = [
             'id', 'assignment', 'albanian_tl', 'hbpr', 'cadence',
-            'kind', 'kind_display', 'occurred_on', 'reporting_year',
+            'kind', 'kind_display', 'status', 'cancel_reason', 'occurred_on', 'reporting_year',
             'shared_summary', 'action_items', 'reference_url',
             'recorded_by', 'recorded_by_name', 'updated_by', 'updated_by_name',
-            'next_due_on', 'cadence_status',
+            'next_due_on', 'next_due_moved_from', 'cadence_status',
             'created_at', 'updated_at',
         ]
         read_only_fields = [
@@ -534,6 +535,13 @@ class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
         # rewriting the date, so all three surfaces agree.
         return str(assignment.next_due_on(last_meeting_on=self._last_cadence_on(obj)))
 
+    def get_next_due_moved_from(self, obj):
+        assignment = obj.assignment
+        if not assignment.is_current:
+            return None
+        moved = assignment.next_due_slot(last_meeting_on=self._last_cadence_on(obj))[1]
+        return str(moved) if moved else None
+
     def get_cadence_status(self, obj):
         from apps.users.services.hbpr_assignments import cadence_status
 
@@ -566,6 +574,19 @@ class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {'reporting_year': 'Only EPR evidence carries a reporting year.'}
             )
+
+        status = attrs.get('status', getattr(self.instance, 'status', 'held'))
+        if status == 'cancelled':
+            if kind != 'cadence_meeting':
+                raise serializers.ValidationError(
+                    {'status': 'Only a cadence meeting can be cancelled.'})
+            reason = (attrs.get('cancel_reason', getattr(self.instance, 'cancel_reason', '')) or '').strip()
+            if not reason:
+                raise serializers.ValidationError(
+                    {'cancel_reason': 'Say why the meeting was not held.'})
+            attrs['cancel_reason'] = reason
+        else:
+            attrs['cancel_reason'] = ''
 
         # Evidence records something that happened; a future date would also make
         # `next_due_on` future and read as 'on_track' prematurely.

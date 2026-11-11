@@ -71,42 +71,44 @@ export const ClientAssignmentSection: React.FC = () => {
             {visibleMembers.length === 0 ? (
               <EmptyState icon={Users} title="No members or clients match your search" />
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className={TABLE_HEAD_ROW_CLASS}>
-                    <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-0 py-0 pr-2 pb-2")}>
-                      Member
-                    </th>
-                    <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-0 py-0 pb-2")}>
-                      Client
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-border/50 divide-y">
-                  {visibleMembers.map((m) => {
-                    const name = displayName(m);
-                    const draft = effective[m.user.id] ?? [];
-                    return (
-                      <tr key={m.user.id}>
-                        <td className="py-2 pr-2">
-                          <span className="block font-medium">{name}</span>
-                          <span className="text-muted-foreground block text-xs">
-                            @{m.user.username}
-                          </span>
-                        </td>
-                        <td className="py-2">
-                          <ClientMultiSelect
-                            clients={clients}
-                            value={draft}
-                            onChange={(ids) => setDraft(m.user.id, ids)}
-                            triggerLabel={`Client for ${name}`}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className={TABLE_HEAD_ROW_CLASS}>
+                      <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-0 py-0 pr-2 pb-2")}>
+                        Member
+                      </th>
+                      <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "px-0 py-0 pb-2")}>
+                        Client
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-border/50 divide-y">
+                    {visibleMembers.map((m) => {
+                      const name = displayName(m);
+                      const draft = effective[m.user.id] ?? [];
+                      return (
+                        <tr key={m.user.id}>
+                          <td className="py-2 pr-2">
+                            <span className="block font-medium">{name}</span>
+                            <span className="text-muted-foreground block text-xs">
+                              @{m.user.username}
+                            </span>
+                          </td>
+                          <td className="py-2">
+                            <ClientMultiSelect
+                              clients={clients}
+                              value={draft}
+                              onChange={(ids) => setDraft(m.user.id, ids)}
+                              triggerLabel={`Client for ${name}`}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
 
             <div className="flex items-center gap-3 pt-1">

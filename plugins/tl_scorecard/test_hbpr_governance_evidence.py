@@ -537,3 +537,45 @@ class EvidenceServerSideFilterTests(EvidenceBase):
             force_authenticate(request, user=self.hbpr)
             response = HbprGovernanceEvidenceViewSet.as_view({'get': 'list'})(request)
             self.assertEqual(response.status_code, 400, params)
+
+
+class CancelledCadenceMeetingTests(EvidenceBase):
+    """A skipped slot is recorded with a reason: it consumes the slot but is not a held meeting."""
+
+    def _cancel(self, **overrides):
+        return self.call('create', self.tl, data=self._cadence(
+            status='cancelled', cancel_reason='HBPR on leave', shared_summary='', **overrides))
+
+    def test_cancelled_meeting_needs_a_reason(self):
+        resp = self.call('create', self.tl, data=self._cadence(status='cancelled'))
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('cancel_reason', resp.data)
+
+    def test_epr_rows_cannot_be_cancelled(self):
+        resp = self.call('create', self.tl, data={
+            'assignment': self.assignment.id, 'kind': 'epr_mid_year', 'reporting_year': 2026,
+            'occurred_on': str(self.today), 'status': 'cancelled', 'cancel_reason': 'x'})
+        self.assertEqual(resp.status_code, 400)
+
+    def test_cancelled_slot_moves_next_due_but_is_not_held(self):
+        resp = self._cancel(occurred_on=str(self.today))
+        self.assertEqual(resp.status_code, 201, resp.data)
+        self.assertEqual(resp.data['status'], 'cancelled')
+        self.assertEqual(resp.data['cancel_reason'], 'HBPR on leave')
+        self.assertGreater(resp.data['next_due_on'], str(self.today))
+
+    def test_reason_is_cleared_for_a_held_meeting(self):
+        resp = self.call('create', self.tl, data=self._cadence(cancel_reason='ignored'))
+        self.assertEqual(resp.status_code, 201, resp.data)
+        self.assertEqual(resp.data['cancel_reason'], '')
+
+    def test_pack_separates_held_from_cancelled(self):
+        self.call('create', self.tl, data=self._cadence())
+        self._cancel(occurred_on=str(self.today))
+        request = self.factory.get('/x/', {'assignment': self.assignment.id, 'year': str(self.today.year)})
+        force_authenticate(request, user=self.tl)
+        pack = HbprGovernanceEvidenceViewSet.as_view({'get': 'year_end_pack'})(request).data
+        self.assertEqual(pack['cadence_held'], 1)
+        self.assertEqual(pack['cadence_cancelled'], 1)
+        self.assertEqual(len(pack['meetings']), 1)
+        self.assertEqual(pack['cancelled_meetings'][0]['cancel_reason'], 'HBPR on leave')

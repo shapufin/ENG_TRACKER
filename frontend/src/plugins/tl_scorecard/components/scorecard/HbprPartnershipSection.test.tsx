@@ -61,6 +61,8 @@ const EVIDENCE: HbprEvidence = {
   cadence: "weekly",
   kind: "cadence_meeting",
   kind_display: "Cadence meeting",
+  status: "held",
+  cancel_reason: "",
   occurred_on: "2026-03-01",
   reporting_year: null,
   shared_summary: "Weekly governance sync.",
@@ -261,5 +263,65 @@ describe("HbprPartnershipSection", () => {
     await waitFor(() => expect(loadEvidencePack).toHaveBeenCalledWith(11, 2026));
     expect(await screen.findByText("2026 year-end summary")).toBeInTheDocument();
     expect(screen.getByText("31/40")).toBeInTheDocument();
+  });
+
+  it("logs the due meeting as held with its date prefilled", async () => {
+    const { onCreate } = renderSection();
+    fireEvent.click(screen.getByRole("button", { name: "Meeting held" }));
+    expect(await screen.findByLabelText(/Meeting date/)).toHaveValue("2026-03-08");
+    fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
+    await waitFor(() =>
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: "cadence_meeting",
+          status: "held",
+          occurred_on: "2026-03-08",
+        })
+      )
+    );
+  });
+
+  it("cancels the due meeting only with a reason", async () => {
+    const { onCreate } = renderSection();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel meeting" }));
+    const submit = await screen.findByRole("button", { name: "Cancel meeting", hidden: false });
+    const buttons = screen.getAllByRole("button", { name: "Cancel meeting" });
+    const confirm = buttons[buttons.length - 1];
+    expect(confirm).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/^Reason/), { target: { value: "HBPR on leave" } });
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
+    await waitFor(() =>
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "cancelled",
+          cancel_reason: "HBPR on leave",
+          occurred_on: "2026-03-08",
+        })
+      )
+    );
+    expect(submit).toBeTruthy();
+  });
+
+  it("says when the next date moved because of a public holiday", () => {
+    renderSection({
+      partnership: {
+        ...PARTNERSHIP,
+        assignment: {
+          ...PARTNERSHIP.assignment!,
+          next_due_on: "2026-03-15",
+          next_due_moved_from: "2026-03-08",
+        },
+      },
+    });
+    expect(screen.getByText(/Moved from .*public holiday/)).toBeInTheDocument();
+  });
+
+  it("marks a cancelled slot with its reason", () => {
+    renderSection({
+      evidence: [{ ...EVIDENCE, status: "cancelled", cancel_reason: "HBPR on leave" }],
+    });
+    expect(screen.getByText("Cancelled")).toBeInTheDocument();
+    expect(screen.getByText("HBPR on leave")).toBeInTheDocument();
   });
 });

@@ -129,6 +129,11 @@ const PackBody: React.FC<{ pack: YearEndEvidencePack }> = ({ pack }) => (
         <p className="mt-0.5 text-lg font-semibold tabular-nums">
           {pack.cadence_held}/{pack.cadence_expected}
         </p>
+        {(pack.cadence_cancelled ?? 0) > 0 && (
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            {pack.cadence_cancelled} cancelled with a reason
+          </p>
+        )}
       </div>
       <div className="border-line-subtle rounded-lg border p-3">
         <p className="text-muted-foreground text-xs">Coverage</p>

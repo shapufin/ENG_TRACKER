@@ -886,3 +886,38 @@ class AssignmentApiTests(HbprAssignmentTestBase):
             response = self.client.get(self._list_url())
         self.assertEqual(response.status_code, 200)
         self.assertLess(len(ctx.captured_queries), 30)
+
+
+class CadenceHolidayPushTests(HbprAssignmentTestBase):
+    """A due date that is a public holiday moves to the next slot of the cadence."""
+
+    def _assignment(self, **kw):
+        return HbprAlbanianTlAssignment.objects.create(
+            hbpr=self.hbpr, albanian_tl=self.al_tl, effective_from=date(2026, 1, 1), **kw)
+
+    def _holiday(self, day):
+        from apps.dashboard.models.calendar import PublicHoliday
+        PublicHoliday.objects.create(name='H', date=day, country_code='AL', is_global=True)
+
+    def test_weekly_due_on_a_holiday_moves_one_week(self):
+        a = self._assignment(cadence='weekly', cadence_day_of_week=2)  # Wednesday
+        self._holiday(date(2026, 3, 11))
+        self.assertEqual(a.next_due_on(last_meeting_on=date(2026, 3, 4)), date(2026, 3, 18))
+        self.assertEqual(
+            a.next_due_slot(last_meeting_on=date(2026, 3, 4)),
+            (date(2026, 3, 18), date(2026, 3, 11)))
+
+    def test_biweekly_and_monthly_move_one_step_and_chain_over_holidays(self):
+        b = self._assignment(cadence='biweekly', cadence_day_of_week=2)
+        self._holiday(date(2026, 3, 18))
+        self.assertEqual(b.next_due_on(last_meeting_on=date(2026, 3, 4)), date(2026, 4, 1))
+        m = HbprAlbanianTlAssignment.objects.create(
+            hbpr=self.hbpr, albanian_tl=self.al_tl2, effective_from=date(2026, 1, 1),
+            cadence='monthly')
+        self._holiday(date(2026, 4, 10))
+        self._holiday(date(2026, 5, 10))
+        self.assertEqual(m.next_due_on(last_meeting_on=date(2026, 3, 10)), date(2026, 6, 10))
+
+    def test_non_holiday_due_date_is_unchanged(self):
+        a = self._assignment(cadence='weekly', cadence_day_of_week=2)
+        self.assertEqual(a.next_due_slot(last_meeting_on=date(2026, 3, 4)), (date(2026, 3, 11), None))

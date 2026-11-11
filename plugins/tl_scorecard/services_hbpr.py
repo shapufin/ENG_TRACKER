@@ -128,10 +128,10 @@ def _team_sizes(assignments, scope):
 
 def _evidence_rollup(assignment_ids, year):
     """Per-assignment evidence facts in one pass over the rows."""
-    last_cadence, last_evidence, counts, epr = {}, {}, {}, {}
+    last_cadence, last_evidence, counts, epr, last_held = {}, {}, {}, {}, {}
     rows = HbprGovernanceEvidence.objects.filter(
         assignment_id__in=assignment_ids,
-    ).values('assignment_id', 'kind', 'reporting_year', 'occurred_on')
+    ).values('assignment_id', 'kind', 'reporting_year', 'occurred_on', 'status')
     for row in rows:
         aid = row['assignment_id']
         counts[aid] = counts.get(aid, 0) + 1
@@ -141,9 +141,15 @@ def _evidence_rollup(assignment_ids, year):
         if row['kind'] == 'cadence_meeting':
             if last_cadence.get(aid) is None or occurred_on > last_cadence[aid]:
                 last_cadence[aid] = occurred_on
+            if row['status'] == 'held' and (
+                last_held.get(aid) is None or occurred_on > last_held[aid]
+            ):
+                last_held[aid] = occurred_on
         elif row['kind'] in EPR_KINDS and row['reporting_year'] == year:
             epr.setdefault(aid, set()).add(row['kind'])
-    return last_cadence, last_evidence, counts, epr
+    # `last_cadence` is the latest slot handled (held or cancelled) and drives the next
+    # due date; `last_held` is the latest meeting that really took place.
+    return last_cadence, last_evidence, counts, epr, last_held
 
 
 def overview(scope, *, reporting_year=None):
@@ -157,7 +163,7 @@ def overview(scope, *, reporting_year=None):
     )
     assignment_ids = [a.id for a in assignments]
     team_sizes = _team_sizes(assignments, scope)
-    last_cadence, last_evidence, counts, epr = _evidence_rollup(assignment_ids, year)
+    last_cadence, last_evidence, counts, epr, last_held = _evidence_rollup(assignment_ids, year)
 
     leaders = []
     for assignment in assignments:
@@ -170,7 +176,7 @@ def overview(scope, *, reporting_year=None):
             'cadence_day_of_week': assignment.cadence_day_of_week,
             'cadence_nth_week': assignment.cadence_nth_week,
             'team_size': team_sizes.get(assignment.albanian_tl_id, 0),
-            'last_meeting_on': last_meeting_on,
+            'last_meeting_on': last_held.get(assignment.id),
             'next_due_on': (
                 assignment.next_due_on(last_meeting_on=last_meeting_on)
                 if assignment.is_current else None
@@ -217,8 +223,12 @@ def partnership(leader, *, reporting_year=None, viewer=None):
     if assignment is None:
         return {'reporting_year': year, 'assignment': None}
 
-    last_cadence, last_evidence, counts, epr = _evidence_rollup([assignment.id], year)
+    last_cadence, last_evidence, counts, epr, last_held = _evidence_rollup([assignment.id], year)
     last_meeting_on = last_cadence.get(assignment.id)
+    next_slot = (
+        assignment.next_due_slot(last_meeting_on=last_meeting_on)
+        if assignment.is_current else (None, None)
+    )
     return {
         'reporting_year': year,
         'assignment': {
@@ -232,11 +242,9 @@ def partnership(leader, *, reporting_year=None, viewer=None):
                 is_staff_user(viewer) or viewer.id == assignment.albanian_tl_id
             ),
             'effective_from': assignment.effective_from.isoformat(),
-            'last_meeting_on': last_meeting_on,
-            'next_due_on': (
-                assignment.next_due_on(last_meeting_on=last_meeting_on)
-                if assignment.is_current else None
-            ),
+            'last_meeting_on': last_held.get(assignment.id),
+            'next_due_on': next_slot[0],
+            'next_due_moved_from': next_slot[1],
             'cadence_status': cadence_status(
                 assignment, last_meeting_on=last_meeting_on, on_date=today
             ),
