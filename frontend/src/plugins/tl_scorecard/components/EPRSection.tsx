@@ -28,6 +28,10 @@ interface EPRSectionProps {
   cycles: EPRCycle[];
   /** Employees the leader can score; the tracker denominator. Falls back to started cycles. */
   teamSize?: number;
+  /** Year the tracker covers; cycles of other years are ignored. */
+  year?: number;
+  /** Server-decided due date (YYYY-MM-DD) per stage, from `epr-progress`. */
+  dueDates?: Partial<Record<EPRStage, string>>;
   onParseGoals: (cycleId: number, stage: EPRStage, file: File) => Promise<string[]>;
   onCompleteStage: (cycleId: number, data: CompleteEprStagePayload) => Promise<void>;
 }
@@ -307,13 +311,23 @@ const FILTERS: { value: PhaseFilter; label: string }[] = [
   { value: "complete", label: "Complete" },
 ];
 
-const StageTracker: React.FC<{ cycles: EPRCycle[]; teamSize: number }> = ({ cycles, teamSize }) => {
+const formatDue = (iso: string) =>
+  new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+const StageTracker: React.FC<{
+  cycles: EPRCycle[];
+  teamSize: number;
+  dueDates?: Partial<Record<EPRStage, string>>;
+}> = ({ cycles, teamSize, dueDates }) => {
   const total = Math.max(teamSize, cycles.length);
+  const today = new Date().toISOString().slice(0, 10);
   return (
     <div role="group" aria-label="EPR stage tracker" className="mt-3 space-y-2">
       <div className="grid gap-3 sm:grid-cols-3">
         {STAGES.map(({ field, label }) => {
           const count = cycles.filter((cycle) => cycle[`${field}_completed_at` as const]).length;
+          const due = dueDates?.[field];
+          const overdue = due && due < today ? Math.max(total - count, 0) : 0;
           return (
             <div key={field} className="space-y-1">
               <div className="flex items-baseline justify-between text-xs">
@@ -322,6 +336,16 @@ const StageTracker: React.FC<{ cycles: EPRCycle[]; teamSize: number }> = ({ cycl
                   {count}/{total}
                 </span>
               </div>
+              {due && (
+                <p className="text-muted-foreground text-xs">
+                  due {formatDue(due)}
+                  {overdue > 0 && (
+                    <span className="text-tone-warning-text ml-1.5 font-medium">
+                      {overdue} overdue
+                    </span>
+                  )}
+                </p>
+              )}
               <Progress
                 value={total ? (count / total) * 100 : 0}
                 aria-label={`${label}: ${count} of ${total} done`}
@@ -342,6 +366,8 @@ const StageTracker: React.FC<{ cycles: EPRCycle[]; teamSize: number }> = ({ cycl
 export const EPRSection: React.FC<EPRSectionProps> = ({
   cycles,
   teamSize = 0,
+  year,
+  dueDates,
   onParseGoals,
   onCompleteStage,
 }) => {
@@ -367,7 +393,11 @@ export const EPRSection: React.FC<EPRSectionProps> = ({
         <EmptyState icon={ClipboardCheck} title="No EPR cycles started" className="py-6" />
       ) : (
         <>
-          <StageTracker cycles={cycles} teamSize={teamSize} />
+          <StageTracker
+            cycles={year === undefined ? cycles : cycles.filter((cycle) => cycle.year === year)}
+            teamSize={teamSize}
+            dueDates={dueDates}
+          />
           {cycles.length > 3 && (
             <div className="mt-3 space-y-2">
               <SearchField

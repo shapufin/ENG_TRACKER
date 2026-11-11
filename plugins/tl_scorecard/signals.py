@@ -169,7 +169,8 @@ def _on_hbpr_evidence_saved(sender, instance, created, **kwargs):
     if _skip(instance, kwargs):
         return
     edited = not created and _changed(
-        instance, 'occurred_on', 'shared_summary', 'action_items', 'reference_url')
+        instance, 'occurred_on', 'shared_summary', 'action_items', 'reference_url',
+        'status', 'cancel_reason')
     if not (created or edited):
         return
     cls = (

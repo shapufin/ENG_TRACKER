@@ -395,7 +395,8 @@ class HbprGovernanceEvidence(TrackedFieldsMixin, BaseModel):
     later hands the evidence to their manager, so rows are never deleted —
     ``recorded_by``/``updated_by`` keep the audit trail.
     """
-    tracked_fields = ('occurred_on', 'shared_summary', 'action_items', 'reference_url')
+    tracked_fields = (
+        'occurred_on', 'shared_summary', 'action_items', 'reference_url', 'status', 'cancel_reason')
 
     KIND_CHOICES = [
         ('cadence_meeting', 'Cadence meeting'),

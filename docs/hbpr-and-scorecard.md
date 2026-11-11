@@ -232,6 +232,15 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
   `stages_completed` and `stages_with_evidence` for `scoreable_member_ids(leader)`.
   Line Managers are excluded, as everywhere in the scorecard.
 
+## Reminders and backfill (2026-11-11)
+
+The hourly job `cadence_reminders` (`reminders.py`) notifies the Line Manager on the day the next
+partnership meeting is due and both the Line Manager and the HBPR once it is overdue, once per
+due date. A cancelled slot is announced as cancelled (reason stays in the log). The EPR cycles card
+shows each stage's due date and an overdue count over the whole scoreable team, for the current year
+only. `manage.py backfill_hbpr_epr_evidence [--dry-run]` creates the partnership rows for stages the
+HBPR attended before the rows were automatic.
+
 ## Evidence exports (2026-11-11)
 
 The scorecard export (`export?file_format=xlsx|pdf`) is the evidence handed over, so it carries the

@@ -30,7 +30,7 @@ class ScorecardRegistryLifecycleTests(TestCase):
         signals.connect()
 
     def test_all_scorecard_types_are_registered_when_connected(self):
-        self.assertEqual(len(SCORECARD_EVENT_TYPES), 16)
+        self.assertEqual(len(SCORECARD_EVENT_TYPES), 18)
         self.assertTrue(SCORECARD_EVENT_TYPES <= set(REGISTRY))
 
     def test_disconnect_removes_scorecard_types_from_registry_and_catalogue(self):
