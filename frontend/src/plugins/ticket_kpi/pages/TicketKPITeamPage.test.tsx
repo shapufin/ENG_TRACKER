@@ -42,6 +42,11 @@ vi.mock("../components/TicketKPITeamYearlyTab", () => ({
 vi.mock("../components/links/AutoMatchReview", () => ({
   AutoMatchReview: () => null,
 }));
+vi.mock("../components/evidence/TeamDocumentsPanel", () => ({
+  TeamDocumentsPanel: ({ month }: { month: string }) => (
+    <div data-testid="team-documents">{month}</div>
+  ),
+}));
 vi.mock("@/components/ui/tabs", () => ({
   Tabs: ({ children }: any) => <div data-testid="tabs">{children}</div>,
   TabsList: ({ children }: any) => <div>{children}</div>,
@@ -178,6 +183,8 @@ describe("TicketKPITeamPage", () => {
     );
     expect(screen.getByTestId("trigger-monthly")).toBeInTheDocument();
     expect(screen.getByTestId("trigger-yearly")).toBeInTheDocument();
+    expect(screen.getByTestId("trigger-documents")).toBeInTheDocument();
+    expect(screen.getByTestId("team-documents")).toBeInTheDocument();
   });
 
   it("hides export button on yearly tab", () => {

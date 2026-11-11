@@ -22,6 +22,7 @@ import { formatMonthLabel } from "@/lib/monthOptions";
 import { downloadTeamCSV } from "../utils/teamCSVExport";
 import { useTicketKPITeamPage } from "./hooks/useTicketKPITeamPage";
 import { usePermissions } from "@/context/PermissionContext";
+import { TeamDocumentsPanel } from "../components/evidence/TeamDocumentsPanel";
 import { Users, Clock, Ticket, CheckCircle, Calendar, Download, ShieldAlert } from "lucide-react";
 
 export const TicketKPITeamPage: React.FC = () => {
@@ -99,6 +100,7 @@ export const TicketKPITeamPage: React.FC = () => {
         <TabsList>
           <TabsTrigger value="monthly">Monthly</TabsTrigger>
           <TabsTrigger value="yearly">Yearly</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
         <TabsContent value="monthly" className="space-y-6">
@@ -205,6 +207,24 @@ export const TicketKPITeamPage: React.FC = () => {
             yearlyTrendChartData={yearlyTrendChartData}
             loading={yearlyLoading}
           />
+        </TabsContent>
+        <TabsContent value="documents" className="space-y-6">
+          <div className="flex items-center gap-3">
+            <Calendar className="text-muted-foreground h-5 w-5" />
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map((m) => (
+                  <SelectItem key={m} value={m}>
+                    {formatMonthLabel(m)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <TeamDocumentsPanel month={selectedMonth} />
         </TabsContent>
       </Tabs>
     </PageShell>
