@@ -2014,7 +2014,7 @@ class KPIEvidenceViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Mod
             return
         if hasattr(user, 'profile') and user.profile.is_hr:
             return
-        raise PermissionDenied("You do not have permission to access this evidence.")
+        raise PermissionDenied("You do not have permission to access this document.")
 
     def get_object(self):
         obj = super().get_object()
@@ -2054,11 +2054,11 @@ class KPIEvidenceViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Mod
         is_tl = _is_tl_for_user(user, evidence.user)
 
         if not is_owner and not is_admin and not is_tl:
-            raise PermissionDenied("You can only update your own or your team members' evidence.")
+            raise PermissionDenied("You can only update your own or your team members' documents.")
 
         # Owners cannot edit evidence once it has been reviewed; TL/Admin can update as needed
         if is_owner and evidence.status != 'pending' and not is_admin:
-            raise PermissionDenied("Reviewed evidence cannot be edited by the owner.")
+            raise PermissionDenied("Reviewed documents cannot be edited by the owner.")
 
         # A replacement file goes through the same policy as an upload at create.
         file_obj = serializer.validated_data.get('file')
@@ -2085,9 +2085,9 @@ class KPIEvidenceViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Mod
         # Owners can delete their own pending evidence; TL/Admin can delete any
         user = self.request.user
         if instance.user != user and not (user.is_staff or user.is_superuser) and not _is_tl_for_user(user, instance.user):
-            raise PermissionDenied("Only the owner or a team leader/admin can delete this evidence.")
+            raise PermissionDenied("Only the owner or a team leader/admin can delete this document.")
         if instance.user == user and instance.reviewed_by and not (user.is_staff or user.is_superuser):
-            raise PermissionDenied("Reviewed evidence cannot be deleted by the owner.")
+            raise PermissionDenied("Reviewed documents cannot be deleted by the owner.")
         logger.info(
             "User %s deleted evidence %d (user=%s, month=%s, type=%s)",
             user.username, instance.id, instance.user.username,
@@ -2108,7 +2108,7 @@ class KPIEvidenceViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Mod
 
         user = request.user
         if not (user.is_staff or user.is_superuser or _is_tl_for_user(user, evidence.user)):
-            raise PermissionDenied("Only administrators or the user's team leader can review evidence.")
+            raise PermissionDenied("Only administrators or the user's team leader can review document.")
 
         evidence.status = new_status
         evidence.reviewed_by = user
@@ -2130,7 +2130,7 @@ class KPIEvidenceViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Mod
         evidence = self.get_object()
         user = request.user
         if not (user.is_staff or user.is_superuser or _is_tl_for_user(user, evidence.user)):
-            raise PermissionDenied("Only administrators or the user's team leader can unreview evidence.")
+            raise PermissionDenied("Only administrators or the user's team leader can unreview document.")
 
         evidence.status = 'pending'
         evidence.reviewed_by = None
@@ -2146,7 +2146,7 @@ class KPIEvidenceViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Mod
         evidence = self.get_object()
         if evidence.evidence_type != 'email_thread' and not evidence.file.name.lower().endswith(('.eml', '.msg')):
             return Response(
-                {'error': 'This evidence is not an email thread'},
+                {'error': 'This document is not an email thread'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         if not evidence.parsed_email:
@@ -2173,7 +2173,7 @@ class KPIEvidenceViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Mod
         evidence = self.get_object()
         if not evidence.file:
             return Response(
-                {'error': 'No file attached to this evidence'},
+                {'error': 'No file attached to this document'},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
