@@ -13,6 +13,7 @@ class TlScorecardPlugin(BasePlugin):
         # Hourly and cheap: returns before touching a leader once the latest frozen month is done.
         return [
             ('freeze_scorecard_months', 3600, 'plugins.tl_scorecard.snapshots.process_freeze_scorecards'),
+            ('cadence_reminders', 3600, 'plugins.tl_scorecard.reminders.process_cadence_reminders_tick'),
         ]
 
     @property

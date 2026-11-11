@@ -57,6 +57,7 @@ const ModuleHeader: React.FC<{
   </div>
 );
 import type {
+  EprProgress,
   CompleteEprStagePayload,
   EPRCycle,
   EPRStage,
@@ -70,6 +71,9 @@ interface TeamGovernanceSectionProps {
   escalations: EscalationCandidate[] | undefined;
   pipRecords: PIPRecord[] | undefined;
   eprCycles: EPRCycle[] | undefined;
+  /** Per-stage due dates for the tracker year (`epr-progress`). */
+  eprProgress?: EprProgress;
+  eprYear?: number;
   canApprovePip: boolean;
   isApprovingPip: boolean;
   onApprovePip: (id: number) => void;
@@ -95,6 +99,8 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
   escalations,
   pipRecords,
   eprCycles,
+  eprProgress,
+  eprYear,
   canApprovePip,
   isApprovingPip,
   onApprovePip,
@@ -322,6 +328,14 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
             <EPRSection
               cycles={eprCycles}
               teamSize={scorecard.team_size}
+              year={eprYear}
+              dueDates={
+                eprProgress && {
+                  goal_setting: eprProgress.stages.goal_setting.due_date,
+                  mid_year: eprProgress.stages.mid_year.due_date,
+                  final_review: eprProgress.stages.final_review.due_date,
+                }
+              }
               onParseGoals={onParseGoals}
               onCompleteStage={onCompleteStage}
             />

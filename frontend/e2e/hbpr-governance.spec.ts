@@ -72,9 +72,7 @@ test.describe("HBPR-only user", () => {
     await expect(page.getByRole("heading", { name: "HBPR Workspace" })).toBeVisible();
     // Either the attention surface or the assignment-free onboarding state.
     await expect(
-      page
-        .getByText("Needs your attention")
-        .or(page.getByText("No Line Managers assigned yet"))
+      page.getByText("Needs your attention").or(page.getByText("No Line Managers assigned yet"))
     ).toBeVisible();
   });
 
@@ -240,7 +238,7 @@ test.describe("Assigned Line Manager", () => {
     await settle(page);
     await expect(page.getByRole("heading", { name: "HBPR partnership" })).toBeVisible();
     await expect(page.getByText("E2E HBPR")).toBeVisible();
-    await expect(page.getByRole("button", { name: /add log entry/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /log cadence meeting/i })).toBeVisible();
 
     // The authoring path the button opens, exercised through the API.
     const created = await request.post(`${API}/api/plugins/tl_scorecard/hbpr-evidence/`, {
@@ -268,6 +266,103 @@ test.describe("Assigned Line Manager", () => {
       evidenceRows.some((row: { id: number }) => row.id === createdRow.id),
       "the assigned HBPR must see the evidence its Line Manager authored"
     ).toBe(true);
+  });
+
+  test("cancels a cadence slot with a reason and moves the next date on", async ({
+    page,
+    request,
+  }) => {
+    const token = await fetchApiToken(E2E_CREDENTIALS.albanianTeamLeader);
+    const auth = { Authorization: `Bearer ${token}` };
+    const before = await get(request, token, "/api/plugins/tl_scorecard/partnership/");
+    const assignmentId = before.body.assignment.id as number;
+    const today = serverToday();
+
+    const noReason = await request.post(`${API}/api/plugins/tl_scorecard/hbpr-evidence/`, {
+      headers: auth,
+      data: {
+        assignment: assignmentId,
+        kind: "cadence_meeting",
+        occurred_on: today,
+        status: "cancelled",
+      },
+    });
+    expect(noReason.status(), "a cancelled slot needs a reason").toBe(400);
+
+    const reason = `E2E HBPR on leave ${Date.now()}`;
+    const cancelled = await request.post(`${API}/api/plugins/tl_scorecard/hbpr-evidence/`, {
+      headers: auth,
+      data: {
+        assignment: assignmentId,
+        kind: "cadence_meeting",
+        occurred_on: today,
+        status: "cancelled",
+        cancel_reason: reason,
+      },
+    });
+    expect(cancelled.status()).toBe(201);
+
+    const after = await get(request, token, "/api/plugins/tl_scorecard/partnership/");
+    expect(
+      after.body.assignment.next_due_on > today,
+      "the next slot moves past the cancelled one"
+    ).toBe(true);
+
+    await loginAsUser(page, E2E_CREDENTIALS.albanianTeamLeader);
+    await page.goto("/tl-scorecard?tab=evidence");
+    await settle(page);
+    await expect(page.getByText("Cancelled").first()).toBeVisible();
+    await expect(page.getByText(reason)).toBeVisible();
+  });
+
+  test("an attended mid-year creates the partnership row without a manual log", async ({
+    request,
+  }) => {
+    const token = await fetchApiToken(E2E_CREDENTIALS.albanianTeamLeader);
+    const auth = { Authorization: `Bearer ${token}` };
+    const year = new Date().getFullYear();
+
+    const team = await request.get(`${API}/api/users/users/my_team_members/?exclude_leaders=true`, {
+      headers: auth,
+    });
+    expect(team.status()).toBe(200);
+    const members = (await team.json()) as { user: { id: number; username: string } }[];
+    const employee = members.find((m) => m.user.username === "e2e_employee_c");
+    expect(employee, "the Line Manager's own report is on the roster").toBeTruthy();
+
+    // Start the cycle (409 when an earlier run already did) and walk it to Mid-year.
+    await request.post(`${API}/api/plugins/tl_scorecard/epr-cycles/`, {
+      headers: auth,
+      data: { user: employee!.user.id, year },
+    });
+    const cycles = await get(request, token, "/api/plugins/tl_scorecard/epr-cycles/");
+    const list = (cycles.body.results ?? cycles.body) as {
+      id: number;
+      user: number;
+      year: number;
+    }[];
+    const cycle = list.find((c) => c.user === employee!.user.id && c.year === year)!;
+    for (const stage of ["goal_setting", "mid_year"]) {
+      const body: Record<string, unknown> = {
+        stage,
+        summary: `E2E ${stage}`,
+        hbpr_present: stage === "mid_year",
+      };
+      if (stage === "goal_setting") body.goal_titles = ["G1", "G2", "G3", "G4", "G5"];
+      const response = await request.post(
+        `${API}/api/plugins/tl_scorecard/epr-cycles/${cycle.id}/complete_stage/`,
+        { headers: auth, data: body }
+      );
+      expect([200, 409]).toContain(response.status());
+    }
+
+    const evidence = await get(
+      request,
+      token,
+      `/api/plugins/tl_scorecard/hbpr-evidence/?kind=epr_mid_year`
+    );
+    const rows = (evidence.body.results ?? evidence.body) as { reporting_year: number }[];
+    expect(rows.some((row) => row.reporting_year === year)).toBe(true);
   });
 
   test("cannot approve a PIP, decide a promotion, or move evidence to another assignment", async ({

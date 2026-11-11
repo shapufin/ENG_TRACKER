@@ -14,12 +14,12 @@ from rest_framework.response import Response
 from core.mixins.permissions import PluginPermissionMixin
 
 
+from ..hbpr_evidence import log_attended_stage
 from ..scope import scoreable_member_ids
 from ..models import (
     EPRCycle,
     EPRGoal,
     EPRStageRecord,
-    HbprGovernanceEvidence,
 )
 from ..epr_goal_import import (
     GoalImportError,
@@ -32,9 +32,7 @@ from ..serializers import (
     EPRGoalSerializer,
     EPRStageRecordSerializer,
 )
-from apps.users.services.hbpr_assignments import active_assignment_for_tl
 from core.mixins.permissions import is_staff_user
-from core.utils.timezone_local import business_today
 from core.mixins.viewer_scope import HbprScopedQuerysetMixin
 
 
@@ -160,33 +158,6 @@ class EPRCycleViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.M
             raise ValidationError({exc.field: [str(exc)]})
         return Response({'goal_titles': titles})
 
-    HBPR_EVIDENCE_KIND = {'mid_year': 'epr_mid_year', 'final_review': 'epr_year_end'}
-
-    @staticmethod
-    def _log_hbpr_partnership(cycle, stage, recorded_by):
-        """An attended Mid-year/Final review also records the Line Manager's
-        partnership evidence for the year (one row per assignment, kind and year),
-        so nobody logs it twice. Skipped when the employee's Line Manager has no
-        HBPR assignment in effect today."""
-        kind = EPRCycleViewSet.HBPR_EVIDENCE_KIND.get(stage)
-        profile = getattr(cycle.user, 'profile', None)
-        if kind is None or profile is None or not profile.albanian_tl_id:
-            return
-        assignment = active_assignment_for_tl(profile.albanian_tl_id)
-        if assignment is None:
-            return
-        HbprGovernanceEvidence.objects.get_or_create(
-            assignment=assignment, kind=kind, reporting_year=cycle.year,
-            defaults={
-                'occurred_on': max(business_today(), assignment.effective_from),
-                'shared_summary': (
-                    f'HBPR attended the {EPRStageRecord(stage=stage).get_stage_display()} '
-                    'review of a team member (recorded from the EPR cycle).'
-                ),
-                'recorded_by': recorded_by,
-            },
-        )
-
     @action(detail=True, methods=['post'])
     def complete_stage(self, request, pk=None):
         """The ONLY writer of `*_completed_at` and confirmed goal rows.
@@ -238,7 +209,7 @@ class EPRCycleViewSet(HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.M
                 setattr(locked, field, timezone.now())
                 locked.save(update_fields=[field, 'updated_at'])
                 if request.data.get('hbpr_present'):
-                    self._log_hbpr_partnership(locked, stage, request.user)
+                    log_attended_stage(locked, stage, request.user)
         except IntegrityError:
             # Lost a race: another request completed this stage between this
             # request's read and write — the unique constraint is the arbiter.

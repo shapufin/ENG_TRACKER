@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { EPRSection } from "./EPRSection";
 import type { EPRCycle } from "../types/tlScorecard";
 
@@ -242,5 +242,54 @@ describe("EPRSection stage tracker", () => {
     expect(tracker).toHaveTextContent(/Mid-year\s*1\/7/);
     expect(tracker).toHaveTextContent(/Final Review\s*0\/7/);
     expect(tracker).toHaveTextContent("3 of 7 employees have a cycle");
+  });
+
+  describe("overdue stages", () => {
+    const dueDates = {
+      goal_setting: "2026-03-31",
+      mid_year: "2026-09-30",
+      final_review: "2026-12-31",
+    };
+
+    afterEach(() => vi.useRealTimers());
+
+    it("counts employees still missing a stage whose due date has passed", () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-15T09:00:00Z"));
+      render(
+        <EPRSection
+          cycles={cycles}
+          year={2026}
+          teamSize={7}
+          dueDates={dueDates}
+          onParseGoals={vi.fn()}
+          onCompleteStage={vi.fn()}
+        />
+      );
+      const tracker = screen.getByRole("group", { name: "EPR stage tracker" });
+      expect(tracker).toHaveTextContent("5 overdue"); // goal setting: 7 - 2 done
+      expect(tracker).toHaveTextContent("6 overdue"); // mid-year: 7 - 1 done
+      expect(tracker).not.toHaveTextContent("7 overdue"); // final review is not due yet
+      expect(tracker).toHaveTextContent("due 31 Dec");
+    });
+
+    it("ignores cycles from other years", () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-15T09:00:00Z"));
+      const lastYear = { ...cycles[0], id: 99, year: 2025 };
+      render(
+        <EPRSection
+          cycles={[lastYear, ...cycles]}
+          year={2026}
+          teamSize={7}
+          dueDates={dueDates}
+          onParseGoals={vi.fn()}
+          onCompleteStage={vi.fn()}
+        />
+      );
+      expect(screen.getByRole("group", { name: "EPR stage tracker" })).toHaveTextContent(
+        /Goal Setting\s*2\/7/
+      );
+    });
   });
 });

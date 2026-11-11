@@ -232,17 +232,81 @@ class HbprCadenceEvidenceRecorded(NotificationType):
         return User.objects.filter(id=row.assignment.hbpr_id, is_active=True)
 
     def title(self, context):
+        if context['instance'].status == 'cancelled':
+            return 'A partnership meeting was cancelled'
         if context.get('edited'):
             return 'A partnership meeting was updated'
         return 'A partnership meeting was recorded'
 
     def message(self, context):
+        # No reason in the copy: a push or lock-screen preview must not disclose it.
+        if context['instance'].status == 'cancelled':
+            return 'Your team leader recorded a cancelled meeting for your partnership. Open the log for the reason.'
         if context.get('edited'):
             return 'Your team leader updated a cadence meeting for your partnership.'
         return 'Your team leader logged a cadence meeting for your partnership.'
 
     def dedupe_key(self, context, user):
         return _evidence_dedupe('hbpr-cadence', context, user)
+
+
+class HbprCadenceDue(NotificationType):
+    """The partnership meeting with the HBPR is due today."""
+    event_type = 'scorecard_hbpr_cadence_due'
+    label = 'Partnership meeting due today'
+    description = 'Sent to the assigned Line Manager on the day the next meeting with their HBPR is due.'
+    category = 'team'
+    notification_type = 'info'
+    push_by_default = False
+    link = '/tl-scorecard?tab=evidence'
+
+    def recipients(self, context):
+        return User.objects.filter(id=context['assignment'].albanian_tl_id, is_active=True)
+
+    def title(self, context):
+        return 'Partnership meeting due today'
+
+    def message(self, context):
+        return 'Your meeting with your HR business partner is due today. Log it, or cancel it with a reason.'
+
+    def dedupe_key(self, context, user):
+        return f'hbpr-cadence-due:{context["assignment"].pk}:{context["due_on"]}:user:{user.id}'
+
+
+class HbprCadenceOverdue(NotificationType):
+    """The partnership meeting was due and nothing was logged."""
+    event_type = 'scorecard_hbpr_cadence_overdue'
+    label = 'Partnership meeting overdue'
+    description = (
+        'Sent to the assigned Line Manager and their HBPR once the due date of the next '
+        'meeting has passed with nothing logged.'
+    )
+    category = 'oversight'
+    notification_type = 'warning'
+    push_by_default = False
+    preference_group = HBPR_MEETINGS
+    preference_group_label = 'Meetings & cadence'
+    link = '/tl-scorecard?tab=evidence'
+
+    def recipients(self, context):
+        assignment = context['assignment']
+        return User.objects.filter(
+            id__in=[assignment.albanian_tl_id, assignment.hbpr_id], is_active=True)
+
+    def link_for(self, context, user):
+        return '/hbpr?view=evidence' if user.id == context['assignment'].hbpr_id else self.link
+
+    def title(self, context):
+        return 'Partnership meeting overdue'
+
+    def message(self, context):
+        return (
+            'The meeting between a team leader and their HR business partner passed its '
+            'due date with nothing logged.'
+        )
+
+    def dedupe_key(self, context, user):
+        return f'hbpr-cadence-overdue:{context["assignment"].pk}:{context["due_on"]}:user:{user.id}'
 
 
 class HbprEprEvidenceRecorded(NotificationType):
@@ -447,5 +511,6 @@ ALL_TYPES = (
     RecordShared, PipStarted, EprStageShared, PipAwaitingApproval, PipDecided,
     PipClosed, FlagRaised, PromotionNominated, HbprCadenceEvidenceRecorded,
     HbprEprEvidenceRecorded, HbprReviewDelivered, PromotionDecided,
+    HbprCadenceDue, HbprCadenceOverdue,
     HbprAssignmentChanged, FlagResolved, EprStageCompleted, HbprMeetingChanged,
 )

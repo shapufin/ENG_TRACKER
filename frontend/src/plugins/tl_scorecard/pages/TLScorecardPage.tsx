@@ -202,6 +202,11 @@ const TLScorecardAuthoring: React.FC = () => {
     queryFn: () => tlScorecardService.listEPRCycles(),
     enabled: onOverview,
   });
+  const eprProgressQuery = useQuery({
+    queryKey: ["tl-scorecard", "epr-progress", year],
+    queryFn: async () => (await tlScorecardService.getEprProgress(year)).data,
+    enabled: onOverview,
+  });
   const partnershipQuery = useQuery({
     queryKey: ["tl-scorecard", "partnership", year],
     queryFn: async () => (await tlScorecardService.getPartnership(undefined, year)).data,
@@ -386,6 +391,8 @@ const TLScorecardAuthoring: React.FC = () => {
         escalations={escalationsQuery.data}
         pipRecords={pipRecordsQuery.data}
         eprCycles={eprCyclesQuery.data}
+        eprProgress={eprProgressQuery.data}
+        eprYear={year}
         canApprovePip={isStaff}
         isApprovingPip={approvePIPMutation.isPending}
         onApprovePip={(id) => approvePIPMutation.mutate(id)}
