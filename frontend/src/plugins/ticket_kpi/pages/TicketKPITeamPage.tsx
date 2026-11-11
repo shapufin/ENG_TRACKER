@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { PageShell } from "@/components/layout/PageShell";
+import { toneFillClass } from "@/components/ui/tone";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -129,7 +130,7 @@ export const TicketKPITeamPage: React.FC = () => {
               subtitle="This month"
               icon={Ticket}
               progressPercent={stats.total > 0 ? 100 : 0}
-              progressColorClass="bg-indigo-500"
+              progressColorClass={toneFillClass.accent}
             />
             <KPICard
               title="Members with Data"
@@ -137,7 +138,7 @@ export const TicketKPITeamPage: React.FC = () => {
               subtitle="Imported this month"
               icon={Users}
               progressPercent={stats.members > 0 ? 100 : 0}
-              progressColorClass="bg-purple-500"
+              progressColorClass={toneFillClass.neutral}
             />
             <KPICard
               title="Avg Resolution"
@@ -145,7 +146,7 @@ export const TicketKPITeamPage: React.FC = () => {
               subtitle="Per ticket"
               icon={Clock}
               progressPercent={stats.avgRes != null && stats.avgRes > 0 ? 100 : 0}
-              progressColorClass="bg-blue-500"
+              progressColorClass={toneFillClass.info}
             />
             <KPICard
               title="SLA Compliance"
@@ -153,7 +154,7 @@ export const TicketKPITeamPage: React.FC = () => {
               subtitle="Team average"
               icon={CheckCircle}
               progressPercent={stats.sla ?? undefined}
-              progressColorClass="bg-emerald-500"
+              progressColorClass={toneFillClass.success}
             />
           </div>
 
