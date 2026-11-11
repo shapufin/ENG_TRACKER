@@ -1,7 +1,11 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
+import {
+  readStoredColumnVisibility,
+  writeStoredColumnVisibility,
+} from "@/components/ui/columnVisibilityStorage";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Inbox } from "lucide-react";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
@@ -26,6 +30,9 @@ interface TeamGroupedTablesProps<T extends GroupableRow> {
   userMetaMap: Map<number, { teamNames: string[]; italianTlName?: string | null }>;
   /** Phone card layout passed to every table, grouped or not. */
   mobileCard?: DataTableCardSpec;
+  enableColumnVisibility?: boolean;
+  storageKey?: string;
+  defaultColumnVisibility?: Record<string, boolean>;
 }
 
 // fallow-ignore-next-line complexity
@@ -36,7 +43,35 @@ export const TeamGroupedTables = <T extends GroupableRow>({
   memberGroupMode,
   userMetaMap,
   mobileCard,
+  enableColumnVisibility = false,
+  storageKey,
+  defaultColumnVisibility,
 }: TeamGroupedTablesProps<T>) => {
+  const [prevStorageKey, setPrevStorageKey] = useState(storageKey);
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() =>
+    readStoredColumnVisibility(storageKey, defaultColumnVisibility)
+  );
+  if (prevStorageKey !== storageKey) {
+    setPrevStorageKey(storageKey);
+    setColumnVisibility(readStoredColumnVisibility(storageKey, defaultColumnVisibility));
+  }
+
+  const handleColumnVisibilityChange = useCallback(
+    (next: Record<string, boolean>) => {
+      setColumnVisibility(next);
+      writeStoredColumnVisibility(storageKey, next);
+    },
+    [storageKey]
+  );
+
+  const visibilityProps = enableColumnVisibility
+    ? {
+        enableColumnVisibility: true,
+        storageKey,
+        columnVisibility,
+        onColumnVisibilityChange: handleColumnVisibilityChange,
+      }
+    : {};
   const buildGroupSections = useCallback(
     (data: T[]): GroupSection<T>[] => {
       if (!data.length) return [];
@@ -88,6 +123,7 @@ export const TeamGroupedTables = <T extends GroupableRow>({
           columns={columnsBuilder(rows)}
           getRowId={(row) => row.id.toString()}
           mobileCard={mobileCard}
+          {...visibilityProps}
         />
       </GlassCard>
     );
@@ -126,6 +162,7 @@ export const TeamGroupedTables = <T extends GroupableRow>({
               columns={columnsBuilder(section.rows)}
               getRowId={(row) => row.id.toString()}
               mobileCard={mobileCard}
+              {...visibilityProps}
             />
           </GlassCard>
         );

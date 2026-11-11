@@ -241,6 +241,8 @@ const TeamManagementPage: React.FC = () => {
                 memberGroupMode={memberGroupMode}
                 userMetaMap={userMetaMap}
                 mobileCard={TEAM_OVERTIME_CARD}
+                enableColumnVisibility
+                storageKey="table-visibility-team-overview-overtime"
               />
             </LoadingStateWrapper>
           </TabsContent>
@@ -253,6 +255,8 @@ const TeamManagementPage: React.FC = () => {
                 memberGroupMode={memberGroupMode}
                 userMetaMap={userMetaMap}
                 mobileCard={TEAM_STANDBY_CARD}
+                enableColumnVisibility
+                storageKey="table-visibility-team-overview-standby"
               />
             </LoadingStateWrapper>
           </TabsContent>
@@ -265,6 +269,8 @@ const TeamManagementPage: React.FC = () => {
                 memberGroupMode={memberGroupMode}
                 userMetaMap={userMetaMap}
                 mobileCard={TEAM_LEAVE_CARD}
+                enableColumnVisibility
+                storageKey="table-visibility-team-overview-leave"
               />
             </LoadingStateWrapper>
           </TabsContent>

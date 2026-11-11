@@ -39,6 +39,7 @@ import { ColumnVisibilityMenu } from "./ColumnVisibilityMenu";
 import { EmptyState } from "./EmptyState";
 import { RowActionsPill } from "./RowActionsPill";
 import { DataTableCards, MOBILE_CARD_QUERY, type DataTableCardSpec } from "./DataTableCards";
+import { readStoredColumnVisibility, writeStoredColumnVisibility } from "./columnVisibilityStorage";
 
 /** The actions column is never user-hideable; drop any persisted or emitted `actions` key. */
 const withoutActions = (visibility: ColumnVisibilityState): ColumnVisibilityState =>
@@ -123,29 +124,7 @@ export const DataTable = function DataTable<TData extends RowData>({
   // Initialize column visibility from localStorage or external prop
   const [internalColumnVisibility, setInternalColumnVisibility] = React.useState<
     Record<string, boolean>
-  >(() => {
-    if (storageKey) {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          // Check if the saved state has a version key; if not, it's old format
-          if (!parsed._version) {
-            // Clear old format visibility state
-            localStorage.removeItem(storageKey);
-            return defaultColumnVisibility ?? {};
-          }
-          // Remove metadata before returning the column visibility map.
-          const visibility = { ...parsed };
-          delete (visibility as { _version?: unknown })._version;
-          return visibility;
-        } catch {
-          return defaultColumnVisibility ?? {};
-        }
-      }
-    }
-    return defaultColumnVisibility ?? {};
-  });
+  >(() => readStoredColumnVisibility(storageKey, defaultColumnVisibility));
 
   const columnVisibility = React.useMemo(
     () => withoutActions(externalColumnVisibility ?? internalColumnVisibility),
@@ -162,9 +141,7 @@ export const DataTable = function DataTable<TData extends RowData>({
       } else {
         setInternalColumnVisibility(newVisibility);
       }
-      if (storageKey) {
-        localStorage.setItem(storageKey, JSON.stringify({ _version: 1, ...newVisibility }));
-      }
+      writeStoredColumnVisibility(storageKey, newVisibility);
     },
     [onColumnVisibilityChange, storageKey, columnVisibility]
   );
