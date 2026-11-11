@@ -322,7 +322,7 @@ describe("TLScorecardPage", () => {
     expect(await screen.findByText("Elda Partner")).toBeInTheDocument();
     expect(screen.getByText("Mid-year EPR: not logged")).toBeInTheDocument();
     // The Line Manager authors the evidence.
-    expect(screen.getByRole("button", { name: /add log entry/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /log cadence meeting/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /change schedule/i })).toBeInTheDocument();
     perms.value = { isAdmin: false };
   });
@@ -331,7 +331,7 @@ describe("TLScorecardPage", () => {
     mockDefaults();
     renderPage("/tl-scorecard?tab=evidence");
     expect(await screen.findByText("No HR business partner assigned yet")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /add log entry/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /log cadence meeting/i })).not.toBeInTheDocument();
   });
 
   it("does not fetch the HBPR partnership on the overview tab", async () => {

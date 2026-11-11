@@ -111,7 +111,7 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
             {canAuthor && (
               <Button variant="outline" size="sm" onClick={openCreate}>
                 <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                Add log entry
+                Log cadence meeting
               </Button>
             )}
           </div>

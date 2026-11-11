@@ -92,6 +92,7 @@ const PACK: YearEndEvidencePack = {
   meetings: [],
   epr_mid_year: null,
   epr_year_end: null,
+  employee_epr: [],
 };
 
 const renderSection = (
@@ -194,12 +195,12 @@ describe("HbprPartnershipSection", () => {
   it("tells an unpaired team leader there is no HBPR yet", () => {
     renderSection({ partnership: { reporting_year: 2026, assignment: null } });
     expect(screen.getByText("No HR business partner assigned yet")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /add log entry/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /log cadence meeting/i })).not.toBeInTheDocument();
   });
 
   it("is read-only for a viewer who cannot author", () => {
     renderSection({ canAuthor: false, evidence: [EVIDENCE] });
-    expect(screen.queryByRole("button", { name: /add log entry/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /log cadence meeting/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
     expect(screen.getByText("Weekly governance sync.")).toBeInTheDocument();
   });
@@ -212,7 +213,7 @@ describe("HbprPartnershipSection", () => {
 
   it("records a cadence meeting for the assignment", async () => {
     const { onCreate } = renderSection();
-    fireEvent.click(screen.getByRole("button", { name: /add log entry/i }));
+    fireEvent.click(screen.getByRole("button", { name: /log cadence meeting/i }));
 
     fireEvent.change(screen.getByLabelText("Summary"), { target: { value: "Discussed Q2 goals" } });
     fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
@@ -229,23 +230,11 @@ describe("HbprPartnershipSection", () => {
     );
   });
 
-  it("requires a reporting year for EPR participation", async () => {
-    const { onCreate } = renderSection();
-    fireEvent.click(screen.getByRole("button", { name: /add log entry/i }));
-
-    fireEvent.click(screen.getByRole("option", { name: "EPR mid-year participation" }));
-    const yearInput = await screen.findByLabelText(/^Reporting year/);
-    fireEvent.change(yearInput, { target: { value: "1999" } });
-    expect(screen.getByRole("alert")).toHaveTextContent(/between 2000 and 2100/i);
-    expect(screen.getByRole("button", { name: "Save entry" })).toBeDisabled();
-
-    fireEvent.change(yearInput, { target: { value: "2026" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save entry" }));
-    await waitFor(() =>
-      expect(onCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ kind: "epr_mid_year", reporting_year: 2026 })
-      )
-    );
+  it("offers no manual EPR entry: those rows come from the employee EPR stage", () => {
+    renderSection();
+    fireEvent.click(screen.getByRole("button", { name: /log cadence meeting/i }));
+    expect(screen.queryByLabelText(/entry type/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Reporting year/)).not.toBeInTheDocument();
   });
 
   it("edits an existing evidence row through the dialog", async () => {

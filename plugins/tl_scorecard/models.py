@@ -359,6 +359,8 @@ class EPRStageRecord(TrackedFieldsMixin, BaseModel):
         blank=True, help_text='Link to the review artifact (e.g. Workday).'
     )
     shared_with_employee = models.BooleanField(default=False)
+    hbpr_present = models.BooleanField(
+        default=False, help_text='The HR business partner attended this review.')
     recorded_by = models.ForeignKey(
         User, on_delete=models.PROTECT, related_name='epr_stage_records'
     )

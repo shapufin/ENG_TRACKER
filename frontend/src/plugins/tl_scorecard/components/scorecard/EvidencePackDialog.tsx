@@ -11,7 +11,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { YearEndEvidencePack } from "../../types/tlScorecard";
+import type {
+  YearEndEmployeeEpr,
+  YearEndEmployeeStage,
+  YearEndEvidencePack,
+} from "../../types/tlScorecard";
 import { CADENCE_LABELS, formatDate } from "../hbpr/hbprMeta";
 
 interface EvidencePackDialogProps {
@@ -158,6 +162,8 @@ const PackBody: React.FC<{ pack: YearEndEvidencePack }> = ({ pack }) => (
       </div>
     )}
 
+    <EmployeeEprTable rows={pack.employee_epr ?? []} />
+
     {[pack.epr_mid_year, pack.epr_year_end].some(Boolean) && (
       <div>
         <h3 className="text-muted-foreground flex items-center gap-1.5 font-mono text-xs font-semibold tracking-wider uppercase">
@@ -174,6 +180,44 @@ const PackBody: React.FC<{ pack: YearEndEvidencePack }> = ({ pack }) => (
     )}
   </div>
 );
+
+const StageCell: React.FC<{ stage: YearEndEmployeeStage | null }> = ({ stage }) =>
+  stage === null ? (
+    <Badge variant="outline">Not held</Badge>
+  ) : (
+    <Badge variant={stage.hbpr_present ? "success" : "warning"}>
+      {stage.hbpr_present ? "HBPR present" : "HBPR absent"} · {stage.completed_on}
+    </Badge>
+  );
+
+/** Each employee's Mid-year and Final Review, and whether the HBPR attended. */
+const EmployeeEprTable: React.FC<{ rows: YearEndEmployeeEpr[] }> = ({ rows }) => {
+  if (rows.length === 0) return null;
+  const present = (pick: (row: YearEndEmployeeEpr) => YearEndEmployeeStage | null) =>
+    rows.filter((row) => pick(row)?.hbpr_present).length;
+  return (
+    <div>
+      <h3 className="text-muted-foreground flex items-center gap-1.5 font-mono text-xs font-semibold tracking-wider uppercase">
+        Employee EPR meetings
+      </h3>
+      <p className="text-muted-foreground mt-1 text-xs">
+        HBPR present: Mid-year {present((row) => row.mid_year)}/{rows.length}, Final Review{" "}
+        {present((row) => row.final_review)}/{rows.length}
+      </p>
+      <ul className="divide-border/50 mt-2 divide-y">
+        {rows.map((row) => (
+          <li key={row.user_id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
+            <span className="min-w-0 flex-1 truncate font-medium">{row.user_name}</span>
+            <span className="text-muted-foreground text-xs">Mid-year</span>
+            <StageCell stage={row.mid_year} />
+            <span className="text-muted-foreground text-xs">Final</span>
+            <StageCell stage={row.final_review} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
 
 /**
  * The packaged per-assignment+year summary the Line Manager hands to their

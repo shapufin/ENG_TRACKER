@@ -394,7 +394,8 @@ class EPRStageRecordSerializer(serializers.ModelSerializer):
         model = EPRStageRecord
         fields = [
             'id', 'cycle', 'stage', 'stage_display', 'summary', 'reference_url',
-            'shared_with_employee', 'recorded_by', 'recorded_by_name', 'created_at',
+            'shared_with_employee', 'hbpr_present', 'recorded_by', 'recorded_by_name',
+            'created_at',
         ]
         read_only_fields = ['id', 'cycle', 'stage', 'recorded_by', 'created_at']
 
@@ -451,6 +452,7 @@ class EPRCycleSerializer(serializers.ModelSerializer):
                         'stage': r.stage,
                         'has_reference': bool(r.reference_url),
                         'shared_with_employee': r.shared_with_employee,
+                        'hbpr_present': r.hbpr_present,
                         'recorded_by_name': _display_name(r.recorded_by),
                         'created_at': r.created_at,
                     }

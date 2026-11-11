@@ -51,6 +51,7 @@ const completedCycle: EPRCycle = {
       summary: "Five SMART goals agreed with Jane.",
       reference_url: "https://workday.example/goals/3",
       shared_with_employee: true,
+      hbpr_present: false,
       recorded_by: 9,
       recorded_by_name: "Enri Leader",
       created_at: "2026-03-01T10:00:00Z",
@@ -198,6 +199,7 @@ describe("EPRSection", () => {
         summary: "No Workday changes.",
         reference_url: "",
         shared_with_employee: false,
+        hbpr_present: false,
       })
     );
   });
