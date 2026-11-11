@@ -437,6 +437,7 @@ class EngagementHbprDeniedTests(EngagementAPITests):
     def test_multi_role_hbpr_tl_sees_only_their_own_rows(self):
         _assign_tl_role(self.hbpr, 'italian_tl')
         team = _make_team('Team H', 'TH', leader=self.hbpr)
+        _join(_make_user('hbpr_member'), team)
         compute_tl_metric(self.hbpr, team, self.month)
         resp = self._call('team-breakdown', self.hbpr, month=self.month.isoformat())
         self.assertEqual(resp.status_code, 200)

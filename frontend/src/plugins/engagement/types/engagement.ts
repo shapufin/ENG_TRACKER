@@ -84,6 +84,9 @@ export interface EngagementTeamBreakdownRow {
   decisions_on_holidays: number;
   next_deadline_at: string | null;
   computed_at: string | null;
+  frozen?: boolean;
+  manager_changed?: boolean;
+  manager_changed_at?: string | null;
 }
 
 export interface EngagementStatus {

@@ -265,6 +265,7 @@ class StaffCoverageAPITests(TestCase):
         self.leader = _make_user('cov_api_leader')
         _assign_tl_role(self.leader, 'italian_tl')
         self.team = _make_team('Cov API Team', 'COVAPI', leader=self.leader)
+        _join(_make_user('cov_api_member'), self.team)
         call_command('seed_plugin_permissions')
 
     def test_staff_read_creates_rows_for_every_tl(self):
@@ -335,6 +336,7 @@ class ScopeCorrectnessTests(TestCase):
     def test_soft_deleted_team_gets_no_snapshot(self):
         leader = _make_user('deleted_team_leader')
         team = _make_team('Deleted Team', 'DELT', leader=leader)
+        _join(_make_user('deleted_team_member'), team)
         self.assertIn((leader.id, team.id), [(lead.id, t.id) for lead, t in leader_team_pairs()])  # positive control
         team.soft_delete()
         self.assertNotIn((leader.id, team.id), [(lead.id, t.id) for lead, t in leader_team_pairs()])
@@ -354,6 +356,7 @@ class ScopeCorrectnessTests(TestCase):
     def test_deactivated_tl_rows_are_hidden_from_staff_reads(self):
         leader = _make_user('gone_leader')
         team = _make_team('Gone Team', 'GONE', leader=leader)
+        _join(_make_user('gone_member'), team)
         compute_tl_metric(leader, team, OCT)
         staff = _make_user('scope_staff', is_staff=True)
         call_command('seed_plugin_permissions')

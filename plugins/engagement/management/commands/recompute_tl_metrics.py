@@ -13,7 +13,12 @@ from django.core.management.base import BaseCommand, CommandError
 
 from core.utils.metrics_freeze import is_frozen
 from plugins.engagement.models import TLApprovalMetric
-from plugins.engagement.services import compute_tl_metric, leader_team_pairs, months_with_activity
+from plugins.engagement.services import (
+    compute_tl_metric,
+    leader_team_pairs,
+    months_with_activity,
+    sync_manager_change_markers,
+)
 from core.utils.timezone_local import business_today
 
 
@@ -62,18 +67,40 @@ class Command(BaseCommand):
         pairs = leader_team_pairs()
         if leader_id:
             pairs = [(leader, team) for leader, team in pairs if leader.id == leader_id]
-
-        if not pairs:
-            self.stdout.write(self.style.WARNING('No (leader, team) pairs found.'))
-            return
+        pair_keys = {(leader.id, team.id) for leader, team in pairs}
 
         computed = 0
+        pruned = 0
+        sync_leaders = set()
         for target in months:
+            target_month = target.replace(day=1)
             for leader, team in pairs:
-                if not options.get('include_frozen') and self._is_final(leader, team, target.replace(day=1)):
+                if not options.get('include_frozen') and self._is_final(leader, team, target_month):
                     continue
-                compute_tl_metric(leader, team, target.replace(day=1))
+                compute_tl_metric(leader, team, target_month)
                 computed += 1
                 self.stdout.write(f'  Computed: leader={leader.username} team={team.name} month={target}')
 
-        self.stdout.write(self.style.SUCCESS(f'Done: {computed} snapshot(s) computed for {len(months)} month(s).'))
+            existing = TLApprovalMetric.objects.filter(month=target_month, team__isnull=False)
+            if leader_id:
+                existing = existing.filter(leader_id=leader_id)
+            sync_leaders |= set(existing.values_list('leader_id', flat=True).distinct())
+            orphan_pks = [
+                row.pk
+                for row in existing
+                if (row.leader_id, row.team_id) not in pair_keys
+                and (options.get('include_frozen') or not is_frozen(row.month, row.computed_at))
+            ]
+            if orphan_pks:
+                pruned += TLApprovalMetric.objects.filter(pk__in=orphan_pks).delete()[0]
+
+        if sync_leaders:
+            sync_manager_change_markers(sync_leaders)
+
+        if not pairs and not pruned:
+            self.stdout.write(self.style.WARNING('No (leader, team) pairs found.'))
+            return
+
+        self.stdout.write(
+            self.style.SUCCESS(f'Done: {computed} snapshot(s) computed, {pruned} pruned for {len(months)} month(s).')
+        )

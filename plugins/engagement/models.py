@@ -74,6 +74,17 @@ class TLApprovalMetric(BaseModel):
         blank=True,
         help_text='Earliest deadline among pending requests not yet past due; passing it makes the snapshot stale.',
     )
+    member_ids = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Sorted active managed user IDs included in this snapshot.',
+    )
+    manager_changed_at = models.DateField(
+        null=True,
+        blank=True,
+        help_text='Business date when this leader lost all active managed members in this active team '
+                  '(noted on frozen snapshots only).',
+    )
     computed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:

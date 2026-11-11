@@ -12,9 +12,13 @@ class TLApprovalMetricSerializer(serializers.ModelSerializer):
     team_code = serializers.SerializerMethodField()
 
     frozen = serializers.SerializerMethodField()
+    manager_changed = serializers.SerializerMethodField()
 
     def get_frozen(self, obj) -> bool:
         return is_frozen(obj.month, obj.computed_at)
+
+    def get_manager_changed(self, obj) -> bool:
+        return bool(obj.manager_changed_at and (obj.team_id is None or obj.team.is_active))
 
     def get_team_name(self, obj):
         return obj.team.name if obj.team_id else obj.team_name
@@ -30,5 +34,5 @@ class TLApprovalMetricSerializer(serializers.ModelSerializer):
             'resubmission_count', 'engagement_score', 'decisions_during_leave',
             'decisions_on_holidays', 'score_speed', 'score_approval_rate',
             'score_responsiveness', 'score_consistency', 'closure_on_time', 'late_closure_penalty',
-            'next_deadline_at', 'computed_at', 'frozen',
+            'next_deadline_at', 'computed_at', 'frozen', 'manager_changed', 'manager_changed_at',
         ]
