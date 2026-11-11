@@ -328,6 +328,46 @@ def _pack_name(user):
     return user.get_full_name() or user.username
 
 
+def employee_epr_presence(leader, year: int) -> list[dict]:
+    """Per employee of ``leader``: when Mid-year and Final Review were held and
+    whether the HBPR attended. Dates and the flag only, never the summary, so
+    an HBPR can read it without seeing review content."""
+    from django.contrib.auth.models import User
+
+    from apps.users.services.team_leaders import albanian_tl_user_ids, italian_tl_user_ids
+
+    ids = leader.profile.get_team_member_ids()
+    ids = ids - albanian_tl_user_ids(among=ids) - italian_tl_user_ids(among=ids)
+    people = list(
+        User.objects.filter(id__in=ids, is_active=True)
+        .order_by('last_name', 'first_name', 'username')
+    )
+    cycles = {
+        c.user_id: c
+        for c in EPRCycle.objects.filter(user_id__in=ids, year=year).prefetch_related('stage_records')
+    }
+
+    def _stage(cycle, stage):
+        done_at = getattr(cycle, f'{stage}_completed_at', None) if cycle else None
+        if not done_at:
+            return None
+        record = next((r for r in cycle.stage_records.all() if r.stage == stage), None)
+        return {
+            'completed_on': done_at.date().isoformat(),
+            'hbpr_present': bool(record and record.hbpr_present),
+        }
+
+    return [
+        {
+            'user_id': person.id,
+            'user_name': _pack_name(person),
+            'mid_year': _stage(cycles.get(person.id), 'mid_year'),
+            'final_review': _stage(cycles.get(person.id), 'final_review'),
+        }
+        for person in people
+    ]
+
+
 def build_year_end_pack(assignment, year: int, evidence_qs) -> dict:
     """Held-vs-expected cadence + EPR participations for one assignment+year
     — the packaged summary the Line Manager hands to their manager at year-end.
@@ -405,6 +445,7 @@ def build_year_end_pack(assignment, year: int, evidence_qs) -> dict:
         'meetings': [_row(r) for r in meetings],
         'epr_mid_year': _row(epr_mid),
         'epr_year_end': _row(epr_end),
+        'employee_epr': employee_epr_presence(assignment.albanian_tl, year),
     }
 
 

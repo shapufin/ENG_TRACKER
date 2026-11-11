@@ -81,9 +81,7 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <caption className="sr-only">
-              Assigned Line Managers and their governance state
-            </caption>
+            <caption className="sr-only">Assigned Line Managers and their governance state</caption>
             <thead>
               <tr className={TABLE_HEAD_ROW_CLASS}>
                 <th scope="col" className={HEAD_CELL}>

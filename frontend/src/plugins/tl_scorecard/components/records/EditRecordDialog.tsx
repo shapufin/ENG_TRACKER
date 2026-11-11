@@ -5,7 +5,14 @@ import { LogMeetingDialog } from "../LogMeetingDialog";
 import { LogReviewDeliveryDialog } from "../LogReviewDeliveryDialog";
 import { NominatePromotionDialog } from "../NominatePromotionDialog";
 import { OpenPIPDialog } from "../OpenPIPDialog";
-import type { Absence, IdleFlag, Meeting, PIPRecord, PromotionFlag, ReviewDelivery } from "../../types/tlScorecard";
+import type {
+  Absence,
+  IdleFlag,
+  Meeting,
+  PIPRecord,
+  PromotionFlag,
+  ReviewDelivery,
+} from "../../types/tlScorecard";
 import type { RecordKind, RecordRow } from "./recordKinds";
 
 interface EditRecordDialogProps {
@@ -16,7 +23,12 @@ interface EditRecordDialogProps {
 }
 
 /** Re-uses each kind's create dialog in edit mode. Mounted only while editing, so it seeds from `record`. */
-export const EditRecordDialog: React.FC<EditRecordDialogProps> = ({ kind, record, onClose, onSubmit }) => {
+export const EditRecordDialog: React.FC<EditRecordDialogProps> = ({
+  kind,
+  record,
+  onClose,
+  onSubmit,
+}) => {
   const common = {
     open: true,
     mode: "edit" as const,

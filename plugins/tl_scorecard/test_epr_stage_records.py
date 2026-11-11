@@ -675,3 +675,109 @@ class EprMetricsEvidenceTests(TestCase):
         result = epr_metrics({member.id}, 2026)
         self.assertEqual(result['stages_completed'], 1)
         self.assertEqual(result['stages_with_evidence'], 1)
+
+
+class HbprPresentInEmployeeEprTests(TestCase):
+    """The HBPR attends each employee's EPR; the pack lists it per employee."""
+
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        call_command('seed_plugin_permissions')
+        for code in ('hbpr', 'albanian_tl'):
+            Role.objects.get_or_create(code=code, defaults={'name': code})
+        self.hbpr = _make_user('hbpr_present')
+        assign_role(self.hbpr, 'hbpr')
+        self.tl = _make_user('tl_present')
+        assign_role(self.tl, 'albanian_tl')
+        self.a = _make_user('emp_a_present')
+        self.b = _make_user('emp_b_present')
+        for emp in (self.a, self.b):
+            emp.profile.albanian_tl = self.tl
+            emp.profile.save()
+        self.assignment = HbprAlbanianTlAssignment.objects.create(
+            hbpr=self.hbpr, albanian_tl=self.tl, cadence='weekly',
+            effective_from=date(2020, 1, 1))
+        self.cycle_a = EPRCycle.objects.create(
+            user=self.a, year=2026, goal_setting_completed_at=timezone.now(),
+            mid_year_completed_at=timezone.now())
+        EPRStageRecord.objects.create(
+            cycle=self.cycle_a, stage='mid_year', summary='Private.',
+            recorded_by=self.tl, hbpr_present=True)
+
+    def _pack(self, user):
+        request = self.factory.get('/x/', {'assignment': self.assignment.id, 'year': '2026'})
+        force_authenticate(request, user=user)
+        return HbprGovernanceEvidenceViewSet.as_view({'get': 'year_end_pack'})(request)
+
+    def test_pack_lists_every_employee_with_hbpr_presence_and_no_summary(self):
+        for viewer in (self.tl, self.hbpr):
+            with self.subTest(viewer=viewer.username):
+                resp = self._pack(viewer)
+                self.assertEqual(resp.status_code, 200, resp.data)
+                rows = {r['user_id']: r for r in resp.data['employee_epr']}
+                self.assertEqual(set(rows), {self.a.id, self.b.id})
+                self.assertTrue(rows[self.a.id]['mid_year']['hbpr_present'])
+                self.assertIsNone(rows[self.a.id]['final_review'])
+                self.assertIsNone(rows[self.b.id]['mid_year'])
+                self.assertNotIn('summary', rows[self.a.id]['mid_year'])
+
+    def test_complete_stage_stores_the_flag(self):
+        cycle = EPRCycle.objects.create(
+            user=self.b, year=2026, goal_setting_completed_at=timezone.now())
+        EPRGoal.objects.bulk_create(
+            [EPRGoal(cycle=cycle, description=f'G{i}') for i in range(5)])
+        request = self.factory.post(
+            f'/x/{cycle.id}/complete_stage/',
+            {'stage': 'mid_year', 'summary': 'Done.', 'hbpr_present': True}, format='json')
+        force_authenticate(request, user=self.tl)
+        resp = EPRCycleViewSet.as_view({'post': 'complete_stage'})(request, pk=cycle.id)
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertTrue(EPRStageRecord.objects.get(cycle=cycle, stage='mid_year').hbpr_present)
+
+    def _complete(self, cycle, stage, **extra):
+        request = self.factory.post(
+            f'/x/{cycle.id}/complete_stage/',
+            {'stage': stage, 'summary': 'Done.', **extra}, format='json')
+        force_authenticate(request, user=self.tl)
+        return EPRCycleViewSet.as_view({'post': 'complete_stage'})(request, pk=cycle.id)
+
+    def _ready_cycle(self, user, **done):
+        cycle = EPRCycle.objects.create(
+            user=user, year=2026, goal_setting_completed_at=timezone.now(), **done)
+        EPRGoal.objects.bulk_create(
+            [EPRGoal(cycle=cycle, description=f'G{i}') for i in range(5)])
+        return cycle
+
+    def test_hbpr_present_creates_the_partnership_row_once(self):
+        first = self._ready_cycle(self.b)
+        self.assertEqual(self._complete(first, 'mid_year', hbpr_present=True).status_code, 200)
+        rows = HbprGovernanceEvidence.objects.filter(
+            assignment=self.assignment, kind='epr_mid_year', reporting_year=2026)
+        self.assertEqual(rows.count(), 1)
+        self.assertEqual(rows.get().recorded_by, self.tl)
+        # A second employee's attended review reuses the same row.
+        third = _make_user('emp_c_present')
+        third.profile.albanian_tl = self.tl
+        third.profile.save()
+        self.tl.profile._scoreable_ids = None  # per-instance scope cache
+        second = self._ready_cycle(third)
+        self.assertEqual(self._complete(second, 'mid_year', hbpr_present=True).status_code, 200)
+        self.assertEqual(rows.count(), 1)
+
+    def test_final_review_maps_to_the_year_end_row(self):
+        cycle = self._ready_cycle(self.b, mid_year_completed_at=timezone.now())
+        self.assertEqual(self._complete(cycle, 'final_review', hbpr_present=True).status_code, 200)
+        self.assertTrue(HbprGovernanceEvidence.objects.filter(
+            assignment=self.assignment, kind='epr_year_end', reporting_year=2026).exists())
+
+    def test_no_row_when_hbpr_absent(self):
+        cycle = self._ready_cycle(self.b)
+        self._complete(cycle, 'mid_year', hbpr_present=False)
+        self.assertFalse(HbprGovernanceEvidence.objects.exists())
+
+    def test_no_row_when_the_assignment_has_ended(self):
+        self.assignment.effective_to = date(2020, 6, 1)
+        self.assignment.save()
+        cycle = self._ready_cycle(self.b)
+        self.assertEqual(self._complete(cycle, 'mid_year', hbpr_present=True).status_code, 200)
+        self.assertFalse(HbprGovernanceEvidence.objects.exists())

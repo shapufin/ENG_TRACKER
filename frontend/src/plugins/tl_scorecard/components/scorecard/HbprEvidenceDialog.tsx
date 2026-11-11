@@ -30,8 +30,8 @@ interface HbprEvidenceDialogProps {
 }
 
 /**
- * Records the Line Manager's governance evidence: a recurring cadence meeting, or their
- * participation in the mid-year / year-end EPR. Only the assigned Line Manager (and
+ * Records a cadence meeting with the HBPR, or edits an existing entry. Mid-year and
+ * year-end EPR participation is created automatically from the employee EPR stage. Only the assigned Line Manager (and
  * staff) may author it — the HBPR participates but is read-only.
  */
 export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
@@ -86,7 +86,7 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={isEdit ? "Edit log entry" : "Add log entry"}
+      title={isEdit ? "Edit log entry" : "Log cadence meeting"}
       description="Logged by the assigned Line Manager. Your HBPR and staff can read it."
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
@@ -94,23 +94,28 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
       submitDisabled={!canSubmit}
     >
       <div className="space-y-4">
-        <div className="space-y-2">
-          <FieldLabel htmlFor="hbpr-evidence-kind" required>
-            Entry type
-          </FieldLabel>
-          <Select value={kind} onValueChange={(v) => setKind(v as HbprEvidenceKind)}>
-            <SelectTrigger id="hbpr-evidence-kind">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {KINDS.map((k) => (
-                <SelectItem key={k} value={k}>
-                  {EVIDENCE_KIND_LABELS[k]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* New EPR participation rows come from ticking "HR business partner attended"
+            when an employee's Mid-year or Final Review is completed; only an existing
+            row can be edited here. */}
+        {isEdit && (
+          <div className="space-y-2">
+            <FieldLabel htmlFor="hbpr-evidence-kind" required>
+              Entry type
+            </FieldLabel>
+            <Select value={kind} onValueChange={(v) => setKind(v as HbprEvidenceKind)}>
+              <SelectTrigger id="hbpr-evidence-kind">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {KINDS.map((k) => (
+                  <SelectItem key={k} value={k}>
+                    {EVIDENCE_KIND_LABELS[k]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">

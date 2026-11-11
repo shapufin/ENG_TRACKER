@@ -72,6 +72,7 @@ describe("CompleteEprStageDialog", () => {
       target: { value: "https://workday.example/review/42" },
     });
     fireEvent.click(screen.getByRole("checkbox", { name: /share with employee/i }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /HR business partner attended/i }));
     fireEvent.click(screen.getByRole("button", { name: "Complete stage" }));
 
     await waitFor(() =>
@@ -79,6 +80,7 @@ describe("CompleteEprStageDialog", () => {
         summary: "Year-end rating agreed; promotion case opened.",
         reference_url: "https://workday.example/review/42",
         shared_with_employee: true,
+        hbpr_present: true,
       })
     );
     expect(onOpenChange).toHaveBeenCalledWith(false);
@@ -190,6 +192,7 @@ describe("CompleteEprStageDialog", () => {
         summary: "Evidence summary.",
         reference_url: "",
         shared_with_employee: false,
+        hbpr_present: false,
       })
     );
   });

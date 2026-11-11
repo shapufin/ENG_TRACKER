@@ -35,6 +35,20 @@ const PACK: YearEndEvidencePack = {
     recorded_by_name: "Enri Leader",
   },
   epr_year_end: null,
+  employee_epr: [
+    {
+      user_id: 1,
+      user_name: "Alice A",
+      mid_year: { completed_on: "2026-06-20", hbpr_present: true },
+      final_review: null,
+    },
+    {
+      user_id: 2,
+      user_name: "Bob B",
+      mid_year: { completed_on: "2026-06-21", hbpr_present: false },
+      final_review: null,
+    },
+  ],
 };
 
 const renderDialog = (load = vi.fn().mockResolvedValue(PACK)) =>
@@ -48,6 +62,15 @@ describe("EvidencePackDialog", () => {
     expect(screen.getByText("Elda Partner")).toBeInTheDocument();
     expect(screen.getByText("31/40")).toBeInTheDocument();
     expect(screen.getByText("77.5%")).toBeInTheDocument();
+  });
+
+  it("shows each employee's EPR meetings and whether the HBPR attended", async () => {
+    renderDialog();
+    expect(await screen.findByText("Employee EPR meetings")).toBeInTheDocument();
+    expect(screen.getByText(/Mid-year 1\/2, Final Review 0\/2/)).toBeInTheDocument();
+    expect(screen.getByText("Alice A")).toBeInTheDocument();
+    expect(screen.getByText(/HBPR present · 2026-06-20/)).toBeInTheDocument();
+    expect(screen.getByText(/HBPR absent · 2026-06-21/)).toBeInTheDocument();
   });
 
   it("lists the meetings and the EPR participation state", async () => {

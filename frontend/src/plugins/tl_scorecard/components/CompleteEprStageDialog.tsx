@@ -33,6 +33,8 @@ interface CompleteEprStageValues {
   summary: string;
   reference_url: string;
   shared_with_employee: boolean;
+  /** Only sent for Mid-year and Final Review, the meetings the HBPR may attend. */
+  hbpr_present?: boolean;
   goal_titles?: string[];
 }
 
@@ -74,6 +76,8 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
   const [summary, setSummary] = useState("");
   const [referenceUrl, setReferenceUrl] = useState("");
   const [shared, setShared] = useState(false);
+  const [hbprPresent, setHbprPresent] = useState(false);
+  const hasHbprMeeting = stage === "mid_year" || stage === "final_review";
   const [goalTitles, setGoalTitles] = useState<string[]>(
     supportsGoals && initialGoalTitles.length === 0 ? [""] : initialGoalTitles
   );
@@ -130,6 +134,7 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
         reference_url: referenceUrl.trim(),
         shared_with_employee: shared,
       };
+      if (hasHbprMeeting) values.hbpr_present = hbprPresent;
       if (supportsGoals && (stage === "goal_setting" || goalsChanged)) {
         values.goal_titles = normalizedGoalTitles;
       }
@@ -296,6 +301,26 @@ export const CompleteEprStageDialog: React.FC<CompleteEprStageDialogProps> = ({
               placeholder="https://… (e.g. the Workday review)"
             />
           </div>
+
+          {hasHbprMeeting && (
+            <label
+              htmlFor="epr-stage-hbpr"
+              className="flex cursor-pointer items-start gap-2.5 text-sm"
+            >
+              <Checkbox
+                id="epr-stage-hbpr"
+                className="mt-0.5"
+                checked={hbprPresent}
+                onCheckedChange={(checked) => setHbprPresent(checked === true)}
+              />
+              <span>
+                HR business partner attended
+                <span className="text-muted-foreground block text-xs">
+                  Shown in the partnership log; the HBPR never sees the summary.
+                </span>
+              </span>
+            </label>
+          )}
 
           <label
             htmlFor="epr-stage-share"

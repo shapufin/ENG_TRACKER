@@ -248,6 +248,7 @@ export interface EPRStageRecord {
   summary: string;
   reference_url: string;
   shared_with_employee: boolean;
+  hbpr_present: boolean;
   recorded_by: number;
   recorded_by_name: string | null;
   created_at: string;
@@ -263,6 +264,7 @@ export interface EPRStageRecordMeta {
   stage: EPRStage;
   has_reference: boolean;
   shared_with_employee: boolean;
+  hbpr_present: boolean;
   recorded_by_name: string | null;
   created_at: string;
 }
@@ -287,6 +289,7 @@ export interface CompleteEprStagePayload {
   summary: string;
   reference_url?: string;
   shared_with_employee?: boolean;
+  hbpr_present?: boolean;
   /** Confirmed Workday titles; allowed at Goal Setting and Mid-year only. */
   goal_titles?: string[];
 }
@@ -319,6 +322,20 @@ export interface YearEndEvidencePack {
   meetings: YearEndPackEvidenceRow[];
   epr_mid_year: YearEndPackEvidenceRow | null;
   epr_year_end: YearEndPackEvidenceRow | null;
+  /** One row per scoreable employee: when each stage was held and whether the HBPR attended. */
+  employee_epr: YearEndEmployeeEpr[];
+}
+
+export interface YearEndEmployeeStage {
+  completed_on: string;
+  hbpr_present: boolean;
+}
+
+export interface YearEndEmployeeEpr {
+  user_id: number;
+  user_name: string | null;
+  mid_year: YearEndEmployeeStage | null;
+  final_review: YearEndEmployeeStage | null;
 }
 
 /** HBPR workspace (GET hbpr/overview/ and hbpr-evidence/). */
