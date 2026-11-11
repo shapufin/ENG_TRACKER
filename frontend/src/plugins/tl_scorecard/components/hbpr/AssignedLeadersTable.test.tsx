@@ -43,9 +43,10 @@ describe("AssignedLeadersTable", () => {
   it("scopes the evidence action to the reporting year it was given", () => {
     renderTable([LEADER], 2025);
 
-    expect(
-      screen.getAllByRole("link", { name: /partnership log.*alba leader/i })[0]
-    ).toHaveAttribute("href", "/hbpr?view=evidence&year=2025&leader=8");
+    expect(screen.getAllByRole("link", { name: /partnership log.*alba leader/i })[0]).toHaveAttribute(
+      "href",
+      "/hbpr?view=evidence&year=2025&leader=8"
+    );
   });
 
   it("shows the empty state and no table when no leaders are assigned", () => {

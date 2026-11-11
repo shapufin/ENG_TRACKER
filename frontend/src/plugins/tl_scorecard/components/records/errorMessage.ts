@@ -5,10 +5,7 @@ const firstString = (value: unknown): string | null => {
 };
 
 /** Surface the server's own message (DRF `error`, `detail`, or the first field error). */
-export const errorMessage = (
-  error: unknown,
-  fallback = "Something went wrong. Please try again."
-): string => {
+export const errorMessage = (error: unknown, fallback = "Something went wrong. Please try again."): string => {
   const data = (error as { response?: { data?: unknown } } | null)?.response?.data;
   if (data && typeof data === "object" && !(data instanceof Blob)) {
     const body = data as Record<string, unknown>;

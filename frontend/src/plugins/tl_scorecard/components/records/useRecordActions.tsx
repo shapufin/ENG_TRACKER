@@ -51,8 +51,7 @@ const NOTE_ACTIONS: Partial<Record<RecordActionId, NoteAction>> = {
     submitLabel: "Promote",
     required: false,
     success: "Marked as promoted",
-    call: (id, decision_note) =>
-      tlScorecardService.decidePromotionFlag(id, { status: "promoted", decision_note }),
+    call: (id, decision_note) => tlScorecardService.decidePromotionFlag(id, { status: "promoted", decision_note }),
   },
   decline: {
     title: "Decline promotion",
@@ -60,14 +59,11 @@ const NOTE_ACTIONS: Partial<Record<RecordActionId, NoteAction>> = {
     submitLabel: "Decline",
     required: false,
     success: "Nomination declined",
-    call: (id, decision_note) =>
-      tlScorecardService.decidePromotionFlag(id, { status: "declined", decision_note }),
+    call: (id, decision_note) => tlScorecardService.decidePromotionFlag(id, { status: "declined", decision_note }),
   },
 };
 
-const ONE_CLICK: Partial<
-  Record<RecordActionId, { success: string; call: (id: number) => Promise<unknown> }>
-> = {
+const ONE_CLICK: Partial<Record<RecordActionId, { success: string; call: (id: number) => Promise<unknown> }>> = {
   resolve: { success: "Marked resolved", call: (id) => tlScorecardService.resolveIdleFlag(id) },
   address: { success: "Marked addressed", call: (id) => tlScorecardService.addressAbsence(id) },
   approve: { success: "PIP approved", call: (id) => tlScorecardService.approvePIPRecord(id) },
@@ -97,9 +93,7 @@ export const useRecordActions = (viewer: Viewer) => {
       throw error;
     }
     toast.success(success);
-    await Promise.all(
-      INVALIDATED.map((key) => queryClient.invalidateQueries({ queryKey: ["tl-scorecard", key] }))
-    );
+    await Promise.all(INVALIDATED.map((key) => queryClient.invalidateQueries({ queryKey: ["tl-scorecard", key] })));
   };
 
   const run = (action: RecordActionId, config: KindConfig<RecordRow>, record: RecordRow) => {
@@ -159,11 +153,7 @@ export const useRecordActions = (viewer: Viewer) => {
           record={pending.record}
           onClose={close}
           onSubmit={(data) =>
-            perform(
-              () =>
-                tlScorecardService.updateRecord(pending.config.resource, pending.record.id, data),
-              "Changes saved"
-            )
+            perform(() => tlScorecardService.updateRecord(pending.config.resource, pending.record.id, data), "Changes saved")
           }
         />
       )}
@@ -181,7 +171,7 @@ export const useRecordActions = (viewer: Viewer) => {
             try {
               await perform(
                 () => tlScorecardService.deleteRecord(pending.config.resource, pending.record.id),
-                `${pending.config.noun[0].toUpperCase()}${pending.config.noun.slice(1)} deleted`
+                `${pending.config.noun[0].toUpperCase()}${pending.config.noun.slice(1)} deleted`,
               );
               close();
             } catch {
@@ -202,9 +192,7 @@ export const useRecordActions = (viewer: Viewer) => {
           fieldLabel={noteAction.fieldLabel}
           submitLabel={noteAction.submitLabel}
           required={noteAction.required}
-          onSubmit={(note) =>
-            perform(() => noteAction.call(pending.record.id, note), noteAction.success)
-          }
+          onSubmit={(note) => perform(() => noteAction.call(pending.record.id, note), noteAction.success)}
         />
       )}
     </>

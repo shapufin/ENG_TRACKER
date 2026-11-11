@@ -13,11 +13,8 @@ describe("EscalationsPanel", () => {
       <EscalationsPanel
         candidates={[
           {
-            kind: "idle_flag_stale",
-            subject_id: 1,
-            subject_name: "Jane Doe",
-            detail: "Idle flag open with no status update since 2026-08-01.",
-            since: "2026-08-01",
+            kind: "idle_flag_stale", subject_id: 1, subject_name: "Jane Doe",
+            detail: "Idle flag open with no status update since 2026-08-01.", since: "2026-08-01",
           },
         ]}
       />
