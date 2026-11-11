@@ -56,7 +56,7 @@ export const TicketKPITeamBatchesTable: React.FC<TicketKPITeamBatchesTableProps>
       },
       {
         accessorKey: "created_at",
-        header: "Uploaded",
+        header: "Imported",
         cell: ({ row }) =>
           row.original.created_at
             ? formatDateDDMMYYYY(row.original.created_at.slice(0, 10))
@@ -108,7 +108,7 @@ export const TicketKPITeamBatchesTable: React.FC<TicketKPITeamBatchesTableProps>
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Team Uploads</CardTitle>
+        <CardTitle>Team Imports</CardTitle>
       </CardHeader>
       <CardContent>
         <DataTable

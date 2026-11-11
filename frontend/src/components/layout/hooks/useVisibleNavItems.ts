@@ -135,6 +135,7 @@ const allNavItems: NavItem[] = [
     icon: Users,
     section: "leadership",
     roles: ["team_leader"],
+    exact: true,
   },
   {
     path: "/ticket-kpi/team-management",

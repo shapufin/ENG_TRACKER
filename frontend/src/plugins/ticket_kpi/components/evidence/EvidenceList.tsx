@@ -27,7 +27,7 @@ const FILTER_ORDER: FilterType[] = [
 
 const FILTER_LABELS: Record<FilterType, string> = {
   all: "All",
-  document: "Documents",
+  document: "General",
   certificate: "Certificates",
   email_thread: "Emails",
   screenshot: "Screenshots",
@@ -77,9 +77,7 @@ export const EvidenceList: React.FC<EvidenceListProps> = ({
       )}
 
       {filteredEvidence.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
-          No {FILTER_LABELS[filter].toLowerCase()} documents for this month.
-        </p>
+        <p className="text-muted-foreground text-sm">No matching documents for this month.</p>
       ) : (
         filteredEvidence.map((item) => (
           <EvidenceItem

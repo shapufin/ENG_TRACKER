@@ -7,7 +7,7 @@ import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 export const TicketKPIRecentUploads: React.FC<{ batches: any[] | undefined }> = ({ batches }) => (
   <Card>
     <CardHeader>
-      <CardTitle>Recent Uploads</CardTitle>
+      <CardTitle>Recent Imports</CardTitle>
     </CardHeader>
     <CardContent>
       {!batches || batches.length === 0 ? (

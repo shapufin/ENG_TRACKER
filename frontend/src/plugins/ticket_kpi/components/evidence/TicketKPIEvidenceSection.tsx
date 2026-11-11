@@ -95,7 +95,7 @@ export const TicketKPIEvidenceSection: React.FC<TicketKPIEvidenceSectionProps> =
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="text-lg">Documents</CardTitle>
             {isOwnView && (
               <Button size="sm" onClick={() => setIsUploadOpen(true)}>

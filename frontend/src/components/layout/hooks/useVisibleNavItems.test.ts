@@ -360,6 +360,14 @@ describe("useVisibleNavItems pure HR", () => {
 });
 
 describe("useVisibleNavItems plugin gating", () => {
+  it("keeps Team Performance exact so it is not also active on Imports Review", () => {
+    const { result } = renderHook(() =>
+      useVisibleNavItems(false, false, false, false, true, false, false, false, ["ticket_kpi"])
+    );
+    const item = result.current.find((i) => i.path === "/ticket-kpi/team");
+    expect(item?.exact).toBe(true);
+  });
+
   const kpiLabels = ["Team Performance", "Imports Review", "Ticket KPI", "Import Tickets"];
 
   it("hides ticket_kpi links when the plugin is not active", () => {
