@@ -269,9 +269,10 @@ class TeamMemberQueryBudgetTests(TeamMembersBase):
         self.assertLessEqual(len(owned), 10)
         self.assertEqual(len(owned), 2)
 
-    def test_endpoint_total_is_eleven(self):
-        # 11 = 1 plugin-enabled check + 1 payroll-enabled check (wages) + 2 team-owned
-        # + 5 permission/role lookups + 2 team-scope lookups shared with the other
-        # scorecard endpoints (4 before the scope became link-only, item 64: the team
+    def test_endpoint_total_is_twelve(self):
+        # 12 = 1 plugin-enabled check + 1 payroll-enabled check (wages) + 2 team-owned
+        # + 5 permission/role lookups + 3 team-scope lookups shared with the other
+        # scorecard endpoints (link-only member ids, then the Manager and Line Manager
+        # exclusions; 4 before the scope became link-only, item 64: the team
         # and led-team lookups are gone). Constant per request, not per member.
-        self.assertEqual(len(self._queries()), 11)
+        self.assertEqual(len(self._queries()), 12)

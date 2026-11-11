@@ -15,7 +15,7 @@ export const useTeamMemberOptions = (open: boolean, enabled = true) => {
     if (!open || !enabled) return;
     let cancelled = false;
     userService
-      .getMyTeamMembers()
+      .getMyTeamMembers({ excludeLeaders: true })
       .then((profiles) => {
         if (cancelled) return;
         setOptions(

@@ -43,6 +43,19 @@ describe("ClientAssignmentSection", () => {
     expect(screen.getByRole("combobox", { name: "Client for Cara C" })).toBeInTheDocument();
   });
 
+  it("filters rows by member name or assigned client", () => {
+    render(<ClientAssignmentSection />);
+    const search = screen.getByRole("searchbox", { name: "Search members or clients" });
+    fireEvent.change(search, { target: { value: "msc" } });
+    expect(screen.queryByRole("combobox", { name: "Client for bob" })).toBeNull();
+    expect(screen.getByRole("combobox", { name: "Client for Cara C" })).toBeInTheDocument();
+    fireEvent.change(search, { target: { value: "bob" } });
+    expect(screen.getByRole("combobox", { name: "Client for bob" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Client for Cara C" })).toBeNull();
+    fireEvent.change(search, { target: { value: "zzz" } });
+    expect(screen.getByText("No members or clients match your search")).toBeInTheDocument();
+  });
+
   it("shows every assigned client for a member with several clients", () => {
     render(<ClientAssignmentSection />);
     expect(screen.getByRole("combobox", { name: "Client for Cara C" })).toHaveTextContent(

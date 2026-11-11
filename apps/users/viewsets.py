@@ -1275,6 +1275,13 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         if request.query_params.get('exclude_managers') == 'true':
             from apps.users.services.team_leaders import italian_tl_user_ids
             target_user_ids = set(target_user_ids) - italian_tl_user_ids()
+        if request.query_params.get('exclude_leaders') == 'true':
+            from apps.users.services.team_leaders import albanian_tl_user_ids, italian_tl_user_ids
+            target_user_ids = (
+                set(target_user_ids)
+                - italian_tl_user_ids(among=target_user_ids)
+                - albanian_tl_user_ids(among=target_user_ids)
+            )
 
         if not target_user_ids:
             return Response([])

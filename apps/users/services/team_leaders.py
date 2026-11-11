@@ -50,17 +50,35 @@ def derive_team_tls(team_ids=None):
     }
 
 
-def italian_tl_user_ids():
+def italian_tl_user_ids(among=None):
     """Ids of every Manager, by the same rule as ``UserProfile.is_italian_tl``.
 
     A Manager is the reporting line above the people measured by the skills
     matrix and Ticket KPI, so both leave them out of rosters. Matches the role,
     the legacy flag, or having people who report to them.
     """
+    users = User.objects.all()
+    if among is not None:
+        users = users.filter(id__in=among)
     return set(
-        User.objects.filter(
+        users.filter(
             Q(profile__is_italian_tl_role=True)
             | Q(user_roles__role__code='italian_tl', user_roles__is_active=True)
             | Q(italian_team_members__isnull=False)
         ).values_list('id', flat=True)
     )
+
+
+def albanian_tl_user_ids(among=None):
+    """Ids of Line Managers (``role_codes`` holds ``albanian_tl``), optionally
+    limited to ``among`` so a roster check never scans every profile."""
+    from apps.users.models.core import UserProfile
+
+    profiles = UserProfile.objects.all()
+    if among is not None:
+        profiles = profiles.filter(user_id__in=among)
+    return {
+        user_id
+        for user_id, codes in profiles.values_list('user_id', 'role_codes')
+        if 'albanian_tl' in (codes or [])
+    }

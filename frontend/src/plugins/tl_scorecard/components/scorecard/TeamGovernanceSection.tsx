@@ -116,7 +116,7 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
           id="tl-cadence"
           icon={PhoneCall}
           title="Cadence & Team Syncs"
-          description="One-on-ones, syncs and management reviews"
+          description="One-on-ones, syncs and monthly management reviews to Ops/GM"
         >
           <Button variant="outline" size="sm" onClick={onLogMeeting}>
             <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Log meeting
@@ -125,9 +125,9 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
             variant="outline"
             size="sm"
             onClick={onLogReview}
-            title="Record a delivered management review (counts toward the 12-per-year target)"
+            title="Record a monthly management review you delivered to Ops/GM. It only logs that it happened and counts toward the 12-per-year target."
           >
-            <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Log management review
+            <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Log monthly management review
           </Button>
         </ModuleHeader>
         <div className={STAT_GRID}>
@@ -321,6 +321,7 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
           {eprCycles && (
             <EPRSection
               cycles={eprCycles}
+              teamSize={scorecard.team_size}
               onParseGoals={onParseGoals}
               onCompleteStage={onCompleteStage}
             />
