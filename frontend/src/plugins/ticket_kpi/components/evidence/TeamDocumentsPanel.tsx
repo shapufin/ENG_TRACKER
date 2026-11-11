@@ -4,6 +4,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterChipRow } from "@/components/ui/FilterChipRow";
+import { useAuth } from "@/context/AuthContext";
 import { useTicketKPIEvidence } from "../../pages/hooks/useTicketKPIEvidence";
 import { EvidenceList } from "./EvidenceList";
 import type { EvidenceStatus, KPIEvidence } from "../../types/ticketKPI";
@@ -27,8 +28,20 @@ interface TeamDocumentsPanelProps {
 
 /** Line Manager view: every document the squad added for a month, newest first. */
 export const TeamDocumentsPanel: React.FC<TeamDocumentsPanelProps> = ({ month }) => {
-  const { evidence, isLoading, canReview, reviewMutation, unreviewMutation, deleteMutation } =
-    useTicketKPIEvidence({ month, squad: true });
+  const { user } = useAuth();
+  const {
+    evidence: allEvidence,
+    isLoading,
+    canReview,
+    reviewMutation,
+    unreviewMutation,
+    deleteMutation,
+  } = useTicketKPIEvidence({ month, squad: true });
+  // The Line Manager's own documents are reviewed by someone else, so they stay off this list.
+  const evidence = useMemo(
+    () => allEvidence.filter((e) => e.user !== user?.id),
+    [allEvidence, user?.id]
+  );
   const [status, setStatus] = useState<StatusFilter>("all");
   const [member, setMember] = useState<string>("all");
   const [viewingEmail, setViewingEmail] = useState<KPIEvidence | null>(null);

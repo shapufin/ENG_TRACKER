@@ -2108,7 +2108,7 @@ class KPIEvidenceViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Mod
 
         user = request.user
         if not (user.is_staff or user.is_superuser or _is_tl_for_user(user, evidence.user)):
-            raise PermissionDenied("Only administrators or the user's team leader can review document.")
+            raise PermissionDenied("Only administrators or the user's team leader can review documents.")
 
         evidence.status = new_status
         evidence.reviewed_by = user
@@ -2130,7 +2130,7 @@ class KPIEvidenceViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Mod
         evidence = self.get_object()
         user = request.user
         if not (user.is_staff or user.is_superuser or _is_tl_for_user(user, evidence.user)):
-            raise PermissionDenied("Only administrators or the user's team leader can unreview document.")
+            raise PermissionDenied("Only administrators or the user's team leader can unreview documents.")
 
         evidence.status = 'pending'
         evidence.reviewed_by = None

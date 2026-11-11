@@ -62,6 +62,13 @@ describe("TeamDocumentsPanel", () => {
     expect(screen.queryByText("Doc 2")).not.toBeInTheDocument();
   });
 
+  it("leaves the Line Manager's own documents out of the squad review list", () => {
+    mockHook([doc(1, 1, "lm", "pending"), doc(2, 2, "ana", "pending")]);
+    render(<TeamDocumentsPanel month="2026-03-01" />);
+    expect(screen.queryByText("Doc 1")).not.toBeInTheDocument();
+    expect(screen.getByText("Doc 2")).toBeInTheDocument();
+  });
+
   it("lets the Line Manager approve a member's document", () => {
     mockHook([doc(1, 2, "ana", "pending")]);
     render(<TeamDocumentsPanel month="2026-03-01" />);
