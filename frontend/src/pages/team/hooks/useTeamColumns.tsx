@@ -39,24 +39,28 @@ export const useTeamColumns = (
         accessorKey: "date",
         header: "Date",
         size: 95,
+        meta: { flex: true },
         cell: ({ row }) => formatDateDDMMYYYY(row.original.date),
       },
       {
         accessorKey: "hours",
         header: "Hours",
         size: 130,
+        meta: { flex: true },
         cell: ({ row }) => <OvertimeHoursBadge log={row.original} />,
       },
       {
         accessorKey: "client_name",
         header: "Client",
         size: 110,
+        meta: { flex: true },
         cell: ({ row }) => row.original.client_name || "-",
       },
       {
         id: "ticket_references",
         header: "Ticket ID",
         size: 130,
+        meta: { flex: true },
         accessorFn: (row) => row.ticket_references?.join(", ") ?? "",
         cell: ({ row }) => <TicketIdBadges references={row.original.ticket_references} />,
       },
@@ -64,6 +68,7 @@ export const useTeamColumns = (
         accessorKey: "status",
         header: "Status",
         size: 95,
+        meta: { flex: true },
         cell: ({ row }) => <StatusBadge variant={row.original.status as StatusVariant} />,
       },
       {
@@ -99,12 +104,14 @@ export const useTeamColumns = (
         accessorKey: "date",
         header: "Date",
         size: 95,
+        meta: { flex: true },
         cell: ({ row }) => formatDateDDMMYYYY(row.original.date),
       },
       {
         accessorKey: "hours",
         header: "Hours",
         size: 100,
+        meta: { flex: true },
         cell: ({ row }) => (
           <Badge variant="secondary" className="rounded-full font-mono text-xs">
             {row.original.hours}h
@@ -115,6 +122,7 @@ export const useTeamColumns = (
         accessorKey: "status",
         header: "Status",
         size: 95,
+        meta: { flex: true },
         cell: ({ row }) => <StatusBadge variant={row.original.status as StatusVariant} />,
       },
       {
@@ -149,30 +157,35 @@ export const useTeamColumns = (
         accessorKey: "start_date",
         header: "Start Date",
         size: 105,
+        meta: { flex: true },
         cell: ({ row }) => formatDateDDMMYYYY(row.original.start_date),
       },
       {
         accessorKey: "end_date",
         header: "End Date",
         size: 105,
+        meta: { flex: true },
         cell: ({ row }) => formatDateDDMMYYYY(row.original.end_date),
       },
       {
         accessorKey: "days_requested",
         header: "Days",
         size: 85,
+        meta: { flex: true },
         cell: ({ row }) => leaveDaysLabel(row.original),
       },
       {
         accessorKey: "user_leave_balance",
         header: "Balance Left",
         size: 115,
+        meta: { flex: true },
         cell: ({ row }) => <LeaveBalanceBadge balance={row.original.user_leave_balance} />,
       },
       {
         accessorKey: "request_type",
         header: "Type",
         size: 104,
+        meta: { flex: true },
         cell: ({ row }) => (
           <Badge variant={row.original.request_type === "vacation" ? "default" : "secondary"}>
             {row.original.request_type === "vacation" ? "Vacation" : "Sick Leave"}
@@ -183,6 +196,7 @@ export const useTeamColumns = (
         accessorKey: "status",
         header: "Status",
         size: 95,
+        meta: { flex: true },
         cell: ({ row }) => <StatusBadge variant={row.original.status as StatusVariant} />,
       },
       {
