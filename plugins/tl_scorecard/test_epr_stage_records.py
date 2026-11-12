@@ -781,3 +781,35 @@ class HbprPresentInEmployeeEprTests(TestCase):
         cycle = self._ready_cycle(self.b)
         self.assertEqual(self._complete(cycle, 'mid_year', hbpr_present=True).status_code, 200)
         self.assertFalse(HbprGovernanceEvidence.objects.exists())
+
+
+class EprPartnershipRowAttendeesTests(HbprPresentInEmployeeEprTests):
+    """One partnership row per kind and year, but it names every employee whose
+    review the HBPR attended, so neither side has to open each EPR cycle."""
+
+    def _rows(self, user):
+        request = self.factory.get('/x/', {'year': '2026'})
+        force_authenticate(request, user=user)
+        resp = HbprGovernanceEvidenceViewSet.as_view({'get': 'list'})(request)
+        self.assertEqual(resp.status_code, 200, resp.data)
+        data = resp.data['results'] if isinstance(resp.data, dict) else resp.data
+        return [r for r in data if r['kind'] == 'epr_mid_year']
+
+    def test_row_lists_each_attended_employee_and_no_summary(self):
+        for emp in (self.a, self.b):
+            cycle = EPRCycle.objects.filter(user=emp, year=2026).first() or self._ready_cycle(emp)
+            if cycle.mid_year_completed_at is None:
+                self.assertEqual(self._complete(cycle, 'mid_year', hbpr_present=True).status_code, 200)
+        absent = _make_user('emp_absent')
+        absent.profile.albanian_tl = self.tl
+        absent.profile.save()
+        self.tl.profile._scoreable_ids = None  # per-instance scope cache
+        self.assertEqual(self._complete(self._ready_cycle(absent), 'mid_year',
+                                        hbpr_present=False).status_code, 200)
+        for viewer in (self.tl, self.hbpr):
+            with self.subTest(viewer=viewer.username):
+                rows = self._rows(viewer)
+                self.assertEqual(len(rows), 1)
+                ids = {e['user_id'] for e in rows[0]['attended_employees']}
+                self.assertEqual(ids, {self.a.id, self.b.id})
+                self.assertNotIn('summary', str(rows[0]['attended_employees']))
