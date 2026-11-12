@@ -11,8 +11,8 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.utils import timezone
 
-from core.utils.metrics_freeze import freeze_at, is_past_freeze
-from core.utils.timezone_local import business_tz
+from core.utils.metrics_freeze import freeze_at, is_frozen, is_past_freeze
+from core.utils.timezone_local import business_today, business_tz
 
 from .models import ScorecardMonthSnapshot
 from .scope import scoreable_member_ids
@@ -101,3 +101,21 @@ def freeze_scorecard_months(now: datetime | None = None, month: date | None = No
 def process_freeze_scorecards() -> None:
     """Scheduler entry (hourly). Leaders already snapshotted are skipped."""
     freeze_scorecard_months(now=timezone.now())
+
+
+def frozen_member_ids(leader, month: date, current_ids) -> set:
+    """The team a leader had in ``month``: the final snapshot's roster once the
+    month is frozen, today's roster otherwise (no true history exists before)."""
+    snapshot = ScorecardMonthSnapshot.objects.filter(
+        leader=leader, month=month.replace(day=1)).first()
+    if snapshot is not None and is_frozen(snapshot.month, snapshot.computed_at):
+        return set(snapshot.member_ids)
+    return set(current_ids)
+
+
+def epr_roster(leader, year: int, current_ids) -> set:
+    """Roster for a year's EPR figures: live for this year, the frozen December
+    roster for a closed one, so a past year does not move when teams change."""
+    if year < business_today().year:
+        return frozen_member_ids(leader, date(year, 12, 1), current_ids)
+    return set(current_ids)

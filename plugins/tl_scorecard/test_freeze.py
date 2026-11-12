@@ -153,3 +153,32 @@ class ScorecardFreezeTests(TestCase):
         with patch('django.utils.timezone.now', return_value=BEFORE):
             with self.assertRaises(CommandError):
                 call_command('freeze_scorecard_months', month='2026-09-01', stdout=StringIO())
+
+
+class PastYearRosterTests(ScorecardFreezeTests):
+    """A closed year's EPR figures use the roster frozen with its December
+    snapshot, not today's team, so they cannot move when people change teams."""
+
+    DEC = date(2026, 12, 1)  # freezes 2027-01-10
+    LATER = datetime(2027, 1, 20, 12, tzinfo=TIRANE)
+
+    def _roster(self, year, now):
+        from plugins.tl_scorecard.snapshots import epr_roster
+        with patch('plugins.tl_scorecard.snapshots.business_today', return_value=now.date()), \
+                patch('django.utils.timezone.now', return_value=now):
+            return epr_roster(self.leader, year, {self.m1.id, self.m2.id})
+
+    def test_past_year_uses_the_final_december_roster(self):
+        ScorecardMonthSnapshot.objects.create(
+            leader=self.leader, month=self.DEC, member_ids=[self.m1.id], payload={},
+            computed_at=self.LATER)
+        self.assertEqual(self._roster(2026, self.LATER), {self.m1.id})
+
+    def test_current_year_and_missing_or_provisional_snapshots_use_the_live_roster(self):
+        live = {self.m1.id, self.m2.id}
+        self.assertEqual(self._roster(2026, self.LATER), live)  # no snapshot yet
+        ScorecardMonthSnapshot.objects.create(
+            leader=self.leader, month=self.DEC, member_ids=[self.m1.id], payload={},
+            computed_at=datetime(2027, 1, 3, tzinfo=TIRANE))  # computed before the freeze
+        self.assertEqual(self._roster(2026, self.LATER), live)
+        self.assertEqual(self._roster(2027, self.LATER), live)
