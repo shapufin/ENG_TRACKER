@@ -5,6 +5,7 @@ Both the DB dump and the media zip stream to disk rather than buffering in
 memory, so backup size is bounded by disk space, not RAM.
 """
 import gzip
+import logging
 import hashlib
 import io
 import json
@@ -37,6 +38,8 @@ EXCLUDED_MODELS = [
     # Rows point at ZIPs in EXPORT_ROOT that expire after 24 h and are never backed up.
     'onboarding.clientexport',
 ]
+
+logger = logging.getLogger(__name__)
 
 
 def is_excluded(model) -> bool:
@@ -77,8 +80,24 @@ def _model_row_counts() -> dict:
         try:
             counts[label] = model._default_manager.count()
         except Exception:
+            logger.exception('Could not count rows for %s; omitted from manifest', label)
             continue
     return counts
+
+
+def content_type_labels() -> dict:
+    """``{pk: 'app_label.model'}`` for every ContentType.
+
+    ContentType is excluded from the dump (its PKs are per-database), but
+    included rows such as ``auth.Permission`` point at it. The manifest carries
+    this map so restore can re-point those FKs by ``(app_label, model)``.
+    """
+    from django.contrib.contenttypes.models import ContentType
+
+    return {
+        str(pk): f'{app_label}.{model}'
+        for pk, app_label, model in ContentType.objects.values_list('pk', 'app_label', 'model')
+    }
 
 
 def _sha256_file(path: str) -> str:
@@ -153,6 +172,7 @@ def create_backup(user, note: str = '', include_media: bool = True) -> BackupRec
                 'migration_state_hash': state_hash,
                 'includes_media': include_media,
                 'model_row_counts': row_counts,
+                'content_types': content_type_labels(),
                 'media_file_count': media_count,
             }
             archive.writestr('manifest.json', json.dumps(manifest, indent=2))

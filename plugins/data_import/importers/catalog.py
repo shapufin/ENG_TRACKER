@@ -7,10 +7,21 @@ holds that one implementation so each concrete importer only declares its
 model, its fields, and how to resolve its foreign keys.
 """
 
+import re
+import unicodedata
 from typing import Any, Dict, List, Optional
 
 from .base import row_error_from_exception, BaseImporter, ImportRowResult
 from .helpers import is_blank, parse_bool
+
+
+def derive_code(text: Any) -> str:
+    """Upper-case ASCII code from a name: accents stripped, words joined by ``-``.
+
+    ``"BACKUP"`` -> ``BACKUP``; ``"Engineering Databases"`` -> ``ENGINEERING-DATABASES``.
+    """
+    ascii_text = unicodedata.normalize("NFKD", str(text or "")).encode("ascii", "ignore").decode()
+    return re.sub(r"[^A-Z0-9]+", "-", ascii_text.upper()).strip("-")
 
 
 class CodeKeyedImporter(BaseImporter):
@@ -21,6 +32,9 @@ class CodeKeyedImporter(BaseImporter):
 
     #: Field key (and model field) carrying the unique code.
     code_key: str = "code"
+
+    #: Field key a blank code is derived from (see ``derive_code``); ``None`` disables it.
+    code_source_key: Optional[str] = "name"
 
     #: Store and match codes upper-cased (mirrors ``Tech.save``).
     uppercase_code: bool = False
@@ -80,6 +94,9 @@ class CodeKeyedImporter(BaseImporter):
 
         try:
             code = self.normalize_code(mapped_row.get(self.code_key))
+            if not code and self.code_source_key:
+                # Runs before the dedupe lookup, so dry run and commit agree.
+                code = self.normalize_code(derive_code(mapped_row.get(self.code_source_key)))
             if not code:
                 return ImportRowResult(
                     row_index=row_index,

@@ -89,6 +89,20 @@ class TemplateRoundTripTests(TestCase):
         self.assertIn("Team Code", df.columns)
         self.assertEqual(len(df), len(importer.get_dynamic_sample_rows()))
 
+    def test_long_dropdown_list_uses_hidden_sheet_range(self):
+        for i in range(40):
+            Team.objects.create(code=f"TEAMCODE{i:03d}", name=f"Team {i}")
+        importer = get_importer("users")
+        wb = openpyxl.load_workbook(io.BytesIO(_build_excel_workbook_bytes(importer)))
+        ws = wb[importer.display_name[:31]]
+        formulas = [dv.formula1 for dv in ws.data_validations.dataValidation]
+        self.assertTrue(all(len(f) <= 255 for f in formulas))
+        range_formulas = [f for f in formulas if f.startswith("Lists!")]
+        self.assertTrue(range_formulas)
+        self.assertEqual(wb["Lists"].sheet_state, "hidden")
+        listed = {c.value for row in wb["Lists"].iter_rows() for c in row if c.value}
+        self.assertGreaterEqual(len([v for v in listed if str(v).startswith("TEAMCODE")]), 40)
+
     def test_template_response_csv_and_xlsx(self):
         importer = get_importer("users")
         resp_csv = _template_response(importer, "csv")

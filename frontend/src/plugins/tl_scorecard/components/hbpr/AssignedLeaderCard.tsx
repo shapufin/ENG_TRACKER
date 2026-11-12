@@ -7,6 +7,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { UserAvatar } from "@/components/calendar/UserAvatar";
 import type { HbprLeaderRow } from "../../types/tlScorecard";
 import { avatarSeed } from "../avatarSeed";
+import { LeaderEprNotes } from "./LeaderEprNotes";
 import {
   CADENCE_STATUS_LABELS,
   CADENCE_STATUS_TONE,
@@ -35,8 +36,12 @@ export const AssignedLeaderCard: React.FC<AssignedLeaderCardProps> = ({ leader, 
         <div className="flex min-w-0 items-center gap-2.5">
           <UserAvatar name={leader.name} size="sm" colorSeed={avatarSeed(leader.name)} />
           <div className="min-w-0">
-            <p className="truncate font-semibold" title={leader.name}>
-              {leader.name}
+            <p className="truncate font-semibold">
+              <LeaderEprNotes
+                leader={leader}
+                year={year}
+                className="max-w-full truncate text-left"
+              />
             </p>
             <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
               <UsersRound className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />

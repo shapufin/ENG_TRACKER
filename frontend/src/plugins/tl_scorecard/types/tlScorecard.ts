@@ -380,6 +380,19 @@ export interface HbprNeedsAttention {
   recent_evidence: number;
 }
 
+/** EPR stage evidence existence only: the API never sends the note text or the link. */
+export interface HbprEprStageRow {
+  id: number;
+  employee_id: number;
+  employee_name: string;
+  stage: "goal_setting" | "mid_year" | "final_review";
+  recorded_on: string;
+  recorded_by_name: string;
+  has_reference: boolean;
+  shared_with_employee: boolean;
+  hbpr_present: boolean;
+}
+
 /** One assigned Line Manager, with cadence and EPR governance state. */
 export interface HbprLeaderRow extends PersonRef {
   assignment_id: number;
@@ -392,6 +405,7 @@ export interface HbprLeaderRow extends PersonRef {
   cadence_status: HbprCadenceStatus;
   epr_mid_year: boolean;
   epr_year_end: boolean;
+  epr_stages: HbprEprStageRow[];
   evidence_count: number;
   last_evidence_on: string | null;
 }

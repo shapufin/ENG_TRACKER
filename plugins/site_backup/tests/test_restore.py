@@ -362,6 +362,28 @@ class ExtractMediaGuardTests(TestCase):
                         restore_service._extract_media(archive)
             self.assertFalse(os.path.exists(os.path.join(tmp, 'a.bin')))
 
+    def test_mid_extract_failure_leaves_existing_files_untouched(self):
+        import os
+        with tempfile.TemporaryDirectory() as tmp:
+            existing = os.path.join(tmp, 'a.txt')
+            with open(existing, 'wb') as f:
+                f.write(b'original')
+            archive = self._zip({'media/a.txt': b'replaced', 'media/b.txt': b'second'})
+            real_open = archive.open
+
+            def failing_open(info, *args, **kwargs):
+                if info.filename.endswith('b.txt'):
+                    raise OSError('disk error')
+                return real_open(info, *args, **kwargs)
+
+            with override_settings(MEDIA_ROOT=tmp):
+                with patch.object(archive, 'open', side_effect=failing_open):
+                    with self.assertRaises(OSError):
+                        restore_service._extract_media(archive)
+            with open(existing, 'rb') as f:
+                self.assertEqual(f.read(), b'original')
+            self.assertFalse(os.path.exists(os.path.join(tmp, 'b.txt')))
+
     def test_valid_media_is_still_extracted(self):
         import os
         with tempfile.TemporaryDirectory() as tmp:
@@ -517,3 +539,49 @@ class HbprAssignmentNullCadenceRestoreTests(TestCase):
         self.assertIsNone(restored.cadence_nth_week)
         self.assertEqual(restored.cadence_display, 'Not set')
         self.assertIsNone(restored.effective_to)
+
+
+class ContentTypeRemapTests(TestCase):
+    """R1: Permission rows point at ContentType, which is not in the fixture."""
+
+    def test_restore_repoints_content_type_by_label_when_pks_shifted(self):
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+
+        admin = User.objects.create_user(username='admin', password='pw', is_superuser=True)
+        group_ct = ContentType.objects.get_for_model(Group)
+        perm = Permission.objects.filter(content_type=group_ct).first()
+        perm_pk = perm.pk
+        with tempfile.TemporaryDirectory() as media:
+            with override_settings(MEDIA_ROOT=media):
+                # Simulate a target DB with different ContentType PKs: the
+                # backup's map says the permission's type was pk 99999.
+                real = backup_service.content_type_labels()
+                shifted = {('99999' if v == 'auth.group' else k): v for k, v in real.items()}
+                shifted.pop(str(group_ct.pk), None)
+                shifted['99999'] = 'auth.group'
+
+                original = backup_service._write_db_dump
+                with patch.object(backup_service, 'content_type_labels', return_value=shifted), \
+                        patch.object(backup_service, '_write_db_dump', side_effect=lambda p: _rewrite(original, p, group_ct.pk)):
+                    record = backup_service.create_backup(admin, include_media=False)
+
+                perm.delete()
+                with record.file.open('rb') as fh:
+                    restore_service.commit(
+                        fh, approved_models=['auth.permission'], confirmed=True, user=admin
+                    )
+        restored = Permission.objects.get(pk=perm_pk)
+        self.assertEqual(restored.content_type_id, group_ct.pk)
+
+
+def _rewrite(original, path, real_ct_pk):
+    """Run the real dump, then rewrite Group-type permission FKs to pk 99999."""
+    original(path)
+    with gzip.open(path, 'rb') as fh:
+        data = json.loads(fh.read().decode('utf-8'))
+    for row in data:
+        if row['model'] == 'auth.permission' and row['fields']['content_type'] == real_ct_pk:
+            row['fields']['content_type'] = 99999
+    with gzip.open(path, 'wb') as fh:
+        fh.write(json.dumps(data).encode('utf-8'))

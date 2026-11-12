@@ -2,6 +2,8 @@
 Restore preview (read-only) and commit (destructive, transactional).
 """
 import os
+import shutil
+import tempfile
 from collections import defaultdict
 
 from django.apps import apps as django_apps
@@ -110,7 +112,13 @@ def _safe_media_target(media_root: str, rel_path: str) -> str:
     return target
 
 
-def _extract_media(archive) -> int:
+def _stage_media(archive):
+    """Validate and write every media member into a staging dir under MEDIA_ROOT.
+
+    Nothing in place is touched, so a failure here leaves existing files intact.
+    Returns ``(staging_dir, [(staged_path, final_path)])``; the caller must
+    remove ``staging_dir`` (``shutil.rmtree``) when done.
+    """
     media_root = os.path.normpath(str(settings.MEDIA_ROOT))
     members = [
         info for info in archive.infolist()
@@ -124,19 +132,40 @@ def _extract_media(archive) -> int:
     if sum(info.file_size for info in members) > MAX_MEDIA_UNCOMPRESSED_BYTES:
         raise RestoreError('Backup media exceeds the maximum allowed size.')
 
-    count = 0
+    os.makedirs(media_root, exist_ok=True)
+    staging = tempfile.mkdtemp(prefix='.restore-staging-', dir=media_root)
+    pairs = []
     written = 0
-    for info, target_path in zip(members, targets):
+    try:
+        for index, (info, target_path) in enumerate(zip(members, targets)):
+            staged = os.path.join(staging, str(index))
+            with archive.open(info) as src, open(staged, 'wb') as dst:
+                # Headers can lie about the size: also bound the bytes really written.
+                while chunk := src.read(1024 * 1024):
+                    written += len(chunk)
+                    if written > MAX_MEDIA_UNCOMPRESSED_BYTES:
+                        raise RestoreError('Backup media exceeds the maximum allowed size.')
+                    dst.write(chunk)
+            pairs.append((staged, target_path))
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+    return staging, pairs
+
+
+def _install_media(pairs) -> int:
+    for staged, target_path in pairs:
         os.makedirs(os.path.dirname(target_path), exist_ok=True)
-        with archive.open(info) as src, open(target_path, 'wb') as dst:
-            # Headers can lie about the size: also bound the bytes really written.
-            while chunk := src.read(1024 * 1024):
-                written += len(chunk)
-                if written > MAX_MEDIA_UNCOMPRESSED_BYTES:
-                    raise RestoreError('Backup media exceeds the maximum allowed size.')
-                dst.write(chunk)
-        count += 1
-    return count
+        os.replace(staged, target_path)
+    return len(pairs)
+
+
+def _extract_media(archive) -> int:
+    staging, pairs = _stage_media(archive)
+    try:
+        return _install_media(pairs)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
 
 
 def commit(
@@ -173,49 +202,97 @@ def commit(
     delete_missing = set(delete_missing_models or []) & approved
 
     objects = read_db_objects(archive)
+    _remap_content_types(objects, manifest)
     by_model = {
         label: items for label, items in _group_by_model(objects).items() if label in expanded
     }
 
     result = {'created': {}, 'updated': {}, 'deleted': {}, 'media_extracted': 0}
 
-    with transaction.atomic():
-        for label in topological_delete_order(expanded, graph):
-            if label not in delete_missing:
-                result['deleted'][label] = 0
-                continue
-            model = _model_from_label(label)
-            file_pks = {d.object.pk for d in by_model.get(label, [])}
-            try:
-                deleted_count, _ = model._default_manager.exclude(pk__in=file_pks).delete()
-            except ProtectedError:
-                raise RestoreError(
-                    f'Cannot delete the {label} rows missing from the backup: other '
-                    'records that must be kept still reference them. Nothing was restored.'
-                )
-            result['deleted'][label] = deleted_count
-
-        for label in topological_save_order(expanded, graph):
-            model = _model_from_label(label)
-            existing_pks = set(model._default_manager.values_list('pk', flat=True))
-            created = updated = 0
-            for deserialized in by_model.get(label, []):
-                is_update = deserialized.object.pk in existing_pks
-                deserialized.save()
-                if is_update:
-                    updated += 1
-                else:
-                    created += 1
-            result['created'][label] = created
-            result['updated'][label] = updated
-
-        _reset_sequences(expanded)
-
+    staging = None
+    try:
+        with transaction.atomic():
+            _commit_rows(expanded, graph, delete_missing, by_model, result)
+            if restore_media:
+                # Staged inside the transaction: a media error rolls the DB
+                # back and leaves every existing file untouched.
+                staging, media_pairs = _stage_media(archive)
         if restore_media:
-            result['media_extracted'] = _extract_media(archive)
+            result['media_extracted'] = _install_media(media_pairs)
+    finally:
+        if staging:
+            shutil.rmtree(staging, ignore_errors=True)
 
     _log_restore(user, manifest, expanded, result)
     return result
+
+
+def _commit_rows(expanded, graph, delete_missing, by_model, result) -> None:
+    for label in topological_delete_order(expanded, graph):
+        if label not in delete_missing:
+            result['deleted'][label] = 0
+            continue
+        model = _model_from_label(label)
+        file_pks = {d.object.pk for d in by_model.get(label, [])}
+        try:
+            deleted_count, _ = model._default_manager.exclude(pk__in=file_pks).delete()
+        except ProtectedError:
+            raise RestoreError(
+                f'Cannot delete the {label} rows missing from the backup: other '
+                'records that must be kept still reference them. Nothing was restored.'
+            )
+        result['deleted'][label] = deleted_count
+
+    for label in topological_save_order(expanded, graph):
+        model = _model_from_label(label)
+        existing_pks = set(model._default_manager.values_list('pk', flat=True))
+        created = updated = 0
+        for deserialized in by_model.get(label, []):
+            is_update = deserialized.object.pk in existing_pks
+            deserialized.save()
+            if is_update:
+                updated += 1
+            else:
+                created += 1
+        result['created'][label] = created
+        result['updated'][label] = updated
+
+    _reset_sequences(expanded)
+
+
+
+def _remap_content_types(objects, manifest) -> None:
+    """Re-point ContentType FKs at this database's ContentType PKs.
+
+    ContentType rows are not in the fixture and their PKs differ between
+    databases; the manifest's ``content_types`` map (old pk -> label) lets us
+    resolve each reference by ``(app_label, model)``. Backups without the map
+    are left as they are.
+    """
+    old_labels = manifest.get('content_types') or {}
+    if not old_labels:
+        return
+    from django.contrib.contenttypes.models import ContentType
+
+    current = {
+        f'{app_label}.{model}': pk
+        for pk, app_label, model in ContentType.objects.values_list('pk', 'app_label', 'model')
+    }
+    for deserialized in objects:
+        obj = deserialized.object
+        for field in obj._meta.concrete_fields:
+            if not (field.is_relation and field.related_model is ContentType):
+                continue
+            old_pk = getattr(obj, field.attname)
+            if old_pk is None:
+                continue
+            label = old_labels.get(str(old_pk))
+            if label not in current:
+                raise RestoreError(
+                    f'Backup references content type {label or old_pk!r}, which does not '
+                    'exist in this database. Nothing was restored.'
+                )
+            setattr(obj, field.attname, current[label])
 
 
 def _reset_sequences(labels) -> None:

@@ -16,6 +16,7 @@ import { UserAvatar } from "@/components/calendar/UserAvatar";
 import type { HbprLeaderRow } from "../../types/tlScorecard";
 import { avatarSeed } from "../avatarSeed";
 import { AssignedLeaderCard } from "./AssignedLeaderCard";
+import { LeaderEprNotes } from "./LeaderEprNotes";
 import {
   CADENCE_STATUS_LABELS,
   CADENCE_STATUS_TONE,
@@ -137,9 +138,11 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
                         size="sm"
                         colorSeed={avatarSeed(leader.name)}
                       />
-                      <span className="max-w-[14rem] truncate" title={leader.name}>
-                        {leader.name}
-                      </span>
+                      <LeaderEprNotes
+                        leader={leader}
+                        year={year}
+                        className="hover:text-primary max-w-[14rem] truncate text-left underline-offset-4 hover:underline"
+                      />
                     </div>
                   </th>
                   <td className={cn(BODY_CELL, "tabular-nums")}>{leader.team_size}</td>

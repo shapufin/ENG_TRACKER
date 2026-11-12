@@ -224,25 +224,37 @@ def _build_excel_workbook_bytes(importer) -> bytes:
             if hasattr(importer, "get_field_dropdowns")
             else {}
         )
+        lists_ws = None
+        list_idx = 0
         for col_idx, f in enumerate(fields, 1):
             choices = dropdowns.get(f.key)
-            if choices:
-                safe_choices = [
-                    str(c).replace('"', '').replace(',', ' ').strip()
-                    for c in choices
-                    if str(c).strip()
-                ]
-                if safe_choices:
-                    formula_str = f'"{",".join(safe_choices[:30])}"'
-                    if len(formula_str) <= 255:
-                        col_letter = get_column_letter(col_idx)
-                        dv = DataValidation(
-                            type="list",
-                            formula1=formula_str,
-                            allow_blank=True,
-                        )
-                        ws.add_data_validation(dv)
-                        dv.add(f"{col_letter}2:{col_letter}1000")
+            if not choices:
+                continue
+            safe_choices = [
+                str(c).replace('"', '').replace(',', ' ').strip()
+                for c in choices
+                if str(c).strip()
+            ]
+            if not safe_choices:
+                continue
+            inline = f'"{",".join(safe_choices)}"'
+            if len(inline) <= 255:
+                formula_str = inline
+            else:
+                # Excel caps an inline list at 255 characters, so long lists
+                # live in a hidden sheet and the validation points at the range.
+                if lists_ws is None:
+                    lists_ws = wb.create_sheet(title="Lists")
+                    lists_ws.sheet_state = "hidden"
+                list_idx += 1
+                list_col = get_column_letter(list_idx)
+                for row_idx, choice in enumerate(safe_choices, 1):
+                    lists_ws.cell(row=row_idx, column=list_idx, value=xlsx_safe(choice))
+                formula_str = f"Lists!${list_col}$1:${list_col}${len(safe_choices)}"
+            col_letter = get_column_letter(col_idx)
+            dv = DataValidation(type="list", formula1=formula_str, allow_blank=True)
+            ws.add_data_validation(dv)
+            dv.add(f"{col_letter}2:{col_letter}1000")
 
         # Sheet 2: Reference Data
         ref_data = (

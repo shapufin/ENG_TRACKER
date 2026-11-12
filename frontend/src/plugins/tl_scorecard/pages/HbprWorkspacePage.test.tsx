@@ -43,6 +43,7 @@ const LEADER_A = {
   cadence_status: "on_track" as const,
   epr_mid_year: false,
   epr_year_end: false,
+  epr_stages: [],
   evidence_count: 2,
   last_evidence_on: `${YEAR}-03-01`,
 };
@@ -58,6 +59,7 @@ const LEADER_B = {
   cadence_status: "overdue" as const,
   epr_mid_year: true,
   epr_year_end: true,
+  epr_stages: [],
   evidence_count: 1,
   last_evidence_on: `${YEAR}-01-05`,
 };

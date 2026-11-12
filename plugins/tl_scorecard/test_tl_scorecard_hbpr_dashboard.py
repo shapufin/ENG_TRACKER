@@ -49,6 +49,34 @@ class HbprWorkspaceOverviewTests(HbprScorecardBase):
         self.assertFalse(row['epr_year_end'])
         self.assertEqual(row['evidence_count'], 0)
 
+    def test_overview_lists_epr_stage_existence_without_note_content(self):
+        from .models import EPRCycle, EPRStageRecord
+
+        year = date.today().year
+        cycle, _ = EPRCycle.objects.get_or_create(user=self.member, year=year)
+        EPRStageRecord.objects.create(
+            cycle=cycle, stage='mid_year', summary='PRIVATE NOTE TEXT',
+            reference_url='https://workday.example/doc', recorded_by=self.tl,
+        )
+        # Out of scope: another leader's employee must not appear.
+        other_cycle, _ = EPRCycle.objects.get_or_create(user=self.other_member, year=year)
+        EPRStageRecord.objects.create(
+            cycle=other_cycle, stage='mid_year', summary='x', recorded_by=self.other_tl,
+        )
+        data = self._get('overview', self.hbpr).data
+        stages = self._leader(data)['epr_stages']
+        self.assertEqual(len(stages), 1)
+        row = stages[0]
+        self.assertEqual(row['stage'], 'mid_year')
+        self.assertTrue(row['has_reference'])
+        self.assertEqual(row['recorded_by_name'], self.tl.get_full_name() or self.tl.username)
+        self.assertEqual(row['employee_id'], self.member.id)
+        flat = repr(data)
+        self.assertNotIn('PRIVATE NOTE TEXT', flat)
+        self.assertNotIn('workday.example', flat)
+        for forbidden in ('summary', 'reference_url'):
+            self.assertNotIn(forbidden, row)
+
     def test_team_size_ignores_shared_team_members_like_the_scope(self):
         # Scope is link-only (workflow-invariants item 64): a member who only shares a
         # team with the Line Manager is not in the read scope, so the count excludes them.

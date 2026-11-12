@@ -80,8 +80,13 @@ class ClientImporterTests(TestCase):
         self.assertEqual(result.status, "error")
         self.assertIn("already uses the name", result.errors[0])
 
-    def test_missing_code_is_an_error(self):
+    def test_missing_code_is_derived_from_the_name(self):
         result = self.importer.commit_row(row(name="Acme"), NO_UPDATE)
+        self.assertEqual(result.status, "created")
+        self.assertTrue(Client.objects.filter(code="ACME").exists())
+
+    def test_missing_code_and_name_is_an_error(self):
+        result = self.importer.commit_row(row(name=""), NO_UPDATE)
         self.assertEqual(result.status, "error")
 
 

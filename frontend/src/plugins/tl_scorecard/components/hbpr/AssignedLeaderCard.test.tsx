@@ -16,6 +16,8 @@ const LEADER = {
   cadence_status: "on_track",
   epr_mid_year: false,
   epr_year_end: false,
+  epr_stages: [],
+  cadence_missing: false,
   evidence_count: 0,
   last_evidence_on: null,
 } as HbprLeaderRow;

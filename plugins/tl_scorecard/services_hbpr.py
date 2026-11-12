@@ -23,7 +23,7 @@ from apps.users.services.hbpr_assignments import cadence_status
 from apps.users.services.hbpr_assignments import today as app_today
 from core.mixins.permissions import is_staff_user
 
-from .models import HbprGovernanceEvidence, PIPRecord
+from .models import EPRStageRecord, HbprGovernanceEvidence, PIPRecord
 
 User = get_user_model()
 
@@ -106,8 +106,8 @@ def people(scope, search='', limit=50, offset=0):
     }
 
 
-def _team_sizes(assignments, scope):
-    """Line Manager id -> number of in-scope members under that TL.
+def _leader_members(assignments, scope):
+    """Line Manager id -> set of in-scope member ids under that TL.
 
     Uses the same ``get_team_member_ids()`` sources the scope population uses
     (direct `italian_tl`/`albanian_tl` FK **and** shared-team membership), then
@@ -117,13 +117,46 @@ def _team_sizes(assignments, scope):
     Costs a few queries per *assignment*, never per member — so the overview's
     query count still does not grow with headcount.
     """
-    sizes = {}
+    members = {}
     for assignment in assignments:
         profile = getattr(assignment.albanian_tl, 'profile', None)
-        sizes[assignment.albanian_tl_id] = (
-            len(profile.get_team_member_ids() & scope.member_ids) if profile is not None else 0
+        members[assignment.albanian_tl_id] = (
+            profile.get_team_member_ids() & scope.member_ids if profile is not None else set()
         )
-    return sizes
+    return members
+
+
+def _epr_stage_rows(leader_members, year):
+    """Line Manager id -> EPR stage evidence EXISTENCE rows for ``year`` (one query).
+
+    Never selects ``summary`` or ``reference_url`` content: an HBPR verifies that
+    a stage was recorded, by whom and whether a link exists, not what was written.
+    """
+    all_ids = set().union(*leader_members.values()) if leader_members else set()
+    if not all_ids:
+        return {}
+    rows = (
+        EPRStageRecord.objects.filter(cycle__year=year, cycle__user_id__in=all_ids)
+        .select_related('cycle__user', 'recorded_by')
+        .order_by('cycle__user__first_name', 'cycle__user__last_name', 'cycle__user__username', 'id')
+    )
+    by_leader = {tl_id: [] for tl_id in leader_members}
+    for record in rows:
+        entry = {
+            'id': record.id,
+            'employee_id': record.cycle.user_id,
+            'employee_name': _person(record.cycle.user)['name'],
+            'stage': record.stage,
+            'recorded_on': record.created_at,
+            'recorded_by_name': _person(record.recorded_by)['name'],
+            'has_reference': bool(record.reference_url),
+            'shared_with_employee': record.shared_with_employee,
+            'hbpr_present': record.hbpr_present,
+        }
+        for tl_id, member_ids in leader_members.items():
+            if record.cycle.user_id in member_ids:
+                by_leader[tl_id].append(entry)
+    return by_leader
 
 
 def _evidence_rollup(assignment_ids, year):
@@ -162,7 +195,8 @@ def overview(scope, *, reporting_year=None):
         .order_by('albanian_tl__first_name', 'albanian_tl__last_name', 'albanian_tl__username')
     )
     assignment_ids = [a.id for a in assignments]
-    team_sizes = _team_sizes(assignments, scope)
+    leader_members = _leader_members(assignments, scope)
+    epr_stages = _epr_stage_rows(leader_members, year)
     last_cadence, last_evidence, counts, epr, last_held = _evidence_rollup(assignment_ids, year)
 
     leaders = []
@@ -176,7 +210,7 @@ def overview(scope, *, reporting_year=None):
             'cadence_missing': not assignment.cadence,
             'cadence_day_of_week': assignment.cadence_day_of_week,
             'cadence_nth_week': assignment.cadence_nth_week,
-            'team_size': team_sizes.get(assignment.albanian_tl_id, 0),
+            'team_size': len(leader_members.get(assignment.albanian_tl_id, ())),
             'last_meeting_on': last_held.get(assignment.id),
             'next_due_on': (
                 assignment.next_due_on(last_meeting_on=last_meeting_on)
@@ -185,6 +219,7 @@ def overview(scope, *, reporting_year=None):
             'cadence_status': cadence_status(assignment, last_meeting_on=last_meeting_on, on_date=today),
             'epr_mid_year': 'epr_mid_year' in epr.get(assignment.id, ()),
             'epr_year_end': 'epr_year_end' in epr.get(assignment.id, ()),
+            'epr_stages': epr_stages.get(assignment.albanian_tl_id, []),
             'evidence_count': counts.get(assignment.id, 0),
             'last_evidence_on': last_evidence.get(assignment.id),
         })
