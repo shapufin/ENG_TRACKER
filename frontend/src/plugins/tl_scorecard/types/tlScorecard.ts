@@ -430,6 +430,7 @@ export interface HbprEvidence {
   next_due_on: string | null;
   next_due_moved_from?: string | null;
   cadence_status: HbprCadenceStatus;
+  attended_employees?: { user_id: number; name: string }[];
   created_at: string;
   updated_at: string;
 }

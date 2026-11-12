@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { AttendedEmployees } from "../partnership/AttendedEmployees";
 import {
   CalendarClock,
   ExternalLink,
@@ -286,6 +287,7 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
                         {row.shared_summary}
                       </p>
                     )}
+                    <AttendedEmployees employees={row.attended_employees} />
                     {row.action_items && (
                       <div className="border-line-subtle bg-muted/40 mt-3 rounded-lg border p-3">
                         <p className="text-muted-foreground text-xs font-medium">Action items</p>

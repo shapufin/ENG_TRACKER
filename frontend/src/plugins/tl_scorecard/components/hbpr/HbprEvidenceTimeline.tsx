@@ -1,4 +1,5 @@
 import React from "react";
+import { AttendedEmployees } from "../partnership/AttendedEmployees";
 import { ExternalLink, FileClock, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -183,6 +184,7 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
                       {row.shared_summary}
                     </p>
                   )}
+                  <AttendedEmployees employees={row.attended_employees} />
                   {row.action_items && (
                     <div className="border-line-subtle bg-muted/40 mt-3 rounded-lg border p-3">
                       <p className="text-muted-foreground text-xs font-medium">Action items</p>
