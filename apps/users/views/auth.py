@@ -184,13 +184,16 @@ class MFAVerifyView(_MFAView):
                 if exc.code == 'locked'
                 else f"Invalid MFA code entered for user '{username}'"
             )
+            extra_data = {'username': username, 'code': exc.code}
+            if exc.reason:
+                extra_data['reason'] = exc.reason
             log_security_event(
                 user=user,
                 action=action,
                 description=desc,
                 ip_address=ip,
                 user_agent=ua,
-                extra_data={'username': username, 'code': exc.code},
+                extra_data=extra_data,
                 status='failure',
             )
             return _mfa_error(exc)
@@ -238,13 +241,16 @@ class MFALoginActivateView(_MFAView):
             codes = mfa_service.activate(user, str(request.data.get('code', '')))
         except MFAError as exc:
             username = user.username if user else 'Unknown'
+            extra_data = {'username': username, 'code': exc.code}
+            if exc.reason:
+                extra_data['reason'] = exc.reason
             log_security_event(
                 user=user,
                 action='MFA_FAILED',
                 description=f"Invalid MFA code during enrolment for user '{username}'",
                 ip_address=ip,
                 user_agent=ua,
-                extra_data={'username': username, 'code': exc.code},
+                extra_data=extra_data,
                 status='failure',
             )
             return _mfa_error(exc)

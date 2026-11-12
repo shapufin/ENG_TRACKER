@@ -1,5 +1,5 @@
 import re
-
+from django.db.models import Q
 
 from rest_framework import serializers
 
@@ -488,6 +488,7 @@ class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
     next_due_on = serializers.SerializerMethodField()
     next_due_moved_from = serializers.SerializerMethodField()
     cadence_status = serializers.SerializerMethodField()
+    attended_employees = serializers.SerializerMethodField()
 
     class Meta:
         model = HbprGovernanceEvidence
@@ -496,12 +497,41 @@ class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
             'kind', 'kind_display', 'status', 'cancel_reason', 'occurred_on', 'reporting_year',
             'shared_summary', 'action_items', 'reference_url',
             'recorded_by', 'recorded_by_name', 'updated_by', 'updated_by_name',
-            'next_due_on', 'next_due_moved_from', 'cadence_status',
+            'next_due_on', 'next_due_moved_from', 'cadence_status', 'attended_employees',
             'created_at', 'updated_at',
         ]
         read_only_fields = [
             'recorded_by', 'updated_by', 'created_at', 'updated_at',
         ]
+
+    def get_attended_employees(self, obj):
+        """Employees whose EPR stage the HBPR attended, for an EPR row only.
+
+        One partnership row covers the whole year, so this is where each
+        employee shows up. Names only: never the review summary. Matched by the
+        record's author or the employee's current Line Manager, so a later team
+        move does not drop an attendee.
+        """
+        if obj.kind not in HbprGovernanceEvidence.EPR_KINDS:
+            return []
+        stage = 'mid_year' if obj.kind == 'epr_mid_year' else 'final_review'
+        leader_id = obj.assignment.albanian_tl_id
+        cache = self.__dict__.setdefault('_attendee_cache', {})
+        key = (leader_id, obj.reporting_year, stage)
+        if key not in cache:
+            records = (
+                EPRStageRecord.objects.filter(
+                    stage=stage, hbpr_present=True, cycle__year=obj.reporting_year,
+                )
+                .filter(Q(recorded_by_id=leader_id) | Q(cycle__user__profile__albanian_tl_id=leader_id))
+                .select_related('cycle__user')
+                .order_by('cycle__user__first_name', 'cycle__user__last_name', 'cycle__user_id')
+            )
+            cache[key] = [
+                {'user_id': r.cycle.user_id, 'name': _display_name(r.cycle.user)}
+                for r in records
+            ]
+        return cache[key]
 
     def get_albanian_tl_name(self, obj):
         return _display_name(obj.assignment.albanian_tl)

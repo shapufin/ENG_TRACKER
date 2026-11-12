@@ -17,6 +17,7 @@ from ..excel_export import build_workbook_bytes
 from ..pdf_export import build_scorecard_pdf
 
 from ..scope import scoreable_member_ids
+from ..snapshots import epr_roster, frozen_member_ids
 from ..models import (
     HbprGovernanceEvidence,
 )
@@ -248,7 +249,8 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             raise ValidationError({'year': 'year must be between 2000 and 2100.'})
 
         leader = self._resolve_leader(request)
-        return Response(EprProgressSerializer(epr_metrics(scoreable_member_ids(leader), year)).data)
+        roster = epr_roster(leader, year, scoreable_member_ids(leader))
+        return Response(EprProgressSerializer(epr_metrics(roster, year)).data)
 
     @action(detail=False, methods=['get'])
     def partnership(self, request):
@@ -352,8 +354,9 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             scope = get_hbpr_scope(request.user)
             if scope is not None:
                 subject_ids = set(team_member_ids) & scope.user_ids
+        month_roster = frozen_member_ids(leader, month, team_member_ids)
         governance = governance_records(
-            leader, team_member_ids, month.year, subject_ids,
+            leader, month_roster, month.year, subject_ids,
             include_review_content=is_staff_user(request.user) or leader.id == request.user.id,
         )
         period_label = date.fromisoformat(scorecard['month']).strftime('%B %Y')
@@ -385,7 +388,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         include_leave_overtime = not is_hbpr_only(request.user)
         if file_format == 'pdf':
             body = build_scorecard_pdf(
-                scorecard, trend, governance, epr_metrics(team_member_ids, month.year), period_label,
+                scorecard, trend, governance, epr_metrics(epr_roster(leader, month.year, team_member_ids), month.year), period_label,
                 leader_name=leader.get_full_name() or leader.username,
                 generated_by=request.user.get_full_name() or request.user.username,
                 hbpr_evidence=evidence_rows,

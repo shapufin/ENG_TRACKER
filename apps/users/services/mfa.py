@@ -10,6 +10,7 @@ import hashlib
 import hmac
 import io
 import logging
+import math
 import secrets
 import struct
 import time
@@ -30,6 +31,7 @@ logger = logging.getLogger(__name__)
 STEP_SECONDS = 30
 CODE_DIGITS = 6
 STEP_WINDOW = 1  # accept the previous, current and next step (+-30 s of clock drift)
+DRIFT_HINT_WINDOW = 10  # +-5 min diagnostic-only window to detect out-of-sync device clocks
 MAX_FAILURES = 5
 LOCK_MINUTES = 15
 CHALLENGE_MAX_AGE = 300
@@ -46,10 +48,11 @@ PURPOSE_SETUP = 'setup'
 class MFAError(Exception):
     """``code`` is a stable machine string the views map to an HTTP status."""
 
-    def __init__(self, code, message=''):
+    def __init__(self, code, message='', reason=None):
         super().__init__(message or code)
         self.code = code
         self.message = message or code
+        self.reason = reason
 
 
 # --- TOTP primitives ---------------------------------------------------------
@@ -75,14 +78,36 @@ def code_at(secret: str, step: int) -> str:
     return _hotp(secret, step)
 
 
-def match_step(secret: str, code: str, now: float | None = None) -> int | None:
+def match_step(secret: str, code: str, now: float | None = None, window: int = STEP_WINDOW) -> int | None:
     """The step whose code equals ``code`` inside the drift window, else None."""
     base = current_step(now)
     matched = None
-    for step in range(base - STEP_WINDOW, base + STEP_WINDOW + 1):
+    for step in range(base - window, base + window + 1):
         if hmac.compare_digest(_hotp(secret, step), code):
             matched = step
     return matched
+
+
+def _diagnose_totp_failure(
+    secret: str, candidate: str, last_used_step: int | None = None, now: float | None = None
+) -> tuple[str, str]:
+    """Return ``(reason, message)`` explaining why a 6-digit TOTP code was rejected."""
+    if last_used_step is not None:
+        step = match_step(secret, candidate, now=now)
+        if step is not None and step <= last_used_step:
+            return (
+                'reused',
+                'That code was already used. Wait for the next 6-digit code and try again.',
+            )
+    if match_step(secret, candidate, now=now, window=DRIFT_HINT_WINDOW) is not None:
+        return (
+            'clock_drift',
+            'That code is out of sync with the server clock. Turn on automatic date and time on your device, then try the current code.',
+        )
+    return (
+        'mismatch',
+        'That code is not right. Check your authenticator app and try again.',
+    )
 
 
 def provisioning_uri(secret: str, account: str) -> str:
@@ -236,9 +261,14 @@ def activate(user, code: str) -> list[str]:
             secret = decrypt_text(mfa.secret_ciphertext)
         except SecretDecryptError as exc:
             raise MFAError('unavailable', 'Two-factor authentication is unavailable.') from exc
-        step = match_step(secret, ''.join(code.split()))
+        candidate = ''.join(code.split())
+        step = match_step(secret, candidate) if candidate.isdigit() and len(candidate) == CODE_DIGITS else None
         if step is None:
-            raise MFAError('invalid_code', 'That code is not right. Check your authenticator app and try again.')
+            if candidate.isdigit() and len(candidate) == CODE_DIGITS:
+                reason, message = _diagnose_totp_failure(secret, candidate)
+            else:
+                reason, message = 'mismatch', 'That code is not right. Check your authenticator app and try again.'
+            raise MFAError('invalid_code', message, reason=reason)
         mfa.is_enabled = True
         mfa.enabled_at = timezone.now()
         mfa.last_used_step = step
@@ -255,6 +285,9 @@ def verify_second_factor(user, code: str) -> None:
     inside the transaction and the exception raised after it closes.
     """
     outcome = None
+    failure_reason = None
+    failure_message = None
+    lock_minutes_left = LOCK_MINUTES
     with transaction.atomic():
         mfa = UserMFA.objects.select_for_update().filter(user=user, is_enabled=True).first()
         if mfa is None:
@@ -262,6 +295,8 @@ def verify_second_factor(user, code: str) -> None:
         now = timezone.now()
         if mfa.locked_until and mfa.locked_until > now:
             outcome = 'locked'
+            failure_reason = 'locked'
+            lock_minutes_left = max(1, math.ceil((mfa.locked_until - now).total_seconds() / 60))
         else:
             try:
                 secret = decrypt_text(mfa.secret_ciphertext)
@@ -270,7 +305,8 @@ def verify_second_factor(user, code: str) -> None:
                 raise MFAError('unavailable', 'Two-factor authentication is unavailable. Contact an administrator.')
             candidate = ''.join(code.split())
             accepted = False
-            if candidate.isdigit() and len(candidate) == CODE_DIGITS:
+            is_totp = candidate.isdigit() and len(candidate) == CODE_DIGITS
+            if is_totp:
                 step = match_step(secret, candidate)
                 if step is not None and (mfa.last_used_step is None or step > mfa.last_used_step):
                     mfa.last_used_step = step
@@ -285,16 +321,34 @@ def verify_second_factor(user, code: str) -> None:
             else:
                 mfa.failed_attempts += 1
                 outcome = 'invalid_code'
+                if is_totp:
+                    failure_reason, failure_message = _diagnose_totp_failure(
+                        secret, candidate, last_used_step=mfa.last_used_step
+                    )
+                elif _normalise_backup(candidate):
+                    failure_reason = 'invalid_backup_code'
+                    failure_message = 'That backup code is not right. Check the code and try again.'
+                else:
+                    failure_reason = 'mismatch'
+                    failure_message = 'That code is not right. Check your authenticator app and try again.'
                 if mfa.failed_attempts >= MAX_FAILURES:
                     mfa.failed_attempts = 0
                     mfa.locked_until = now + timedelta(minutes=LOCK_MINUTES)
                     outcome = 'locked'
+                    failure_reason = 'locked'
+                else:
+                    remaining = MAX_FAILURES - mfa.failed_attempts
+                    unit = 'attempt' if remaining == 1 else 'attempts'
+                    failure_message = (
+                        f'{failure_message} ({remaining} {unit} left before a {LOCK_MINUTES}-minute lockout.)'
+                    )
             mfa.save(update_fields=['last_used_step', 'failed_attempts', 'locked_until', 'updated_at'])
 
     if outcome == 'locked':
-        raise MFAError('locked', f'Too many wrong codes. Try again in {LOCK_MINUTES} minutes.')
+        unit = 'minute' if lock_minutes_left == 1 else 'minutes'
+        raise MFAError('locked', f'Too many wrong codes. Try again in {lock_minutes_left} {unit}.', reason='locked')
     if outcome == 'invalid_code':
-        raise MFAError('invalid_code', 'That code is not right. Check your authenticator app and try again.')
+        raise MFAError('invalid_code', failure_message, reason=failure_reason)
 
 
 def check_step_up(user, password: str, code: str) -> None:

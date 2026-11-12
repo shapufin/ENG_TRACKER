@@ -77,12 +77,18 @@ class LoginHandshakeTests(MFATestBase):
             self.assertEqual(response.status_code, expected)
 
     def test_replayed_totp_code_is_rejected(self):
+        from apps.reports.models import AuditLog
         secret, _ = self.enrol()
         code = next_code(secret)
         token = login(self.client).data['mfa_token']
         self.assertEqual(self.client.post('/api/auth/token/mfa-verify/', {'mfa_token': token, 'code': code}).status_code, 200)
         token = login(self.client).data['mfa_token']
-        self.assertEqual(self.client.post('/api/auth/token/mfa-verify/', {'mfa_token': token, 'code': code}).status_code, 400)
+        resp = self.client.post('/api/auth/token/mfa-verify/', {'mfa_token': token, 'code': code})
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('already used', resp.data['detail'])
+        audit_row = AuditLog.objects.filter(action='MFA_FAILED').order_by('-id').first()
+        self.assertIsNotNone(audit_row)
+        self.assertEqual(audit_row.extra_data.get('reason'), 'reused')
 
     def test_wrong_codes_lock_the_account_even_with_fresh_challenges(self):
         secret, _ = self.enrol()

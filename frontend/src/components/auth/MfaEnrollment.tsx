@@ -43,8 +43,8 @@ export const MfaEnrollment = ({
           1. Scan the QR code
         </h3>
         <p className="text-muted-foreground text-sm">
-          Open an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password, Authy)
-          and add an account by scanning this code.
+          Open an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password,
+          Authy) and add an account by scanning this code.
         </p>
         {/* White tile in both themes: a QR needs dark-on-light contrast to scan. */}
         <div className="flex justify-center">
@@ -99,6 +99,9 @@ export const MfaEnrollment = ({
           error={error}
           autoFocus
         />
+        <p className="text-muted-foreground text-xs">
+          If the code is rejected, check that automatic date and time is turned on on your device.
+        </p>
       </section>
     </div>
   );

@@ -44,7 +44,9 @@ const session = { access: "tok", user: employee };
 
 const renderPage = () =>
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       <MemoryRouter>
         <LoginPage />
       </MemoryRouter>
@@ -119,13 +121,16 @@ describe("LoginPage second factor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Verify" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("That code is not right.");
+    expect(screen.getByText(/automatic date and time is turned on/i)).toBeInTheDocument();
     expect(screen.getByLabelText("6-digit code")).toHaveValue("");
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
   it("returns to the password step when the challenge has expired", async () => {
     loginMock.mockResolvedValue({ mfa_required: true, mfa_token: "chal" });
-    verifyMfaMock.mockRejectedValue(apiError("challenge_invalid", "This sign-in step expired. Start again."));
+    verifyMfaMock.mockRejectedValue(
+      apiError("challenge_invalid", "This sign-in step expired. Start again.")
+    );
     renderPage();
     await enterPassword();
     fireEvent.change(await screen.findByLabelText("6-digit code"), { target: { value: "111111" } });
@@ -150,11 +155,16 @@ describe("LoginPage second factor", () => {
     it("walks through setup, shows backup codes, and only continues once they are saved", async () => {
       loginMock.mockResolvedValue({ mfa_setup_required: true, mfa_token: "chal" });
       startLoginSetupMock.mockResolvedValue(setup);
-      finishLoginSetupMock.mockResolvedValue({ ...session, backup_codes: ["AAAA-BBBB-CCCC", "DDDD-EEEE-FFFF"] });
+      finishLoginSetupMock.mockResolvedValue({
+        ...session,
+        backup_codes: ["AAAA-BBBB-CCCC", "DDDD-EEEE-FFFF"],
+      });
       renderPage();
       await enterPassword();
 
-      expect(await screen.findByRole("heading", { name: "Set up two-factor authentication" })).toBeInTheDocument();
+      expect(
+        await screen.findByRole("heading", { name: "Set up two-factor authentication" })
+      ).toBeInTheDocument();
       expect(startLoginSetupMock).toHaveBeenCalledWith("chal");
       expect(screen.getByAltText(/QR code/i)).toBeInTheDocument();
       expect(screen.getByTestId("mfa-secret")).toHaveTextContent("ABCD EFGH IJKL MNOP");
