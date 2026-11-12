@@ -43,15 +43,15 @@ class YearClosePlugin(BasePlugin):
         metadata.update({
             "routes": [
                 {
-                    "path": "/admin/previous-years",
-                    "component": "PreviousYearsPage",
+                    "path": "/admin/archives",
+                    "component": "ArchivesPage",
                     "layout": "admin",
                 },
             ],
             "injection_slots": [
                 {
                     "slot": "admin-sidebar-nav-system",
-                    "component": "PreviousYearsSidebarItem",
+                    "component": "ArchivesSidebarItem",
                     "section": "system",
                 },
             ],

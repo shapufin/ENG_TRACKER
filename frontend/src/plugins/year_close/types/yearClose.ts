@@ -32,3 +32,36 @@ export interface YearSnapshotFile {
   error: string;
   created_at: string;
 }
+
+export interface ArchiveCategory {
+  key: string;
+  label: string;
+  /** Null when the set was built before this category was recorded. */
+  count: number | null;
+  location: "company" | "team";
+  retention_years: number;
+  remove_on: string;
+}
+
+export interface ArchiveEntry {
+  year: number;
+  snapshot_id: number;
+  version: number;
+  completed_at: string | null;
+  total_bytes: number;
+  categories: ArchiveCategory[];
+  files: YearSnapshotFile[];
+}
+
+export type VerifyResult = "ok" | "mismatch" | "missing";
+
+export interface LeaderHistoryRow {
+  leader_id: number;
+  username: string;
+  name: string;
+  is_current: boolean;
+  scorecard_months: number;
+  engagement_months: number;
+  governance_evidence: number;
+  leader_records: number;
+}

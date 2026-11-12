@@ -1,5 +1,5 @@
 /**
- * Previous Years page, end to end (plan `2026-10-26-year-close-snapshot.md`, Y4).
+ * Archives page (was Previous Years), end to end (plan `2026-10-26-year-close-snapshot.md`, Y4).
  *
  * A closed year is superuser-only evidence: the page gates itself (the route
  * admits staff), lists the set, and downloads a file through a signed link.
@@ -66,13 +66,13 @@ test.afterAll(() => {
   resetFixture();
 });
 
-test("a superuser lists the closed year and downloads a file", async ({ page }) => {
+test("a superuser lists the closed year, sees retention dates and downloads a file", async ({ page }) => {
   test.skip(!runsHere(), "closing a year is global state: one project only");
 
   await loginAsUser(page, E2E_CREDENTIALS.superuser);
-  await page.goto("/admin/previous-years");
+  await page.goto("/admin/archives");
 
-  await expect(page.getByRole("heading", { name: "Previous Years" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Archives" })).toBeVisible();
   const yearRow = page.getByRole("row", { name: new RegExp(String(YEAR)) });
   await expect(yearRow.getByText("ready")).toBeVisible();
 
@@ -80,6 +80,8 @@ test("a superuser lists the closed year and downloads a file", async ({ page }) 
   await yearRow.hover();
   await page.getByRole("button", { name: `Files for ${YEAR}` }).click({ force: true });
   await expect(page.getByText("company", { exact: true })).toBeVisible();
+  await expect(page.getByText(`${YEAR} contents and retention`)).toBeVisible();
+  await expect(page.getByText(/kept until/).first()).toBeVisible();
 
   // Same hover-gated pill as the years table.
   const companyRow = page.getByRole("row", { name: /company/ });
@@ -93,6 +95,6 @@ test("staff is refused, because the route alone is not the gate", async ({ page 
   test.skip(!runsHere(), "closing a year is global state: one project only");
 
   await loginAsUser(page, E2E_CREDENTIALS.admin);
-  await page.goto("/admin/previous-years");
+  await page.goto("/admin/archives");
   await expect(page.getByText("Access Denied")).toBeVisible();
 });

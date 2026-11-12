@@ -12,7 +12,7 @@ const ADMIN_PLUGIN_CRUMBS: Record<string, { group: string; label: string }> = {
   "/admin/audit-logs": { group: "System", label: "Audit Logs" },
   "/admin/notifications": { group: "System", label: "Notifications" },
   "/admin/backup-restore": { group: "System", label: "Backup & Restore" },
-  "/admin/previous-years": { group: "System", label: "Previous Years" },
+  "/admin/archives": { group: "System", label: "Archives" },
 };
 
 const matches = (pathname: string, path: string, exact?: boolean) =>

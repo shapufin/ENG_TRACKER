@@ -1,7 +1,12 @@
 import api from "@/lib/api";
 import { normalizeList } from "@/lib/api-utils";
 import type { PaginatedResponse } from "@/types";
-import type { YearSnapshot, YearSnapshotFile } from "../types/yearClose";
+import type {
+  ArchiveEntry,
+  LeaderHistoryRow,
+  VerifyResult,
+  YearSnapshot,
+} from "../types/yearClose";
 
 const BASE = "/plugins/year_close";
 
@@ -14,16 +19,37 @@ export const yearCloseService = {
     return normalizeList(data);
   },
 
-  async listFiles(snapshotId: number): Promise<YearSnapshotFile[]> {
-    const { data } = await api.get<YearSnapshotFile[] | PaginatedResponse<YearSnapshotFile>>(
-      `${BASE}/snapshots/${snapshotId}/files/`
-    );
-    return normalizeList(data);
-  },
-
   /** A 120-second, single-use URL: navigate to it, never fetch it as a blob. */
   async getDownloadUrl(fileId: number): Promise<string> {
     const { data } = await api.post<{ url: string }>(`${BASE}/files/${fileId}/download-link/`);
     return data.url;
+  },
+
+  /** One entry per closed year: categories with counts and removal dates, plus files. */
+  async listArchives(): Promise<ArchiveEntry[]> {
+    const { data } = await api.get<ArchiveEntry[]>(`${BASE}/archives/`);
+    return data;
+  },
+
+  /** Recomputes the file's checksum on the server and compares it with the stored one. */
+  async verifyFile(fileId: number): Promise<VerifyResult> {
+    const { data } = await api.post<{ result: VerifyResult }>(`${BASE}/files/${fileId}/verify/`);
+    return data.result;
+  },
+
+  async listLeaderHistory(year: number): Promise<LeaderHistoryRow[]> {
+    const { data } = await api.get<LeaderHistoryRow[]>(`${BASE}/archives/leaders/`, {
+      params: { year },
+    });
+    return data;
+  },
+
+  /** A leader's workbook for one year; small enough to stream as a blob. */
+  async exportLeader(year: number, leaderId: number): Promise<Blob> {
+    const { data } = await api.get<Blob>(`${BASE}/archives/leaders/export/`, {
+      params: { year, leader: leaderId },
+      responseType: "blob",
+    });
+    return data;
   },
 };

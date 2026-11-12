@@ -3,18 +3,18 @@ import { Link, useLocation } from "react-router-dom";
 import { FolderArchive } from "lucide-react";
 import { usePermissions } from "@/context/PermissionContext";
 
-/** Admin nav entry for the Previous Years page. Superuser-only, like the page. */
-const PreviousYearsSidebarItem: React.FC = () => {
+/** Admin nav entry for the Archives page. Superuser-only, like the page. */
+const ArchivesSidebarItem: React.FC = () => {
   const location = useLocation();
   const { isSuperuser } = usePermissions();
-  const isActive = location.pathname.startsWith("/admin/previous-years");
+  const isActive = location.pathname.startsWith("/admin/archives");
 
   if (!isSuperuser) return null;
 
   return (
     <li>
       <Link
-        to="/admin/previous-years"
+        to="/admin/archives"
         role="menuitem"
         className={`group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
           isActive
@@ -23,10 +23,10 @@ const PreviousYearsSidebarItem: React.FC = () => {
         }`}
       >
         <FolderArchive className={`h-5 w-5 shrink-0 ${isActive ? "text-primary" : ""}`} />
-        <span>Previous Years</span>
+        <span>Archives</span>
       </Link>
     </li>
   );
 };
 
-export default PreviousYearsSidebarItem;
+export default ArchivesSidebarItem;

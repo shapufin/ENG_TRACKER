@@ -232,13 +232,13 @@ const PLUGIN_COMPONENTS: Record<string, Record<string, React.LazyExoticComponent
     ),
   },
   year_close: {
-    PreviousYearsPage: lazy(() =>
-      import("./year_close/pages/PreviousYearsPage").then((m) => ({
-        default: m.PreviousYearsPage,
+    ArchivesPage: lazy(() =>
+      import("./year_close/pages/ArchivesPage").then((m) => ({
+        default: m.ArchivesPage,
       }))
     ),
-    PreviousYearsSidebarItem: lazy(
-      () => import("./year_close/components/PreviousYearsSidebarItem")
+    ArchivesSidebarItem: lazy(
+      () => import("./year_close/components/ArchivesSidebarItem")
     ),
   },
   tl_scorecard: {

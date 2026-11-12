@@ -24,7 +24,7 @@ Branch per phase, TDD, one PR each, docs and backup checks inside every phase.
 `archive_sets.py`: EPR, scorecard months, engagement, HBPR evidence with attendees, leader records, in the company
 ZIP; December snapshot blocker. Items 74-75 in `docs/workflow-invariants.md`.
 
-## Phase 2 - Archives area (superuser)
+## Phase 2 - Archives area (superuser) - BUILT 2026-11-12 (invariant 76)
 - Admin sidebar group "Archives" (one entry, replaces the Previous Years entry; route and crumbs updated).
 - Sections per year: Payroll, Overtime, Standby, Leave, Scorecard and EPR, Engagement, HBPR evidence, each with its
   file, size, hash status, removal date and download. Leader history lists current and former leaders per year.
