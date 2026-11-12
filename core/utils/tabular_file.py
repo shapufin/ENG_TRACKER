@@ -8,6 +8,7 @@ plugins/ticket_kpi/mapping_engine.py.
 """
 
 import io
+import re
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -51,15 +52,20 @@ def normalize_columns(df_columns: List[str]) -> Dict[str, str]:
     """Return a lowercase/stripped lookup map from original column names.
 
     Strips a trailing "*" (the required-column marker downloadable templates
-    append to a field's label, e.g. "Name *") so a filled-in template still
-    auto-detects against the plain alias list ("name") on re-upload.
+    append to a field's label, e.g. "Name *") and any parenthetical/bracketed
+    example hints (e.g. "Team Code (e.g. ENG, HR)" -> "team code") so a
+    filled-in template still auto-detects against the plain alias list ("team code")
+    on re-upload. Both raw and stripped keys are preserved in the lookup.
     """
     lookup: Dict[str, str] = {}
     for c in df_columns:
-        key = c.lower().strip()
-        if key.endswith('*'):
-            key = key[:-1].strip()
-        lookup[key] = c
+        raw_key = c.lower().strip()
+        if raw_key.endswith('*'):
+            raw_key = raw_key[:-1].strip()
+        lookup[raw_key] = c
+        stripped_key = re.sub(r'\s*[\(\[].*?[\)\]]', '', raw_key).strip()
+        if stripped_key and stripped_key not in lookup:
+            lookup[stripped_key] = c
     return lookup
 
 

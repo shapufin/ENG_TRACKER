@@ -99,3 +99,44 @@ class SkillImporter(SkillsPluginAuthority, CodeKeyedImporter):
                 "is_active": True,
             },
         ]
+
+    def _build_dynamic_sample_rows(self) -> List[Dict[str, Any]]:
+        categories = list(SkillCategory.objects.filter(is_active=True).order_by("code")[:2])
+        if not categories:
+            return []
+        c1 = categories[0].code
+        c2 = categories[1].code if len(categories) > 1 else c1
+        return [
+            {
+                "code": "SKILL-NEW-1",
+                "name": "Cloud Administration",
+                "category_code": c1,
+                "description": "Example skill",
+                "is_active": True,
+            },
+            {
+                "code": "SKILL-NEW-2",
+                "name": "Data Analytics",
+                "category_code": c2,
+                "description": "Example data skill",
+                "is_active": True,
+            },
+        ]
+
+    def get_field_dropdowns(self) -> Dict[str, List[str]]:
+        dropdowns = super().get_field_dropdowns()
+        categories = list(
+            SkillCategory.objects.filter(is_active=True)
+            .values_list("code", flat=True)
+            .order_by("code")[:50]
+        )
+        if categories:
+            dropdowns["category_code"] = categories
+        return dropdowns
+
+    def get_reference_data(self) -> Dict[str, List[Dict[str, Any]]]:
+        cats = [
+            {"Category Code": c.code, "Category Name": c.name}
+            for c in SkillCategory.objects.filter(is_active=True).order_by("code")
+        ]
+        return {"Active Skill Categories": cats} if cats else {}

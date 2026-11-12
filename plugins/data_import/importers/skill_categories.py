@@ -74,3 +74,10 @@ class SkillCategoryImporter(SkillsPluginAuthority, CodeKeyedImporter):
                 "is_active": True,
             },
         ]
+
+    def get_reference_data(self) -> Dict[str, List[Dict[str, Any]]]:
+        cats = [
+            {"Category Code": c.code, "Category Name": c.name}
+            for c in SkillCategory.objects.all().order_by("code")
+        ]
+        return {"Existing Categories": cats} if cats else {}

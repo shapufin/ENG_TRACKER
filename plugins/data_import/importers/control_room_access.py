@@ -212,3 +212,73 @@ class ControlRoomAccessImporter(ControlRoomAuthority, BaseImporter):
                 "is_active": True,
             },
         ]
+
+    def _build_dynamic_sample_rows(self) -> List[Dict[str, Any]]:
+        from django.contrib.auth.models import User
+        users = list(User.objects.filter(is_active=True).order_by("username")[:2])
+        teams = list(Team.objects.all().order_by("code")[:2])
+        if not users and not teams:
+            return []
+
+        u1 = users[0].username if users else "mrossi"
+        e1 = users[0].email if users else "m.rossi@example.com"
+        u2 = users[1].username if len(users) > 1 else u1
+        e2 = users[1].email if len(users) > 1 else e1
+
+        t1 = teams[0].code if teams else "ENG"
+        t2 = f"{t1},{teams[1].code}" if len(teams) > 1 else t1
+
+        return [
+            {
+                "username": u1,
+                "email": e1,
+                "team_codes": t1,
+                "display_name": users[0].get_full_name() or u1 if users else "Marco Rossi",
+                "timezone": "Europe/Rome",
+                "is_active": True,
+            },
+            {
+                "username": u2,
+                "email": e2,
+                "team_codes": t2,
+                "display_name": (
+                    users[1].get_full_name() or u2
+                    if len(users) > 1
+                    else (users[0].get_full_name() if users else "Arben Hoxha")
+                ),
+                "timezone": "Europe/Tirane",
+                "is_active": True,
+            },
+        ]
+
+    def get_field_dropdowns(self) -> Dict[str, List[str]]:
+        from django.contrib.auth.models import User
+        dropdowns = super().get_field_dropdowns()
+        users = list(
+            User.objects.filter(is_active=True)
+            .values_list("username", flat=True)
+            .order_by("username")[:50]
+        )
+        teams = list(Team.objects.values_list("code", flat=True).order_by("code")[:50])
+        if users:
+            dropdowns["username"] = users
+        if teams:
+            dropdowns["team_codes"] = teams
+        return dropdowns
+
+    def get_reference_data(self) -> Dict[str, List[Dict[str, Any]]]:
+        from django.contrib.auth.models import User
+        ref: Dict[str, List[Dict[str, Any]]] = {}
+        teams = [
+            {"Team Code": t.code, "Team Name": t.name}
+            for t in Team.objects.all().order_by("code")
+        ]
+        if teams:
+            ref["Active Teams"] = teams
+        users = [
+            {"Username": u.username, "Full Name": u.get_full_name() or u.username}
+            for u in User.objects.filter(is_active=True).order_by("username")[:50]
+        ]
+        if users:
+            ref["Active Employees"] = users
+        return ref

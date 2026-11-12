@@ -198,3 +198,39 @@ class PublicHolidayImporter(StaffOnlyAuthority, BaseImporter):
                 "description": "National holiday",
             },
         ]
+
+    def _build_dynamic_sample_rows(self) -> List[Dict[str, Any]]:
+        ws = CalendarWorkspace.objects.first()
+        ws_name = ws.name if ws else ""
+        return [
+            {
+                "name": "New Year's Day",
+                "date": "2026-01-01",
+                "country_code": "IT",
+                "workspace_name": ws_name,
+                "is_global": ws is None,
+                "description": "National holiday",
+            },
+            {
+                "name": "Republic Day",
+                "date": "2026-06-02",
+                "country_code": "IT",
+                "workspace_name": ws_name,
+                "is_global": ws is None,
+                "description": "National holiday",
+            },
+        ]
+
+    def get_field_dropdowns(self) -> Dict[str, List[str]]:
+        dropdowns = super().get_field_dropdowns()
+        workspaces = list(CalendarWorkspace.objects.values_list("name", flat=True)[:30])
+        if workspaces:
+            dropdowns["workspace_name"] = workspaces
+        return dropdowns
+
+    def get_reference_data(self) -> Dict[str, List[Dict[str, Any]]]:
+        workspaces = [
+            {"Workspace Name": w.name}
+            for w in CalendarWorkspace.objects.all()[:30]
+        ]
+        return {"Calendar Workspaces": workspaces} if workspaces else {}

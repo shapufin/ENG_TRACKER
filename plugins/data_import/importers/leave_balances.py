@@ -51,6 +51,70 @@ class LeaveBalanceImporter(StaffOnlyAuthority, BaseImporter):
             },
         ]
 
+    def _build_dynamic_sample_rows(self) -> List[Dict[str, Any]]:
+        from django.contrib.auth.models import User
+        users = list(User.objects.filter(is_active=True).order_by("username")[:2])
+        if not users:
+            return []
+        leave_type = LeaveBalance.LEAVE_TYPE_CHOICES[0][0]
+        u1 = users[0].username
+        e1 = users[0].email
+        u2 = users[1].username if len(users) > 1 else u1
+        e2 = users[1].email if len(users) > 1 else e1
+        return [
+            {
+                "username": u1,
+                "email": e1,
+                "leave_type": leave_type,
+                "year": 2026,
+                "total_days": "26",
+                "used_days": "4",
+                "pending_days": "0",
+                "is_carry_over": False,
+                "accrual_start_date": "2026-01-01",
+            },
+            {
+                "username": u2,
+                "email": e2,
+                "leave_type": leave_type,
+                "year": 2026,
+                "total_days": "22",
+                "used_days": "0",
+                "pending_days": "2",
+                "is_carry_over": False,
+                "accrual_start_date": "2026-01-01",
+            },
+        ]
+
+    def get_field_dropdowns(self) -> Dict[str, List[str]]:
+        from django.contrib.auth.models import User
+        dropdowns = super().get_field_dropdowns()
+        users = list(
+            User.objects.filter(is_active=True)
+            .values_list("username", flat=True)
+            .order_by("username")[:50]
+        )
+        if users:
+            dropdowns["username"] = users
+        return dropdowns
+
+    def get_reference_data(self) -> Dict[str, List[Dict[str, Any]]]:
+        from django.contrib.auth.models import User
+        users = [
+            {"Username": u.username, "Full Name": u.get_full_name() or u.username}
+            for u in User.objects.filter(is_active=True).order_by("username")[:50]
+        ]
+        leave_types = [
+            {"Code": c[0], "Label": c[1]}
+            for c in LeaveBalance.LEAVE_TYPE_CHOICES
+        ]
+        ref = {}
+        if users:
+            ref["Active Employees"] = users
+        if leave_types:
+            ref["Leave Types"] = leave_types
+        return ref
+
     def get_fields(self) -> List[ImportField]:
         return [
             ImportField(

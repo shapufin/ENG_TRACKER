@@ -165,6 +165,45 @@ class WageImporter(PayrollAuthority, BaseImporter):
             },
         ]
 
+    def _build_dynamic_sample_rows(self) -> List[Dict[str, Any]]:
+        users = list(User.objects.filter(is_active=True).order_by("username")[:2])
+        if not users:
+            return []
+        u1 = users[0].username
+        u2 = users[1].username if len(users) > 1 else u1
+        return [
+            {
+                "username": u1,
+                "gross_monthly_wage": 150000,
+                "effective_from": "2026-01-01",
+                "note": "Standard monthly wage",
+            },
+            {
+                "username": u2,
+                "gross_monthly_wage": 135000,
+                "effective_from": "2026-01-01",
+                "note": "Adjusted wage",
+            },
+        ]
+
+    def get_field_dropdowns(self) -> Dict[str, List[str]]:
+        dropdowns = super().get_field_dropdowns()
+        users = list(
+            User.objects.filter(is_active=True)
+            .values_list("username", flat=True)
+            .order_by("username")[:50]
+        )
+        if users:
+            dropdowns["username"] = users
+        return dropdowns
+
+    def get_reference_data(self) -> Dict[str, List[Dict[str, Any]]]:
+        users = [
+            {"Username": u.username, "Full Name": u.get_full_name() or u.username}
+            for u in User.objects.filter(is_active=True).order_by("username")[:100]
+        ]
+        return {"Active Employees": users} if users else {}
+
     def _month_warnings(
         self,
         WageAssignment,
