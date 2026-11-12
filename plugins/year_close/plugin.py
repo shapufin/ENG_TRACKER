@@ -63,4 +63,6 @@ class YearClosePlugin(BasePlugin):
         # unless last year is eligible and not yet ready.
         return [
             ('close_year', 3600, 'plugins.year_close.services.closer.process_close_year'),
+            # Notices only; a purge is never scheduled, a superuser confirms it.
+            ('retention_notices', 86400, 'plugins.year_close.services.retention.process_notices_tick'),
         ]

@@ -20,6 +20,7 @@ vi.mock("../services/yearCloseService", () => ({
     verifyFile: vi.fn(),
     listLeaderHistory: vi.fn(),
     exportLeader: vi.fn(),
+    purgeCategory: vi.fn(),
   },
 }));
 vi.mock("@/lib/download", async (importOriginal) => ({
@@ -68,6 +69,9 @@ const entry = (overrides = {}) => ({
       location: "company" as const,
       retention_years: 5,
       remove_on: "2030-12-31",
+      removable: false,
+      purged_at: null as string | null,
+      notice_sent_on: null as string | null,
     },
     {
       key: "overtime",
@@ -76,6 +80,9 @@ const entry = (overrides = {}) => ({
       location: "team" as const,
       retention_years: 3,
       remove_on: "2028-12-31",
+      removable: true,
+      purged_at: null as string | null,
+      notice_sent_on: "2028-12-01" as string | null,
     },
   ],
   files: [file()],
@@ -201,5 +208,55 @@ describe("ArchivesPage", () => {
     expect(screen.getByText("Former")).toBeInTheDocument();
     screen.getByRole("button", { name: /Export Old Lead 2025/ }).click();
     await waitFor(() => expect(yearCloseService.exportLeader).toHaveBeenCalledWith(2025, 5));
+  });
+
+  const openRemoveDialog = async () => {
+    vi.mocked(yearCloseService.listSnapshots).mockResolvedValue([snapshot()]);
+    renderPage();
+    await screen.findByText("2025");
+    screen.getByRole("button", { name: "Files for 2025" }).click();
+    (await screen.findByRole("button", { name: "Remove Overtime of 2025" })).click();
+  };
+
+  it("offers removal only for a category past its date, and previews before deleting", async () => {
+    vi.mocked(yearCloseService.purgeCategory).mockResolvedValue({
+      year: 2025,
+      category: "overtime",
+      dry_run: true,
+      rows: { "Overtime entries": 40 },
+    });
+    await openRemoveDialog();
+    expect(screen.queryByRole("button", { name: "Remove Payroll of 2025" })).not.toBeInTheDocument();
+
+    expect(await screen.findByText("Overtime entries")).toBeInTheDocument();
+    expect(yearCloseService.purgeCategory).toHaveBeenCalledWith(2025, "overtime", true);
+    expect(yearCloseService.purgeCategory).not.toHaveBeenCalledWith(2025, "overtime", false);
+
+    screen.getByRole("button", { name: "Remove permanently" }).click();
+    await waitFor(() =>
+      expect(yearCloseService.purgeCategory).toHaveBeenCalledWith(2025, "overtime", false)
+    );
+  });
+
+  it("shows why a removal is refused and keeps confirm disabled", async () => {
+    vi.mocked(yearCloseService.purgeCategory).mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 409, data: { reasons: ["The final removal notice is missing."] } },
+    });
+    await openRemoveDialog();
+    expect(await screen.findByText("The final removal notice is missing.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove permanently" })).toBeDisabled();
+  });
+
+  it("shows a removed category as removed, with no button", async () => {
+    vi.mocked(yearCloseService.listSnapshots).mockResolvedValue([snapshot()]);
+    const base = entry();
+    base.categories[1] = { ...base.categories[1], purged_at: "2029-01-20T10:00:00+00:00" };
+    vi.mocked(yearCloseService.listArchives).mockResolvedValue([base]);
+    renderPage();
+    await screen.findByText("2025");
+    screen.getByRole("button", { name: "Files for 2025" }).click();
+    expect(await screen.findByText(/Removed on/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Remove Overtime of 2025" })).not.toBeInTheDocument();
   });
 });

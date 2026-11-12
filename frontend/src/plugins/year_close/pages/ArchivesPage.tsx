@@ -1,6 +1,6 @@
 /** Archives: the frozen evidence of each closed year and the leader history (superuser only). */
 import React, { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FolderArchive } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/PageShell";
@@ -18,9 +18,10 @@ import { usePermissions } from "@/context/PermissionContext";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 import { ArchiveContents } from "../components/ArchiveContents";
 import { LeaderHistoryTab } from "../components/LeaderHistoryTab";
+import { PurgeDialog } from "../components/PurgeDialog";
 import { formatBytes, formatDate } from "../components/archiveFormat";
 import { yearCloseService } from "../services/yearCloseService";
-import type { VerifyResult, YearSnapshot } from "../types/yearClose";
+import type { ArchiveCategory, VerifyResult, YearSnapshot } from "../types/yearClose";
 
 const STATUS_VARIANT: Record<string, StatusVariant> = {
   ready: "approved",
@@ -56,6 +57,8 @@ export const ArchivesPage: React.FC = () => {
 const ArchivesContent: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [tab, setTab] = useState<ArchivesTab>("years");
+  const [removing, setRemoving] = useState<ArchiveCategory | null>(null);
+  const queryClient = useQueryClient();
 
   const snapshots = useQuery({
     queryKey: ["year_close", "snapshots"],
@@ -219,7 +222,22 @@ const ArchivesContent: React.FC = () => {
               </ul>
             </GlassCard>
           )}
-          {entry && <ArchiveContents entry={entry} onDownload={download} onVerify={verify} />}
+          {entry && (
+            <ArchiveContents
+              entry={entry}
+              onDownload={download}
+              onVerify={verify}
+              onRemove={setRemoving}
+            />
+          )}
+          {entry && (
+            <PurgeDialog
+              year={entry.year}
+              category={removing}
+              onClose={() => setRemoving(null)}
+              onDone={() => void queryClient.invalidateQueries({ queryKey: ["year_close"] })}
+            />
+          )}
         </>
       )}
     </PageShell>

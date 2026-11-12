@@ -4,6 +4,7 @@ import type { PaginatedResponse } from "@/types";
 import type {
   ArchiveEntry,
   LeaderHistoryRow,
+  PurgeResult,
   VerifyResult,
   YearSnapshot,
 } from "../types/yearClose";
@@ -40,6 +41,16 @@ export const yearCloseService = {
   async listLeaderHistory(year: number): Promise<LeaderHistoryRow[]> {
     const { data } = await api.get<LeaderHistoryRow[]>(`${BASE}/archives/leaders/`, {
       params: { year },
+    });
+    return data;
+  },
+
+  /** Preview (dryRun) or confirm the removal of one archived category. 409 carries `reasons`. */
+  async purgeCategory(year: number, category: string, dryRun: boolean): Promise<PurgeResult> {
+    const { data } = await api.post<PurgeResult>(`${BASE}/archives/purge/`, {
+      year,
+      category,
+      dry_run: dryRun,
     });
     return data;
   },

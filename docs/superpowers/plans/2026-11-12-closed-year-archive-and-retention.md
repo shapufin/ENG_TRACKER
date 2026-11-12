@@ -30,17 +30,17 @@ ZIP; December snapshot blocker. Items 74-75 in `docs/workflow-invariants.md`.
   file, size, hash status, removal date and download. Leader history lists current and former leaders per year.
 - Read-only: downloads and status, no live data grid (closed-year data is frozen, no recomputation).
 
-## Phase 3 - Retention, notice, purge, tombstone
-- New small model `ArchivePurge` (year, category, rows removed, archive hash, purged at): proof of what was removed.
+## Phase 3 - Retention, notice, purge, tombstone - BUILT 2026-11-12 (invariant 77; tombstone is a file, not a model)
+- Proof of what was removed is a ledger file, `{year}/RETENTION.json` on the archive volume (no model, no migration: the migrations folder is off limits and the file travels with the archive).
 - `retention.py` with a daily notice job (no purge job) and the command; notice event through the notification registry, once per year and stage.
 - Purge order respects `PROTECT` (payroll lines before runs, evidence before assignments); audited; idempotent.
 - Closed-year lock stays (`ClosedYear` row is never deleted), so purged years still refuse writes.
 
 ## Phase 4 - Backup/restore (same PR as Phase 3, plus a check per phase)
-- `ArchivePurge` added to the backup coverage guard and the restore classification tests.
+- No new model, so nothing to add to the backup coverage guard; a restore round-trip test pins that restored rows can be removed again.
 - A restore of a pre-purge backup resurrects rows: the next retention run purges them again (idempotent); documented.
 - `SNAPSHOT_ROOT` listed as critical in `docs/site-backup-and-restore.md` and the runbook.
-- `year_close` stays in `EXCLUDED_APPS`, `ArchivePurge` is the one exception to decide and test.
+- `year_close` stays in `EXCLUDED_APPS` (the ledger lives on the volume, not in the database).
 
 ## Phase 5 - Leader moves
 Admin response lists a departing leader's open flags, PIPs and absences; no re-owning (team-lifecycle rule stands).
@@ -53,4 +53,4 @@ Admin response lists a departing leader's open flags, PIPs and absences; no re-o
 ## Test points
 Bundle sets and December blocker; purge refuses without file/hash/notice; dry run changes nothing; second run is a no-op;
 payroll/OT/standby purge leaves no orphan and no PROTECT error; leave balances unchanged; superuser-only on every route;
-restore round-trip with `ArchivePurge`; notice sent once. Full suites once per phase.
+re-purge of rows restored from an older backup; notice sent once. Full suites once per phase.

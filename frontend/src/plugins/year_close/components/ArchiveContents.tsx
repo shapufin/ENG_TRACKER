@@ -1,16 +1,18 @@
 import React, { useMemo } from "react";
-import { Download, ShieldCheck } from "lucide-react";
+import { Download, ShieldCheck, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
 import { RowActions } from "@/components/ui/RowActions";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
-import type { ArchiveEntry, YearSnapshotFile } from "../types/yearClose";
+import type { ArchiveCategory, ArchiveEntry, YearSnapshotFile } from "../types/yearClose";
 import { formatBytes, formatDate } from "./archiveFormat";
 
 interface ArchiveContentsProps {
   entry: ArchiveEntry;
   onDownload: (fileId: number) => void;
   onVerify: (fileId: number) => void;
+  onRemove: (category: ArchiveCategory) => void;
 }
 
 /** What a closed year holds, how long each part is kept, and its downloadable files. */
@@ -18,6 +20,7 @@ export const ArchiveContents: React.FC<ArchiveContentsProps> = ({
   entry,
   onDownload,
   onVerify,
+  onRemove,
 }) => {
   const fileColumns = useMemo<AppColumnDef<YearSnapshotFile>[]>(
     () => [
@@ -104,6 +107,24 @@ export const ArchiveContents: React.FC<ArchiveContentsProps> = ({
                 {category.location === "team" ? "In the team files" : "In the company file"} · kept
                 until {formatDate(category.remove_on)}
               </p>
+              {category.purged_at ? (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Removed on {formatDate(category.purged_at)}. The archive file is the record.
+                </p>
+              ) : (
+                category.removable && (
+                  <Button
+                    variant="outline"
+                    size="control-sm"
+                    className="mt-2"
+                    aria-label={`Remove ${category.label} of ${entry.year}`}
+                    onClick={() => onRemove(category)}
+                  >
+                    <Trash2 className="mr-1 h-4 w-4" aria-hidden="true" />
+                    Remove...
+                  </Button>
+                )
+              )}
             </li>
           ))}
         </ul>

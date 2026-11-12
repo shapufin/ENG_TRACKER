@@ -26,6 +26,7 @@ from core.utils.protected_download import (
 
 from .models import YearSnapshot, YearSnapshotFile
 from .services import archive_sets, archive_view
+from .services import retention as retention_service
 from .serializers import YearSnapshotFileSerializer, YearSnapshotSerializer
 
 TOKEN_KIND = 'year-snapshot-file'
@@ -166,7 +167,9 @@ class ArchivesViewSet(SuperuserOnlyMixin, viewsets.ViewSet):
     """The Archives area: per-year categories and leader history (read-only)."""
 
     plugin_name = 'year_close'
-    permission_action_map = {'list': 'view', 'leaders': 'view', 'leaders_export': 'export'}
+    permission_action_map = {
+        'list': 'view', 'leaders': 'view', 'leaders_export': 'export', 'purge': 'export',
+    }
 
     def list(self, request):
         return Response(archive_view.archive_entries())
@@ -191,6 +194,21 @@ class ArchivesViewSet(SuperuserOnlyMixin, viewsets.ViewSet):
         )
         response['Content-Disposition'] = f'attachment; filename="leader-{leader}-{year}.xlsx"'
         return response
+
+    @action(detail=False, methods=['post'])
+    def purge(self, request):
+        """Preview (default) or confirm the removal of one archived category."""
+        category = request.data.get('category')
+        try:
+            year = int(request.data.get('year'))
+        except (TypeError, ValueError):
+            raise ValidationError({'year': 'year must be an integer.'})
+        dry_run = request.data.get('dry_run', True) is not False
+        try:
+            result = retention_service.purge(year, category, actor=request.user, dry_run=dry_run)
+        except retention_service.PurgeRefused as refused:
+            return Response({'reasons': refused.reasons}, status=status.HTTP_409_CONFLICT)
+        return Response(result)
 
     @staticmethod
     def _year(request) -> int:

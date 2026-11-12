@@ -21,6 +21,8 @@ def _set_counts(year: int) -> dict:
 
 def archive_entries() -> list[dict]:
     """One entry per year with a ready set: category counts, removal dates, files."""
+    from . import retention as retention_service
+
     entries = []
     seen = set()
     for snapshot in YearSnapshot.objects.filter(status='ready').order_by('-year', '-version'):
@@ -35,6 +37,7 @@ def archive_entries() -> list[dict]:
                 'key': key, 'label': label, 'count': counts.get(count_key),
                 'location': location, 'retention_years': years,
                 'remove_on': retention.removal_on(snapshot.year, years).isoformat(),
+                **retention_service.category_state(snapshot.year, key),
             })
         files = snapshot.files.all().order_by('kind', 'leader_name', 'team_name')
         entries.append({

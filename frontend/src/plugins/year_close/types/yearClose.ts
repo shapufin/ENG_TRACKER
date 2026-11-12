@@ -41,6 +41,10 @@ export interface ArchiveCategory {
   location: "company" | "team";
   retention_years: number;
   remove_on: string;
+  /** The removal date has passed (the server still checks every other gate). */
+  removable: boolean;
+  purged_at: string | null;
+  notice_sent_on: string | null;
 }
 
 export interface ArchiveEntry {
@@ -64,4 +68,11 @@ export interface LeaderHistoryRow {
   engagement_months: number;
   governance_evidence: number;
   leader_records: number;
+}
+
+export interface PurgeResult {
+  year: number;
+  category: string;
+  dry_run: boolean;
+  rows: Record<string, number>;
 }
