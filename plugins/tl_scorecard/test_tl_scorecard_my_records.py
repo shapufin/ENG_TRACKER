@@ -8,7 +8,9 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 
 
 from .testing import make_user as _make_user
-from .models import Absence, EPRCycle, EPRGoal, IdleFlag, Meeting, PIPRecord, PromotionFlag
+from .models import (
+    Absence, EPRCycle, EPRGoal, EPRStageRecord, IdleFlag, Meeting, PIPRecord, PromotionFlag,
+)
 from .viewsets_my_records import MyRecordsViewSet
 
 
@@ -115,6 +117,23 @@ class MyRecordsTests(TestCase):
             {'id', 'year', 'goal_setting_completed_at', 'mid_year_completed_at',
              'final_review_completed_at', 'goals', 'stage_summaries'},
         )
+
+    def test_only_shared_stage_summaries_reach_the_employee(self):
+        mine = EPRCycle.objects.get(user=self.emp)
+        theirs = EPRCycle.objects.get(user=self.other)
+        for cycle, stage, text, shared in (
+            (mine, 'mid_year', 'SHARED mid-year words', True),
+            (mine, 'final_review', 'PRIVATE final words', False),
+            (theirs, 'mid_year', 'SHARED but not mine', True),
+        ):
+            EPRStageRecord.objects.create(
+                cycle=cycle, stage=stage, summary=text, shared_with_employee=shared,
+                recorded_by=self.tl, hbpr_present=True, reference_url='https://workday.example/x')
+        data = self._get(self.emp).data['epr_cycles'][0]
+        self.assertEqual(data['stage_summaries'], [{'stage': 'mid_year', 'summary': 'SHARED mid-year words'}])
+        text = str(self._get(self.emp).data)
+        for leaked in ('PRIVATE final', 'not mine', 'workday.example', 'hbpr_present'):
+            self.assertNotIn(leaked, text)
 
     def test_nothing_else_is_ever_exposed(self):
         self.assertEqual(set(self._get(self.emp).data), {'one_on_ones', 'pips', 'epr_cycles'})
