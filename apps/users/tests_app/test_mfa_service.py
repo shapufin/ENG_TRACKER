@@ -123,6 +123,28 @@ class VerificationTests(TestCase):
         with self.assertRaises(mfa.MFAError) as ctx:
             mfa.verify_second_factor(self.user, mfa.code_at(self.secret, mfa.current_step()))
         self.assertEqual(ctx.exception.code, 'invalid_code')
+        self.assertEqual(ctx.exception.reason, 'reused')
+        self.assertIn('already used', ctx.exception.message)
+        self.assertIn('4 attempts left', ctx.exception.message)
+
+    def test_clock_drifted_code_reports_clock_drift_and_is_rejected(self):
+        drifted = mfa.code_at(self.secret, mfa.current_step() + 4)
+        with self.assertRaises(mfa.MFAError) as ctx:
+            mfa.verify_second_factor(self.user, drifted)
+        self.assertEqual(ctx.exception.code, 'invalid_code')
+        self.assertEqual(ctx.exception.reason, 'clock_drift')
+        self.assertIn('automatic date and time', ctx.exception.message)
+        self.assertEqual(UserMFA.objects.get(user=self.user).failed_attempts, 1)
+
+    def test_activate_clock_drifted_code_reports_clock_drift(self):
+        other = User.objects.create_user('carl', 'carl@example.com', 'pw-Strong-123')
+        setup = mfa.begin_setup(other)
+        drifted = mfa.code_at(setup['secret'], mfa.current_step() - 4)
+        with self.assertRaises(mfa.MFAError) as ctx:
+            mfa.activate(other, drifted)
+        self.assertEqual(ctx.exception.code, 'invalid_code')
+        self.assertEqual(ctx.exception.reason, 'clock_drift')
+        self.assertIn('automatic date and time', ctx.exception.message)
 
     def test_valid_code_accepted_once_then_replay_rejected(self):
         code = self._next_code()

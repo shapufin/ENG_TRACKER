@@ -273,6 +273,11 @@ export const LoginPage: React.FC = () => {
                 >
                   {useBackupCode ? "Use my authenticator app instead" : "Use a backup code instead"}
                 </button>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  Having trouble? Make sure automatic date and time is turned on on your device, or
+                  wait for the next code. If you lost access, use a backup code or ask an
+                  administrator to reset two-factor authentication.
+                </p>
               </>
             )}
 
