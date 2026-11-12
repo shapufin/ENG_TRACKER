@@ -58,6 +58,7 @@ const EVIDENCE: HbprEvidence = {
   id: 3,
   assignment: 11,
   albanian_tl: 7,
+  albanian_tl_name: "Aldair Xhexhili",
   hbpr: 5,
   cadence: "weekly",
   kind: "cadence_meeting",

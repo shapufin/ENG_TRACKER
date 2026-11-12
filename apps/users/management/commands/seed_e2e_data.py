@@ -259,7 +259,7 @@ class Command(BaseCommand):
         client.save(update_fields=["name", "is_active"])
 
         # Past-month pending overtime for the monthly-lock specs. The API refuses to
-        # create entries once a month is closed (after the 2nd), so these cannot be made
+        # create entries once a month is closed (after the cutoff day, the 5th), so these cannot be made
         # through it at test time; seed a few so a retry still finds an unused one.
         today = business_today()
         past_year, past_month = (today.year, today.month - 1) if today.month > 1 else (today.year - 1, 12)

@@ -42,20 +42,20 @@ class WorkingDayTests(TestCase):
         self._holiday(date(2026, 11, 30))
         self.assertEqual(month_end_working_day(2026, 11), date(2026, 11, 27))
 
-    def test_cutoff_is_day_two_postponed_to_next_working_day(self):
-        # 2026-08-02 is a Sunday -> Monday the 3rd; 2026-10-02 is a Friday -> stays.
-        self.assertEqual(month_cutoff_date(2026, 7), date(2026, 8, 3))
-        self.assertEqual(month_cutoff_date(2026, 9), date(2026, 10, 2))
+    def test_cutoff_is_day_five_postponed_to_next_working_day(self):
+        # 2026-09-05 is a Saturday -> Monday the 7th; 2026-08-05 is a Wednesday -> stays.
+        self.assertEqual(month_cutoff_date(2026, 7), date(2026, 8, 5))
+        self.assertEqual(month_cutoff_date(2026, 8), date(2026, 9, 7))
 
     def test_cutoff_handles_december_rollover(self):
-        self._holiday(date(2027, 1, 4))  # the Monday after the Saturday 2nd
-        self.assertEqual(month_cutoff_date(2026, 12), date(2027, 1, 5))
+        self._holiday(date(2027, 1, 5))  # the 5th is a Tuesday holiday -> Wednesday
+        self.assertEqual(month_cutoff_date(2026, 12), date(2027, 1, 6))
 
     def test_cutoff_across_years_2026_to_2030(self):
         for year in range(2026, 2031):
             for month in range(1, 13):
                 cutoff = month_cutoff_date(year, month)
                 self.assertLess(cutoff.weekday(), 5)
-                second = date(year + (month == 12), month % 12 + 1, 2)
-                self.assertGreaterEqual(cutoff, second)
-                self.assertLessEqual((cutoff - second).days, 2)
+                fifth = date(year + (month == 12), month % 12 + 1, 5)
+                self.assertGreaterEqual(cutoff, fifth)
+                self.assertLessEqual((cutoff - fifth).days, 4)

@@ -13,7 +13,7 @@ from core.utils.timezone_local import business_tz
 
 class ApproveInClosedPeriodTests(TestCase):
     def setUp(self):
-        # The fixtures live in October 2026; entries for a month close on the 2nd of the
+        # The fixtures live in October 2026; entries for a month close on the 5th of the
         # next one, so pin the clock instead of depending on the day the suite runs.
         for target, value in (
             ('django.utils.timezone.now', datetime(2026, 10, 12, 12, 0, tzinfo=business_tz())),

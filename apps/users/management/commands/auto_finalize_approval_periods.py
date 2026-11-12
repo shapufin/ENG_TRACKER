@@ -1,6 +1,6 @@
 """Close a month for every user a TL has not closed, once its cutoff passed.
 
-The month's cutoff is 00:00 on the 2nd of the following month (Europe/Tirane).
+The month's cutoff is 00:00 on the 5th of the following month (Europe/Tirane).
 Before it this does nothing, so it is safe to run from cron or by hand at any
 time. Payroll also sweeps its own run's users when HR finalizes, so this
 command is for closing the whole company ahead of time.

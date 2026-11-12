@@ -15,8 +15,8 @@ from apps.users.services.approval_periods import (
 
 TIRANE = ZoneInfo('Europe/Tirane')
 SEPTEMBER = date(2026, 9, 1)
-BEFORE_CUTOFF = datetime(2026, 10, 1, 23, 59, tzinfo=TIRANE)
-AT_CUTOFF = datetime(2026, 10, 2, 0, 0, tzinfo=TIRANE)
+BEFORE_CUTOFF = datetime(2026, 10, 4, 23, 59, tzinfo=TIRANE)
+AT_CUTOFF = datetime(2026, 10, 5, 0, 0, tzinfo=TIRANE)
 
 
 class AutoFinalizeApprovalPeriodsTests(TestCase):

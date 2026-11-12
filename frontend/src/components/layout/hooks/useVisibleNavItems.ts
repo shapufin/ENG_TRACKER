@@ -140,7 +140,7 @@ const allNavItems: NavItem[] = [
   {
     path: "/ticket-kpi/team-management",
     pluginName: "ticket_kpi",
-    label: "Imports Review",
+    label: "Ticket Review",
     icon: Users,
     section: "leadership",
     roles: ["team_leader"],

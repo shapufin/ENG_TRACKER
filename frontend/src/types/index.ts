@@ -475,6 +475,8 @@ export interface OvertimeSummary {
   approved_hours: number;
   pending_hours: number;
   rejected_hours: number;
+  /** Own hours worked in an earlier month but processed this month (not in the totals). */
+  carried_hours?: number;
 }
 
 export interface StandbySummary {

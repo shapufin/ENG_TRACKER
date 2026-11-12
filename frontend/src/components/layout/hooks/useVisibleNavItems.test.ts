@@ -26,7 +26,7 @@ describe("useVisibleNavItems", () => {
     expect(visible).toContain("Pending Approvals");
     expect(visible).toContain("Team Overview");
     expect(visible).toContain("Team Performance");
-    expect(visible).toContain("Imports Review");
+    expect(visible).toContain("Ticket Review");
   });
 
   it("includes HR items", () => {
@@ -270,7 +270,7 @@ describe("useVisibleNavItems", () => {
       "Ticket KPI": "skills-kpi",
       "Import Tickets": "skills-kpi",
       "Team Performance": "leadership",
-      "Imports Review": "leadership",
+      "Ticket Review": "leadership",
       Settings: "system",
     });
   });
@@ -360,7 +360,7 @@ describe("useVisibleNavItems pure HR", () => {
 });
 
 describe("useVisibleNavItems plugin gating", () => {
-  it("keeps Team Performance exact so it is not also active on Imports Review", () => {
+  it("keeps Team Performance exact so it is not also active on Ticket Review", () => {
     const { result } = renderHook(() =>
       useVisibleNavItems(false, false, false, false, true, false, false, false, ["ticket_kpi"])
     );
@@ -368,7 +368,7 @@ describe("useVisibleNavItems plugin gating", () => {
     expect(item?.exact).toBe(true);
   });
 
-  const kpiLabels = ["Team Performance", "Imports Review", "Ticket KPI", "Import Tickets"];
+  const kpiLabels = ["Team Performance", "Ticket Review", "Ticket KPI", "Import Tickets"];
 
   it("hides ticket_kpi links when the plugin is not active", () => {
     const { result } = renderHook(() =>

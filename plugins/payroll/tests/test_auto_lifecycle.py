@@ -23,7 +23,7 @@ TIRANE = ZoneInfo('Europe/Tirane')
 BEFORE_MONTH_END = datetime(2026, 10, 29, 12, 0, tzinfo=TIRANE)
 MONTH_END = datetime(2026, 10, 30, 9, 0, tzinfo=TIRANE)
 WEEKEND = datetime(2026, 10, 31, 12, 0, tzinfo=TIRANE)
-AT_CUTOFF = datetime(2026, 11, 2, 0, 0, tzinfo=TIRANE)
+AT_CUTOFF = datetime(2026, 11, 5, 0, 0, tzinfo=TIRANE)
 OCTOBER = date(2026, 10, 1)
 
 
@@ -90,7 +90,7 @@ class AutoLifecycleTests(TestCase):
         notices = Notification.objects.filter(dedupe_key__startswith='tl-urgent-close:')
         self.assertEqual([n.user for n in notices], [self.line_manager])
         self.assertEqual(notices[0].notification_type, 'error')
-        self.assertIn('Monday 02 November 2026', notices[0].message)
+        self.assertIn('Thursday 05 November 2026', notices[0].message)
         self.assertIn('15 points', notices[0].message)
         self.assertEqual(self._october().status, 'draft')
 
@@ -145,13 +145,13 @@ class AutoLifecycleTests(TestCase):
         self.assertEqual(run.status, 'finalized')
         self.assertIsNone(run.finalized_by)
 
-    def test_cutoff_waits_for_the_next_working_day_when_day_two_is_a_weekend(self):
-        # 2026-08-02 is a Sunday, so July's cutoff is Monday 08-03.
-        payroll_lifecycle_tick(datetime(2026, 7, 31, 12, 0, tzinfo=TIRANE))
-        payroll_lifecycle_tick(datetime(2026, 8, 2, 12, 0, tzinfo=TIRANE))
-        self.assertEqual(PayrollRun.objects.get(month=7).status, 'draft')
-        payroll_lifecycle_tick(datetime(2026, 8, 3, 0, 0, tzinfo=TIRANE))
-        self.assertEqual(PayrollRun.objects.get(month=7).status, 'finalized')
+    def test_cutoff_waits_for_the_next_working_day_when_day_five_is_a_weekend(self):
+        # 2026-09-05 is a Saturday, so August's cutoff is Monday 09-07.
+        payroll_lifecycle_tick(datetime(2026, 8, 31, 12, 0, tzinfo=TIRANE))
+        payroll_lifecycle_tick(datetime(2026, 9, 6, 12, 0, tzinfo=TIRANE))
+        self.assertEqual(PayrollRun.objects.get(month=8).status, 'draft')
+        payroll_lifecycle_tick(datetime(2026, 9, 7, 0, 0, tzinfo=TIRANE))
+        self.assertEqual(PayrollRun.objects.get(month=8).status, 'finalized')
 
     def test_hr_hears_about_the_automatic_finalize(self):
         hr = User.objects.create_user('hr1', password='x')

@@ -15,33 +15,34 @@ TIRANE = ZoneInfo('Europe/Tirane')
 
 
 class WorkDateCutoffTests(TestCase):
-    def test_september_open_until_oct_1_end(self):
-        self.assertTrue(is_work_date_open(date(2026, 9, 15), now=datetime(2026, 10, 1, 23, 59, tzinfo=TIRANE)))
+    def test_september_open_until_oct_4_end(self):
+        self.assertTrue(is_work_date_open(date(2026, 9, 15), now=datetime(2026, 10, 4, 23, 59, tzinfo=TIRANE)))
 
-    def test_september_closed_at_oct_2_midnight(self):
-        self.assertFalse(is_work_date_open(date(2026, 9, 15), now=datetime(2026, 10, 2, 0, 0, tzinfo=TIRANE)))
+    def test_september_closed_at_oct_5_midnight(self):
+        self.assertFalse(is_work_date_open(date(2026, 9, 15), now=datetime(2026, 10, 5, 0, 0, tzinfo=TIRANE)))
 
-    def test_august_closed_from_sep_2_and_open_before(self):
-        self.assertFalse(is_work_date_open(date(2026, 8, 20), now=datetime(2026, 9, 2, 0, 0, tzinfo=TIRANE)))
-        self.assertTrue(is_work_date_open(date(2026, 8, 20), now=datetime(2026, 9, 1, 23, 59, tzinfo=TIRANE)))
+    def test_august_closed_from_postponed_cutoff_and_open_before(self):
+        # The 5th of September is a Saturday: the cutoff is Monday the 7th.
+        self.assertFalse(is_work_date_open(date(2026, 8, 20), now=datetime(2026, 9, 7, 0, 0, tzinfo=TIRANE)))
+        self.assertTrue(is_work_date_open(date(2026, 8, 20), now=datetime(2026, 9, 6, 23, 59, tzinfo=TIRANE)))
 
     def test_closed_message_names_the_real_cutoff_day(self):
         from rest_framework.exceptions import ValidationError
         with self.assertRaisesMessage(ValidationError, 'are closed. Records for a month can be added until'):
-            assert_work_date_open(date(2026, 9, 15), now=datetime(2026, 10, 2, 0, 0, tzinfo=TIRANE))
+            assert_work_date_open(date(2026, 9, 15), now=datetime(2026, 10, 5, 0, 0, tzinfo=TIRANE))
 
-    def test_closed_message_shows_postponed_cutoff_when_2nd_is_weekend(self):
+    def test_closed_message_shows_postponed_cutoff_when_5th_is_weekend(self):
         from rest_framework.exceptions import ValidationError
-        # 2 Jan 2027 is a Saturday: the cutoff moves to Monday 4 Jan.
-        with self.assertRaisesMessage(ValidationError, '04 January 2027'):
-            assert_work_date_open(date(2026, 12, 15), now=datetime(2027, 1, 4, 0, 0, tzinfo=TIRANE))
+        # 5 Sep 2026 is a Saturday: the cutoff moves to Monday 7 Sep.
+        with self.assertRaisesMessage(ValidationError, '07 September 2026'):
+            assert_work_date_open(date(2026, 8, 15), now=datetime(2026, 9, 7, 0, 0, tzinfo=TIRANE))
 
     def test_current_month_always_open(self):
         self.assertTrue(is_work_date_open(date(2026, 10, 1), now=datetime(2026, 10, 20, 12, 0, tzinfo=TIRANE)))
 
     def test_cutoff_uses_tirane_not_utc(self):
-        # 2026-10-01 23:30 UTC is 2026-10-02 01:30 Tirane (UTC+2 in October): closed.
-        now = datetime(2026, 10, 1, 23, 30, tzinfo=ZoneInfo('UTC'))
+        # 2026-10-04 23:30 UTC is 2026-10-05 01:30 Tirane (UTC+2 in October): closed.
+        now = datetime(2026, 10, 4, 23, 30, tzinfo=ZoneInfo('UTC'))
         self.assertFalse(is_work_date_open(date(2026, 9, 15), now=now))
 
     def test_cutoff_follows_the_configured_business_timezone(self):
@@ -55,19 +56,19 @@ class WorkDateCutoffTests(TestCase):
         self.assertTrue(is_work_date_open(date(2026, 9, 15), now=now))
 
     def test_december_rolls_to_january(self):
-        # 2027-01-02 is a Saturday, so the cutoff moves to Monday the 4th.
-        self.assertTrue(is_work_date_open(date(2026, 12, 5), now=datetime(2027, 1, 3, 23, 59, tzinfo=TIRANE)))
-        self.assertFalse(is_work_date_open(date(2026, 12, 5), now=datetime(2027, 1, 4, 0, 0, tzinfo=TIRANE)))
+        # 2027-01-05 is a Tuesday, so December closes at 00:00 on the 5th.
+        self.assertTrue(is_work_date_open(date(2026, 12, 5), now=datetime(2027, 1, 4, 23, 59, tzinfo=TIRANE)))
+        self.assertFalse(is_work_date_open(date(2026, 12, 5), now=datetime(2027, 1, 5, 0, 0, tzinfo=TIRANE)))
 
-    def test_cutoff_moves_off_a_weekend_day_two(self):
-        # 2026-08-02 is a Sunday: July stays open until Monday 08-03 00:00.
-        self.assertTrue(is_work_date_open(date(2026, 7, 15), now=datetime(2026, 8, 2, 12, 0, tzinfo=TIRANE)))
-        self.assertFalse(is_work_date_open(date(2026, 7, 15), now=datetime(2026, 8, 3, 0, 0, tzinfo=TIRANE)))
+    def test_cutoff_moves_off_a_weekend_day_five(self):
+        # 2026-09-05 is a Saturday: August stays open until Monday 09-07 00:00.
+        self.assertTrue(is_work_date_open(date(2026, 8, 15), now=datetime(2026, 9, 6, 12, 0, tzinfo=TIRANE)))
+        self.assertFalse(is_work_date_open(date(2026, 8, 15), now=datetime(2026, 9, 7, 0, 0, tzinfo=TIRANE)))
 
     def test_assert_raises_with_month_message(self):
         from rest_framework.exceptions import ValidationError
         with self.assertRaises(ValidationError) as ctx:
-            assert_work_date_open(date(2026, 9, 15), now=datetime(2026, 10, 2, 0, 0, tzinfo=TIRANE))
+            assert_work_date_open(date(2026, 9, 15), now=datetime(2026, 10, 5, 0, 0, tzinfo=TIRANE))
         self.assertIn('September 2026', str(ctx.exception.detail[0]))
 
 
@@ -94,12 +95,12 @@ class WorkDateCutoffApiTests(TestCase):
     def _post_sb(self, work_date):
         return self.api.post('/api/standby/logs/', {'date': work_date, 'hours': 8}, format='json')
 
-    def test_ot_september_accepted_before_oct_2(self):
-        self._at(datetime(2026, 10, 1, 23, 59, tzinfo=TIRANE))
+    def test_ot_september_accepted_before_oct_5(self):
+        self._at(datetime(2026, 10, 4, 23, 59, tzinfo=TIRANE))
         self.assertEqual(self._post_ot('2026-09-30').status_code, 201)
 
-    def test_ot_september_rejected_from_oct_2(self):
-        self._at(datetime(2026, 10, 2, 0, 0, tzinfo=TIRANE))
+    def test_ot_september_rejected_from_oct_5(self):
+        self._at(datetime(2026, 10, 5, 0, 0, tzinfo=TIRANE))
         response = self._post_ot('2026-09-30')
         self.assertEqual(response.status_code, 400, response.data)
         self.assertIn('September 2026', str(response.data))
@@ -110,17 +111,17 @@ class WorkDateCutoffApiTests(TestCase):
 
     def test_ot_cutoff_applies_to_staff_without_bypass(self):
         self.api.force_authenticate(user=self.staff)
-        self._at(datetime(2026, 10, 2, 0, 0, tzinfo=TIRANE))
+        self._at(datetime(2026, 10, 5, 0, 0, tzinfo=TIRANE))
         self.assertEqual(self._post_ot('2026-09-30').status_code, 400)
 
-    def test_standby_august_rejected_from_sep_2(self):
-        self._at(datetime(2026, 9, 2, 0, 0, tzinfo=TIRANE))
+    def test_standby_august_rejected_from_sep_7(self):
+        self._at(datetime(2026, 9, 7, 0, 0, tzinfo=TIRANE))
         response = self._post_sb('2026-08-20')
         self.assertEqual(response.status_code, 400, response.data)
         self.assertIn('August 2026', str(response.data))
 
-    def test_standby_september_accepted_before_oct_2(self):
-        self._at(datetime(2026, 10, 1, 23, 59, tzinfo=TIRANE))
+    def test_standby_september_accepted_before_oct_5(self):
+        self._at(datetime(2026, 10, 4, 23, 59, tzinfo=TIRANE))
         self.assertEqual(self._post_sb('2026-09-30').status_code, 201)
 
 
@@ -345,7 +346,7 @@ class ApprovalPeriodWorkflowTests(TestCase):
         with patch('django.utils.timezone.now', return_value=datetime(2026, 9, 29, 12, 0, tzinfo=TIRANE)):
             self._finalize('2026-09-01')
         self.client.force_authenticate(user=self.employee)
-        with patch('django.utils.timezone.now', return_value=datetime(2026, 10, 2, 0, 0, tzinfo=TIRANE)):
+        with patch('django.utils.timezone.now', return_value=datetime(2026, 10, 5, 0, 0, tzinfo=TIRANE)):
             response = self.client.post('/api/overtime/logs/', {
                 'client': self.client_obj.id, 'date': '2026-09-30', 'hours': 2,
             }, format='json')

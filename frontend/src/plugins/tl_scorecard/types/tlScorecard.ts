@@ -410,6 +410,7 @@ export interface HbprEvidence {
   id: number;
   assignment: number;
   albanian_tl: number;
+  albanian_tl_name: string | null;
   hbpr: number;
   cadence: HbprCadence | null;
   cadence_display?: string;

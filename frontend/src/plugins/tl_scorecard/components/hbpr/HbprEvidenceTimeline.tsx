@@ -154,9 +154,14 @@ export const HbprEvidenceTimeline: React.FC<HbprEvidenceTimelineProps> = ({
                           {formatDate(row.occurred_on)}
                         </span>
                       </div>
-                      <p className="text-muted-foreground mt-1 text-xs">
-                        {byId.get(row.albanian_tl)?.name ?? "Line Manager"}
-                        {row.reporting_year ? ` · reporting ${row.reporting_year}` : ""}
+                      <p className="mt-1.5 text-sm font-semibold">
+                        {row.albanian_tl_name ?? byId.get(row.albanian_tl)?.name ?? "Line Manager"}
+                        {row.reporting_year && (
+                          <span className="text-muted-foreground text-xs font-normal">
+                            {" "}
+                            · reporting {row.reporting_year}
+                          </span>
+                        )}
                       </p>
                     </div>
                     <div className="text-muted-foreground flex items-center gap-2 text-xs">

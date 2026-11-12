@@ -19,7 +19,7 @@ from plugins.payroll.services.payroll_service import payroll_lifecycle_tick
 User = get_user_model()
 TIRANE = ZoneInfo('Europe/Tirane')
 MONTH_END = datetime(2026, 10, 30, 9, 0, tzinfo=TIRANE)
-AT_CUTOFF = datetime(2026, 11, 2, 0, 0, tzinfo=TIRANE)
+AT_CUTOFF = datetime(2026, 11, 5, 0, 0, tzinfo=TIRANE)
 
 
 def _wage(user):

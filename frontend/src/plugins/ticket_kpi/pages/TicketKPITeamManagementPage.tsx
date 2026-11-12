@@ -31,7 +31,7 @@ export const TicketKPITeamManagementPage: React.FC = () => {
 
   if (!isTeamLeader) {
     return (
-      <PageShell title="KPI Team Management">
+      <PageShell title="Ticket Review">
         <EmptyState
           icon={ShieldAlert}
           title="You do not have team leader permissions."
@@ -50,7 +50,7 @@ export const TicketKPITeamManagementPage: React.FC = () => {
 
   return (
     <PageShell
-      title="KPI Team Management"
+      title="Ticket Review"
       subtitle="Review and manage your team members' ticket imports."
     >
       <div className="space-y-6">

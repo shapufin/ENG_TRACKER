@@ -81,6 +81,7 @@ const EVIDENCE: HbprEvidence[] = [
     id: 1,
     assignment: 11,
     albanian_tl: 7,
+    albanian_tl_name: "Aldair Xhexhili",
     hbpr: 5,
     cadence: "weekly",
     kind: "cadence_meeting",
@@ -105,6 +106,7 @@ const EVIDENCE: HbprEvidence[] = [
     id: 2,
     assignment: 12,
     albanian_tl: 8,
+    albanian_tl_name: "Aldair Xhexhili",
     hbpr: 5,
     cadence: "monthly",
     kind: "epr_mid_year",
@@ -129,6 +131,7 @@ const EVIDENCE: HbprEvidence[] = [
     id: 3,
     assignment: 11,
     albanian_tl: 7,
+    albanian_tl_name: "Aldair Xhexhili",
     hbpr: 5,
     cadence: "weekly",
     kind: "cadence_meeting",
@@ -460,6 +463,12 @@ describe("HbprWorkspacePage", () => {
     renderPage(`/hbpr?view=evidence&year=${YEAR}`);
     await screen.findByText("Weekly governance sync.");
     expect(screen.getAllByTitle("Alb TL")).toHaveLength(1);
+  });
+
+  it("names the Line Manager on each evidence row", async () => {
+    renderPage(`/hbpr?view=evidence&year=${YEAR}`);
+    await screen.findByText("Weekly governance sync.");
+    expect(screen.getAllByText("Aldair Xhexhili").length).toBeGreaterThan(0);
   });
 
   it("asks the API for the selected leader's evidence", async () => {

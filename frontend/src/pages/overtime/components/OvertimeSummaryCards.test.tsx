@@ -108,4 +108,29 @@ describe("OvertimeSummaryCards", () => {
     expect((fills[3] as HTMLElement).style.width).toBe("20%"); // pending_hours / total_hours
     expect((fills[4] as HTMLElement).style.width).toBe("5%"); // rejected_hours / total_hours
   });
+
+  it("shows a +N carried badge on total hours only when hours were carried in", () => {
+    const base = {
+      total_hours: 11,
+      total_entries: 2,
+      approved_hours: 11,
+      pending_hours: 0,
+      rejected_hours: 0,
+    };
+    const { rerender } = render(<OvertimeSummaryCards summary={{ ...base, carried_hours: 3 }} />);
+    expect(screen.getByRole("button", { name: "+3h carried from last month" })).toHaveTextContent(
+      "+3"
+    );
+
+    rerender(<OvertimeSummaryCards summary={{ ...base, carried_hours: 0 }} />);
+    expect(screen.queryByRole("button", { name: /carried from last month/ })).toBeNull();
+
+    // The API serialises decimals as strings.
+    rerender(
+      <OvertimeSummaryCards summary={{ ...base, carried_hours: "2.50" as unknown as number }} />
+    );
+    expect(
+      screen.getByRole("button", { name: "+2.5h carried from last month" })
+    ).toBeInTheDocument();
+  });
 });

@@ -55,7 +55,7 @@ Approved leave is **informational only** — it does not prorate payroll.
    (Team Approvals). The run's finalize gate reads that closure; unclosed
    leaders get an urgent reminder hourly.
 5. As soon as every run user is closed → early finalize; from the cutoff
-   (00:00 on day 2 of M+1, moved to the next working day) the system closes
+   (00:00 on day 5 of M+1, moved to the next working day) the system closes
    whoever is left (`auto_finalize_approval_periods`) and finalizes anyway.
 6. `finalize_run` re-locks everything: refuses stale drafts (changed config or
    wage), refuses non-approved or modified source entries, stamps
@@ -209,7 +209,7 @@ Statuses: `draft → finalized`, or `draft → cancelled` (**tombstone**).
   blocked until then, **unless the cutoff passed**.
 - **One closer is enough**: the Line Manager OR the Manager closes a scope
   (`finalize_period`); two separate closes are never required.
-- **Cutoff** = `work_date_cutoff(period)` = 00:00 on day 2 of M+1
+- **Cutoff** = `work_date_cutoff(period)` = 00:00 on day 5 of M+1
   (Europe/Tirane), moved to the next working day (`core/utils/working_days.py`;
   shared with the OT/standby creation window). From that instant
   `finalize_run` calls `auto_finalize_approval_periods(period,

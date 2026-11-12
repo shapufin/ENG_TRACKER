@@ -482,6 +482,7 @@ class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
     albanian_tl = serializers.IntegerField(
         source='assignment.albanian_tl_id', read_only=True
     )
+    albanian_tl_name = serializers.SerializerMethodField()
     hbpr = serializers.IntegerField(source='assignment.hbpr_id', read_only=True)
     cadence = serializers.CharField(source='assignment.cadence', read_only=True, allow_null=True)
     next_due_on = serializers.SerializerMethodField()
@@ -491,7 +492,7 @@ class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = HbprGovernanceEvidence
         fields = [
-            'id', 'assignment', 'albanian_tl', 'hbpr', 'cadence',
+            'id', 'assignment', 'albanian_tl', 'albanian_tl_name', 'hbpr', 'cadence',
             'kind', 'kind_display', 'status', 'cancel_reason', 'occurred_on', 'reporting_year',
             'shared_summary', 'action_items', 'reference_url',
             'recorded_by', 'recorded_by_name', 'updated_by', 'updated_by_name',
@@ -501,6 +502,9 @@ class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'recorded_by', 'updated_by', 'created_at', 'updated_at',
         ]
+
+    def get_albanian_tl_name(self, obj):
+        return _display_name(obj.assignment.albanian_tl)
 
     def get_recorded_by_name(self, obj):
         return _display_name(obj.recorded_by)

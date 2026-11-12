@@ -19,8 +19,8 @@ from plugins.engagement.test_engagement_sla import _at
 User = get_user_model()
 TIRANE = ZoneInfo('Europe/Tirane')
 OCT = date(2026, 10, 1)
-BEFORE_CUTOFF = datetime(2026, 11, 1, 12, 0, tzinfo=TIRANE)
-AFTER_CUTOFF = datetime(2026, 11, 2, 9, 0, tzinfo=TIRANE)
+BEFORE_CUTOFF = datetime(2026, 11, 4, 12, 0, tzinfo=TIRANE)
+AFTER_CUTOFF = datetime(2026, 11, 5, 9, 0, tzinfo=TIRANE)
 
 
 def _clock(moment):

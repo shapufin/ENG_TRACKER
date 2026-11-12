@@ -579,3 +579,20 @@ class CancelledCadenceMeetingTests(EvidenceBase):
         self.assertEqual(pack['cadence_cancelled'], 1)
         self.assertEqual(len(pack['meetings']), 1)
         self.assertEqual(pack['cancelled_meetings'][0]['cancel_reason'], 'HBPR on leave')
+
+
+class EvidenceLeaderNameTests(EvidenceBase):
+    """Each evidence row names its Line Manager, so a log of many leaders is readable."""
+
+    def test_rows_carry_the_line_managers_display_name(self):
+        type(self.tl).objects.filter(pk=self.tl.pk).update(first_name='Aldair', last_name='Xhexhili')
+        row = HbprGovernanceEvidence.objects.create(
+            assignment=self.assignment, kind='epr_mid_year', reporting_year=self.today.year,
+            occurred_on=self.today, recorded_by=self.tl,
+        )
+        request = self.factory.get('/x/')
+        force_authenticate(request, user=self.hbpr)
+        response = HbprGovernanceEvidenceViewSet.as_view({'get': 'list'})(request)
+        rows = response.data['results'] if isinstance(response.data, dict) else response.data
+        by_id = {r['id']: r for r in rows}
+        self.assertEqual(by_id[row.id]['albanian_tl_name'], 'Aldair Xhexhili')

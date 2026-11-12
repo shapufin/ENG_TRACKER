@@ -1,4 +1,4 @@
-"""Month cutoff: a TL must close the month, until the system does it at date 2."""
+"""Month cutoff: a TL must close the month, until the system does it at the cutoff day."""
 from datetime import date, datetime
 from decimal import Decimal
 from unittest import mock
@@ -23,8 +23,8 @@ from plugins.payroll.services.payroll_service import (
 
 User = get_user_model()
 TIRANE = ZoneInfo('Europe/Tirane')
-BEFORE_CUTOFF = datetime(2026, 10, 1, 23, 59, tzinfo=TIRANE)
-AT_CUTOFF = datetime(2026, 10, 2, 0, 0, tzinfo=TIRANE)
+BEFORE_CUTOFF = datetime(2026, 10, 4, 23, 59, tzinfo=TIRANE)
+AT_CUTOFF = datetime(2026, 10, 5, 0, 0, tzinfo=TIRANE)
 
 
 def at(moment):
@@ -65,7 +65,7 @@ class CutoffAutoFinalizeTests(TestCase):
             status = get_period_closure_status(run)
 
         self.assertFalse(status['cutoff_passed'])
-        self.assertEqual(status['cutoff_date'], '2026-10-02T00:00:00+02:00')
+        self.assertEqual(status['cutoff_date'], '2026-10-05T00:00:00+02:00')
         self.assertEqual(status['unclosed_users'], [{
             'id': self.staffer.id, 'username': 'staffer', 'full_name': 'Sta Ffer',
             'line_manager': 'artur', 'manager': 'marco',
@@ -110,11 +110,11 @@ class CutoffAutoFinalizeTests(TestCase):
         self.assertEqual(run.status, 'finalized')
 
     def test_scheduler_job_closes_everyone_only_once_the_cutoff_passed(self):
-        with at(datetime(2026, 11, 1, 12, 0, tzinfo=TIRANE)):
+        with at(datetime(2026, 11, 4, 12, 0, tzinfo=TIRANE)):
             payroll_lifecycle_tick()
         self.assertFalse(ApprovalPeriodCloseMember.objects.exists())
 
-        with at(datetime(2026, 11, 2, 0, 0, tzinfo=TIRANE)):
+        with at(datetime(2026, 11, 5, 0, 0, tzinfo=TIRANE)):
             payroll_lifecycle_tick()
         self.assertTrue(
             ApprovalPeriodCloseMember.objects.filter(

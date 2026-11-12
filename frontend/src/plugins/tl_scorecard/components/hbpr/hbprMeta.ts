@@ -11,6 +11,7 @@ import { CADENCE_LABELS, CADENCE_STATUS_LABELS } from "@/types/hbprAssignment";
 import type { HbprCadence, HbprCadenceStatus, HbprEvidenceKind } from "../../types/tlScorecard";
 import type { HbprRecordResource } from "../../hooks/useHbprWorkspaceQueries";
 import type { Tone } from "@/components/ui/tone";
+import { currentBusinessMonthKey } from "@/lib/date-format-utils";
 
 export { CADENCE_LABELS, CADENCE_STATUS_LABELS };
 
@@ -30,6 +31,33 @@ export const CADENCE_STATUS_TONE: Record<
 /** "Weekly" etc., or "Cadence not set" while the Line Manager has not chosen a schedule. */
 export const cadenceLabel = (cadence: HbprCadence | null, display?: string): string =>
   cadence ? display || CADENCE_LABELS[cadence] : "Cadence not set";
+
+export interface NextMeetingSlot {
+  /** Row label: the slot is this month's, or a later one. */
+  label: string;
+  /** Short status for the chip; the meeting has not happened yet. */
+  chip: string;
+  tone: "warning" | "destructive" | "neutral" | "info";
+}
+
+/**
+ * How to describe the next cadence slot. The slot is by definition not held yet, so it
+ * is never called "last"; its month and the cadence state decide the wording.
+ * `now` is a test seam.
+ */
+export function nextMeetingSlot(
+  nextDueOn: string | null,
+  status: HbprCadenceStatus,
+  now: Date = new Date()
+): NextMeetingSlot | null {
+  if (!nextDueOn || status === "ended") return null;
+  const thisMonth = nextDueOn.slice(0, 7) === currentBusinessMonthKey(now);
+  const label = thisMonth ? "This month's meeting" : "Next meeting";
+  if (status === "overdue") return { label, chip: "Overdue", tone: "destructive" };
+  if (status === "due") return { label, chip: "Not done · due", tone: "warning" };
+  if (thisMonth) return { label, chip: "Not done yet", tone: "info" };
+  return { label, chip: "Scheduled", tone: "neutral" };
+}
 
 export const EVIDENCE_KIND_LABELS: Record<HbprEvidenceKind, string> = {
   cadence_meeting: "Cadence meeting",

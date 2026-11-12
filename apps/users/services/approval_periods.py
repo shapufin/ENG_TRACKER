@@ -176,7 +176,7 @@ LATE_CLOSURE_PENALTY_POINTS = 15.0
 def work_date_cutoff(work_date: date) -> datetime:
     """Start of the cutoff day for the work date's month, in the business timezone.
 
-    The cutoff day is the 2nd of the following month, moved to the next working
+    The cutoff day is the 5th of the following month (MONTH_CUTOFF_DAY), moved to the next working
     day when that is a weekend or a global public holiday.
     """
     from core.utils.working_days import month_cutoff_date
@@ -297,7 +297,7 @@ def auto_finalize_approval_periods(
 ) -> tuple[ApprovalPeriodClose | None, int]:
     """Close the period for everyone a TL has not closed, once the cutoff passed.
 
-    Security net, not a shortcut: at 00:00 on the 2nd of the following month
+    Security net, not a shortcut: at 00:00 on the 5th of the following month
     (Europe/Tirane) the submission window shuts, and an absent or forgetful TL
     must not leave payroll blocked. Before that instant this is a no-op, so the
     normal rule (a TL finalizes their own scope) holds. One system close per

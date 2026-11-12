@@ -21,6 +21,7 @@ import {
   CADENCE_STATUS_TONE,
   cadenceLabel,
   formatDate,
+  nextMeetingSlot,
   plural,
 } from "./hbprMeta";
 
@@ -29,6 +30,22 @@ const EprCell: React.FC<{ label: string; recorded: boolean }> = ({ label, record
     {label}: {recorded ? "logged" : "not logged"}
   </Badge>
 );
+
+/** The next slot's date, with "This month" and a not-done chip so it never reads as held. */
+const NextMeetingCell: React.FC<{ leader: HbprLeaderRow }> = ({ leader }) => {
+  const slot = nextMeetingSlot(leader.next_due_on, leader.cadence_status);
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <span className="whitespace-nowrap">{formatDate(leader.next_due_on)}</span>
+      {slot && (
+        <span className="flex flex-wrap items-center gap-1 text-xs font-normal">
+          <span className="text-muted-foreground">{slot.label}</span>
+          <Badge variant={slot.tone}>{slot.chip}</Badge>
+        </span>
+      )}
+    </div>
+  );
+};
 
 // This table is denser than the app's other tables (8 columns plus stacked EPR
 // pills), so the contract's default `px-4` pushes the row action past the card
@@ -81,9 +98,7 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <caption className="sr-only">
-              Assigned Line Managers and their governance state
-            </caption>
+            <caption className="sr-only">Assigned Line Managers and their governance state</caption>
             <thead>
               <tr className={TABLE_HEAD_ROW_CLASS}>
                 <th scope="col" className={HEAD_CELL}>
@@ -96,10 +111,10 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
                   Cadence
                 </th>
                 <th scope="col" className={HEAD_CELL}>
-                  Last HBPR meeting
+                  Last held
                 </th>
                 <th scope="col" className={HEAD_CELL}>
-                  Next due
+                  Next meeting
                 </th>
                 <th scope="col" className={HEAD_CELL}>
                   EPR log
@@ -135,7 +150,7 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
                     {formatDate(leader.last_meeting_on)}
                   </td>
                   <td className={cn(BODY_CELL, "whitespace-nowrap tabular-nums")}>
-                    {formatDate(leader.next_due_on)}
+                    <NextMeetingCell leader={leader} />
                   </td>
                   <td className={BODY_CELL}>
                     <div className="flex flex-wrap gap-1.5">

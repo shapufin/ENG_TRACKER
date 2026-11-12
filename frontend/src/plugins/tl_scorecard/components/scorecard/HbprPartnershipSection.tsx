@@ -27,6 +27,7 @@ import {
   EVIDENCE_KIND_LABELS,
   cadenceLabel,
   formatDate,
+  nextMeetingSlot,
 } from "../hbpr/hbprMeta";
 import { GroupedEvidenceList } from "../partnership/GroupedEvidenceList";
 import { EvidencePackDialog } from "./EvidencePackDialog";
@@ -87,6 +88,9 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
   const dueDate = assignment?.next_due_on ?? null;
   const suggestedDate = dueDate && dueDate < today ? dueDate : today;
   const dueReached = Boolean(dueDate && dueDate <= today);
+  const slot = assignment
+    ? nextMeetingSlot(assignment.next_due_on, assignment.cadence_status)
+    : null;
   const openEdit = (row: HbprEvidence) => {
     setEditing(row);
     setDialogOpen(true);
@@ -163,13 +167,13 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
 
             <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-3">
               <div>
-                <dt className="text-muted-foreground">Last HBPR meeting</dt>
+                <dt className="text-muted-foreground">Last held</dt>
                 <dd className="mt-0.5 font-medium tabular-nums">
                   {formatDate(assignment.last_meeting_on)}
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">Next due</dt>
+                <dt className="text-muted-foreground">{slot?.label ?? "Next meeting"}</dt>
                 <dd className="mt-0.5 flex items-center gap-1.5 font-medium tabular-nums">
                   <CalendarClock
                     className="text-muted-foreground h-3.5 w-3.5 shrink-0"
@@ -177,6 +181,11 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
                   />
                   {formatDate(assignment.next_due_on)}
                 </dd>
+                {slot && (
+                  <dd className="mt-1">
+                    <Badge variant={slot.tone}>{slot.chip}</Badge>
+                  </dd>
+                )}
                 {assignment.next_due_moved_from && (
                   <dd className="text-muted-foreground mt-1">
                     Moved from {formatDate(assignment.next_due_moved_from)} (public holiday)

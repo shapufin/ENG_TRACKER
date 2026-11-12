@@ -457,6 +457,21 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
         serializer = self.get_serializer(log)
         return Response(serializer.data)
 
+    @staticmethod
+    def _carried_in_hours(user):
+        """The user's own hours worked in an earlier month but processed this month.
+
+        The summary is dated by work date, so these hours are outside it; the card
+        shows them next to the total so nobody is surprised by the payroll figure.
+        """
+        from django.db.models import Sum
+        from core.utils.timezone_local import business_today
+        month = business_today().replace(day=1)
+        carried = OvertimeLog.objects.filter(
+            user=user, requested_processing_period=month, date__lt=month,
+        ).exclude(status='rejected')
+        return carried.aggregate(total=Sum('hours'))['total'] or 0
+
     @action(detail=False, methods=['get'])
     def summary(self, request):
         """
@@ -472,6 +487,7 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
             'approved_hours': queryset.filter(status='approved').aggregate(total=Sum('hours'))['total'] or 0,
             'pending_hours': queryset.filter(status='pending').aggregate(total=Sum('hours'))['total'] or 0,
             'rejected_hours': queryset.filter(status='rejected').aggregate(total=Sum('hours'))['total'] or 0,
+            'carried_hours': self._carried_in_hours(request.user),
         }
 
         serializer = OvertimeSummarySerializer(data=summary)

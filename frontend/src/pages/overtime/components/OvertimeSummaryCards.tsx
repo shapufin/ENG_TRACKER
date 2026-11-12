@@ -1,6 +1,7 @@
 import React from "react";
 import { StatCard, STAT_CARD_MICRO_LABEL, type StatCardProps } from "@/components/ui/StatCard";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toneFillClass, toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
 import { Clock, FileText, CheckCircle, AlertCircle, XCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -68,8 +69,32 @@ const SUMMARY_CONFIG: Record<
   },
 };
 
+/** Subtle "+3" next to the total; the tooltip says where those hours come from. */
+const CarriedBadge: React.FC<{ hours: number }> = ({ hours }) => {
+  const label = `+${Number(hours.toFixed(2))}`;
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={`${label}h carried from last month`}
+            className={`${toneTextClass.info} ml-1.5 inline-flex min-h-6 min-w-6 items-center justify-center rounded-md align-middle text-xs font-medium tabular-nums`}
+          >
+            {label}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent collisionPadding={8}>{label}h carried from last month</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
 interface OvertimeSummaryCardsProps {
-  summary: Record<(typeof summaryKeys)[number], number> | null | undefined;
+  summary:
+    | (Record<(typeof summaryKeys)[number], number> & { carried_hours?: number })
+    | null
+    | undefined;
   /** TL-flavored cards render a mockup-matching progress bar; Employee cards do not. */
   isTeamLeader?: boolean;
 }
@@ -81,6 +106,8 @@ export const OvertimeSummaryCards: React.FC<OvertimeSummaryCardsProps> = ({
   if (!summary) return null;
   const totalHours = summary.total_hours || 0;
   const totalEntries = summary.total_entries || 0;
+  // The API sends decimals as strings; coerce before comparing or formatting.
+  const carriedHours = Number(summary.carried_hours) || 0;
   const progressByKey: Record<(typeof summaryKeys)[number], number | undefined> = {
     total_hours: isTeamLeader ? (totalHours > 0 ? 100 : 0) : undefined,
     total_entries: isTeamLeader ? (totalEntries > 0 ? 100 : 0) : undefined,
@@ -100,7 +127,12 @@ export const OvertimeSummaryCards: React.FC<OvertimeSummaryCardsProps> = ({
             key={k}
             label={SUMMARY_LABELS[k]}
             labelClassName={STAT_CARD_MICRO_LABEL}
-            value={<AnimatedNumber value={summary[k]} decimals={k.endsWith("_hours") ? 2 : 0} />}
+            value={
+              <>
+                <AnimatedNumber value={summary[k]} decimals={k.endsWith("_hours") ? 2 : 0} />
+                {k === "total_hours" && carriedHours > 0 && <CarriedBadge hours={carriedHours} />}
+              </>
+            }
             icon={cfg.icon}
             glow={cfg.glow}
             iconColorClass={cfg.iconColorClass}

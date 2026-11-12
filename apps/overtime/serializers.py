@@ -234,3 +234,4 @@ class OvertimeSummarySerializer(serializers.Serializer):
     approved_hours = serializers.DecimalField(max_digits=10, decimal_places=2)
     pending_hours = serializers.DecimalField(max_digits=10, decimal_places=2)
     rejected_hours = serializers.DecimalField(max_digits=10, decimal_places=2)
+    carried_hours = serializers.DecimalField(max_digits=10, decimal_places=2)
