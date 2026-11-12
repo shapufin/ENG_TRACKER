@@ -117,6 +117,70 @@ class StandbyLogImporter(StaffOnlyAuthority, BaseImporter):
             },
         ]
 
+    def _build_dynamic_sample_rows(self) -> List[Dict[str, Any]]:
+        from django.contrib.auth.models import User
+        users = list(User.objects.filter(is_active=True).order_by("username")[:2])
+        clients = list(Client.objects.filter(is_active=True).order_by("code")[:2])
+        if not users and not clients:
+            return []
+
+        u1 = users[0].username if users else "mrossi"
+        e1 = users[0].email if users else "m.rossi@example.com"
+        u2 = users[1].username if len(users) > 1 else u1
+        e2 = users[1].email if len(users) > 1 else e1
+
+        c1 = clients[0].code if clients else "ACME"
+        c2 = f"{c1},{clients[1].code}" if len(clients) > 1 else c1
+
+        return [
+            {
+                "username": u1, "email": e1, "date": "2026-01-05",
+                "hours": "12", "start_time": "18:00", "end_time": "06:00",
+                "client_codes": c1, "description": "Weeknight standby", "evidence": "",
+            },
+            {
+                "username": u2, "email": e2, "date": "2026-01-06",
+                "hours": "24", "start_time": "", "end_time": "",
+                "client_codes": c2, "description": "Weekend standby", "evidence": "",
+            },
+        ]
+
+    def get_field_dropdowns(self) -> Dict[str, List[str]]:
+        from django.contrib.auth.models import User
+        dropdowns = super().get_field_dropdowns()
+        users = list(
+            User.objects.filter(is_active=True)
+            .values_list("username", flat=True)
+            .order_by("username")[:50]
+        )
+        clients = list(
+            Client.objects.filter(is_active=True)
+            .values_list("code", flat=True)
+            .order_by("code")[:50]
+        )
+        if users:
+            dropdowns["username"] = users
+        if clients:
+            dropdowns["client_codes"] = clients
+        return dropdowns
+
+    def get_reference_data(self) -> Dict[str, List[Dict[str, Any]]]:
+        from django.contrib.auth.models import User
+        ref: Dict[str, List[Dict[str, Any]]] = {}
+        clients = [
+            {"Client Code": c.code, "Client Name": c.name}
+            for c in Client.objects.filter(is_active=True).order_by("code")
+        ]
+        if clients:
+            ref["Active Clients"] = clients
+        users = [
+            {"Username": u.username, "Full Name": u.get_full_name() or u.username}
+            for u in User.objects.filter(is_active=True).order_by("username")[:50]
+        ]
+        if users:
+            ref["Active Employees"] = users
+        return ref
+
     def _resolve_clients(self, mapped_row: Dict[str, Any]) -> "tuple[list, Optional[str]]":
         raw = mapped_row.get("client_codes")
         if not raw:

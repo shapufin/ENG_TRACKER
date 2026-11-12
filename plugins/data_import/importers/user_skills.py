@@ -180,3 +180,72 @@ class UserSkillImporter(SkillsPluginAuthority, BaseImporter):
                 "notes": "",
             },
         ]
+
+    def _build_dynamic_sample_rows(self) -> List[Dict[str, Any]]:
+        from django.contrib.auth.models import User
+        users = list(User.objects.filter(is_active=True).order_by("username")[:2])
+        skills = list(Skill.objects.filter(is_active=True).order_by("code")[:2])
+        if not users and not skills:
+            return []
+
+        u1 = users[0].username if users else "mrossi"
+        e1 = users[0].email if users else "m.rossi@example.com"
+        u2 = users[1].username if len(users) > 1 else u1
+        e2 = users[1].email if len(users) > 1 else e1
+
+        s1 = skills[0].code if skills else "AWS"
+        s2 = skills[1].code if len(skills) > 1 else s1
+
+        return [
+            {
+                "username": u1,
+                "email": e1,
+                "skill_code": s1,
+                "level": 4,
+                "notes": "Verified rating",
+            },
+            {
+                "username": u2,
+                "email": e2,
+                "skill_code": s2,
+                "level": 3,
+                "notes": "Standard proficiency",
+            },
+        ]
+
+    def get_field_dropdowns(self) -> Dict[str, List[str]]:
+        from django.contrib.auth.models import User
+        dropdowns = super().get_field_dropdowns()
+        users = list(
+            User.objects.filter(is_active=True)
+            .values_list("username", flat=True)
+            .order_by("username")[:50]
+        )
+        skills = list(
+            Skill.objects.filter(is_active=True)
+            .values_list("code", flat=True)
+            .order_by("code")[:50]
+        )
+        if users:
+            dropdowns["username"] = users
+        if skills:
+            dropdowns["skill_code"] = skills
+        dropdowns["level"] = ["1", "2", "3", "4", "5"]
+        return dropdowns
+
+    def get_reference_data(self) -> Dict[str, List[Dict[str, Any]]]:
+        from django.contrib.auth.models import User
+        ref: Dict[str, List[Dict[str, Any]]] = {}
+        skills = [
+            {"Skill Code": s.code, "Skill Name": s.name, "Category": s.category.name if s.category else ""}
+            for s in Skill.objects.filter(is_active=True).order_by("code")
+        ]
+        if skills:
+            ref["Active Skills"] = skills
+        users = [
+            {"Username": u.username, "Full Name": u.get_full_name() or u.username}
+            for u in User.objects.filter(is_active=True).order_by("username")[:50]
+        ]
+        if users:
+            ref["Active Employees"] = users
+        return ref

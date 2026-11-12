@@ -157,11 +157,137 @@ def _template_frame(importer) -> pd.DataFrame:
     fields = importer.get_fields()
     header = {f.key: f"{f.label} *" if f.required else f.label for f in fields}
     columns = [header[f.key] for f in fields]
+    if hasattr(importer, "get_dynamic_sample_rows"):
+        sample_rows = importer.get_dynamic_sample_rows()
+    elif hasattr(importer, "get_sample_rows"):
+        sample_rows = importer.get_sample_rows()
+    else:
+        sample_rows = []
     rows = [
         {header[f.key]: row.get(f.key, "") for f in fields}
-        for row in importer.get_sample_rows()
+        for row in sample_rows
     ]
     return pd.DataFrame(rows, columns=columns).map(xlsx_safe)
+
+
+def _build_excel_workbook_bytes(importer) -> bytes:
+    """Build a multi-sheet, validated Excel template using openpyxl.
+
+    Sheet 1 holds the data import template with in-cell dropdown data validations.
+    Sheet 2 holds a Reference Data directory of existing valid database entities.
+    """
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.utils import get_column_letter
+    from openpyxl.worksheet.datavalidation import DataValidation
+
+    frame = _template_frame(importer)
+    buffer = io.BytesIO()
+
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        sheet_title = (importer.display_name or importer.target_key)[:31]
+        frame.to_excel(writer, index=False, sheet_name=sheet_title)
+
+        wb = writer.book
+        ws = writer.sheets[sheet_title]
+
+        # Formatting Sheet 1: Template
+        ws.freeze_panes = "A2"
+        header_fill = PatternFill(start_color="F1F5F9", end_color="F1F5F9", fill_type="solid")
+        header_font = Font(name="Calibri", size=11, bold=True, color="0F172A")
+        thin_border = Border(
+            bottom=Side(style='thin', color='CBD5E1'),
+            top=Side(style='thin', color='CBD5E1'),
+            left=Side(style='thin', color='E2E8F0'),
+            right=Side(style='thin', color='E2E8F0'),
+        )
+
+        for col_idx in range(1, ws.max_column + 1):
+            col_letter = get_column_letter(col_idx)
+            header_cell = ws.cell(row=1, column=col_idx)
+            header_cell.fill = header_fill
+            header_cell.font = header_font
+            header_cell.alignment = Alignment(vertical="center", horizontal="left")
+            header_cell.border = thin_border
+
+            # Auto-fit column width
+            max_len = max(len(str(header_cell.value or "")), 12)
+            for row_idx in range(2, min(ws.max_row + 1, 10)):
+                cell_val = ws.cell(row=row_idx, column=col_idx).value
+                if cell_val is not None:
+                    max_len = max(max_len, min(len(str(cell_val)), 40))
+            ws.column_dimensions[col_letter].width = max_len + 4
+
+        # Add DataValidation dropdowns on Sheet 1
+        fields = importer.get_fields()
+        dropdowns = (
+            importer.get_field_dropdowns()
+            if hasattr(importer, "get_field_dropdowns")
+            else {}
+        )
+        for col_idx, f in enumerate(fields, 1):
+            choices = dropdowns.get(f.key)
+            if choices:
+                safe_choices = [
+                    str(c).replace('"', '').replace(',', ' ').strip()
+                    for c in choices
+                    if str(c).strip()
+                ]
+                if safe_choices:
+                    formula_str = f'"{",".join(safe_choices[:30])}"'
+                    if len(formula_str) <= 255:
+                        col_letter = get_column_letter(col_idx)
+                        dv = DataValidation(
+                            type="list",
+                            formula1=formula_str,
+                            allow_blank=True,
+                        )
+                        ws.add_data_validation(dv)
+                        dv.add(f"{col_letter}2:{col_letter}1000")
+
+        # Sheet 2: Reference Data
+        ref_data = (
+            importer.get_reference_data()
+            if hasattr(importer, "get_reference_data")
+            else {}
+        )
+        if ref_data:
+            ref_ws = wb.create_sheet(title="Reference Data")
+            ref_header_fill = PatternFill(start_color="E2E8F0", end_color="E2E8F0", fill_type="solid")
+            ref_header_font = Font(name="Calibri", size=11, bold=True, color="1E293B")
+            section_font = Font(name="Calibri", size=12, bold=True, color="0F172A")
+
+            current_row = 1
+            for section_title, records in ref_data.items():
+                if not records:
+                    continue
+                title_cell = ref_ws.cell(row=current_row, column=1, value=section_title)
+                title_cell.font = section_font
+                current_row += 1
+
+                headers = list(records[0].keys())
+                for col_idx, h in enumerate(headers, 1):
+                    h_cell = ref_ws.cell(row=current_row, column=col_idx, value=h)
+                    h_cell.fill = ref_header_fill
+                    h_cell.font = ref_header_font
+                    h_cell.border = thin_border
+                current_row += 1
+
+                for item in records:
+                    for col_idx, h in enumerate(headers, 1):
+                        val_cell = ref_ws.cell(
+                            row=current_row,
+                            column=col_idx,
+                            value=xlsx_safe(item.get(h, "")),
+                        )
+                        val_cell.border = thin_border
+                    current_row += 1
+                current_row += 1
+
+            for col_idx in range(1, ref_ws.max_column + 1):
+                col_letter = get_column_letter(col_idx)
+                ref_ws.column_dimensions[col_letter].width = 24
+
+    return buffer.getvalue()
 
 
 def _template_response(importer, file_format: str) -> HttpResponse:
@@ -177,10 +303,8 @@ def _template_response(importer, file_format: str) -> HttpResponse:
             buffer.getvalue().encode('utf-8-sig'), content_type=CSV_CONTENT_TYPE
         )
     else:
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            frame.to_excel(writer, index=False, sheet_name=importer.display_name[:31])
-        response = HttpResponse(buffer.getvalue(), content_type=XLSX_CONTENT_TYPE)
+        content = _build_excel_workbook_bytes(importer)
+        response = HttpResponse(content, content_type=XLSX_CONTENT_TYPE)
 
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response

@@ -159,3 +159,68 @@ class TeamImporter(StaffOnlyAuthority, CodeKeyedImporter):
                 "description": "Database sub-team",
             },
         ]
+
+    def _build_dynamic_sample_rows(self) -> List[Dict[str, Any]]:
+        existing_teams = list(Team.objects.all().order_by("code")[:2])
+        leaders = list(User.objects.filter(is_active=True).order_by("username")[:2])
+
+        if not existing_teams and not leaders:
+            return []
+
+        parent_code = existing_teams[0].code if existing_teams else ""
+        leader_1 = leaders[0].username if leaders else ""
+        leader_2 = leaders[1].username if len(leaders) > 1 else leader_1
+
+        return [
+            {
+                "code": "NEW-TEAM-A",
+                "name": "New Department",
+                "parent_team_code": parent_code,
+                "team_leader_username": leader_1,
+                "calendar_group": "operations",
+                "description": "Example team",
+            },
+            {
+                "code": "NEW-TEAM-B",
+                "name": "New Sub-Team",
+                "parent_team_code": "NEW-TEAM-A",
+                "team_leader_username": leader_2,
+                "calendar_group": "operations",
+                "description": "Example sub-team",
+            },
+        ]
+
+    def get_field_dropdowns(self) -> Dict[str, List[str]]:
+        dropdowns = super().get_field_dropdowns()
+        team_codes = list(Team.objects.values_list("code", flat=True).order_by("code"))
+        leaders = list(
+            User.objects.filter(is_active=True)
+            .values_list("username", flat=True)
+            .order_by("username")[:30]
+        )
+        if team_codes:
+            dropdowns["parent_team_code"] = team_codes
+        if leaders:
+            dropdowns["team_leader_username"] = leaders
+        return dropdowns
+
+    def get_reference_data(self) -> Dict[str, List[Dict[str, Any]]]:
+        ref: Dict[str, List[Dict[str, Any]]] = {}
+        teams = [
+            {
+                "Team Code": t.code,
+                "Team Name": t.name,
+                "Current Leader": t.team_leader.username if t.team_leader else "",
+            }
+            for t in Team.objects.all().order_by("code")
+        ]
+        if teams:
+            ref["Existing Teams"] = teams
+
+        users = [
+            {"Username": u.username, "Full Name": u.get_full_name() or u.username}
+            for u in User.objects.filter(is_active=True).order_by("username")[:50]
+        ]
+        if users:
+            ref["Available Leaders"] = users
+        return ref

@@ -149,3 +149,15 @@ class TechImporter(StaffOnlyAuthority, CodeKeyedImporter):
                 "levels": "Junior;Senior",
             },
         ]
+
+    def get_reference_data(self) -> Dict[str, List[Dict[str, Any]]]:
+        techs = [
+            {
+                "Tech Code": t.code,
+                "Tech Name": t.name,
+                "Active": "TRUE" if t.is_active else "FALSE",
+                "Levels": ";".join(t.levels.values_list("code", flat=True)),
+            }
+            for t in Tech.objects.all().order_by("code")
+        ]
+        return {"Existing Techs": techs} if techs else {}

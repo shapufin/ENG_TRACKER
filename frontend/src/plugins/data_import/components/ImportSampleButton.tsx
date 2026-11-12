@@ -39,27 +39,32 @@ export const ImportSampleButton: React.FC<ImportSampleButtonProps> = ({ targetKe
     );
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        disabled={downloading !== null}
-        onClick={() => download("csv")}
-      >
-        {icon("csv")}
-        Sample CSV
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        disabled={downloading !== null}
-        onClick={() => download("xlsx")}
-      >
-        {icon("xlsx")}
-        Sample Excel
-      </Button>
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={downloading !== null}
+          onClick={() => download("csv")}
+        >
+          {icon("csv")}
+          Sample CSV
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={downloading !== null}
+          onClick={() => download("xlsx")}
+        >
+          {icon("xlsx")}
+          Sample Excel
+        </Button>
+      </div>
+      <p className="text-muted-foreground text-[11px]">
+        Pre-populated with live system entities &amp; Excel in-cell dropdowns.
+      </p>
     </div>
   );
 };

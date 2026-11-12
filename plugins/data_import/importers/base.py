@@ -155,6 +155,45 @@ class BaseImporter(ABC):
         """
         return []
 
+    def get_dynamic_sample_rows(self) -> List[Dict[str, Any]]:
+        """Return sample rows, dynamically populated with real DB entities if present.
+
+        Falls back to static ``get_sample_rows()`` on a fresh or empty database.
+        """
+        try:
+            rows = self._build_dynamic_sample_rows()
+            if rows:
+                return rows
+        except Exception:  # noqa: BLE001
+            logger.debug(
+                "Failed building dynamic sample rows for %s; using static fallback",
+                self.target_key,
+                exc_info=True,
+            )
+        return self.get_sample_rows()
+
+    def _build_dynamic_sample_rows(self) -> List[Dict[str, Any]]:
+        """Subclasses override this to query real database models."""
+        return []
+
+    def get_reference_data(self) -> Dict[str, List[Dict[str, Any]]]:
+        """Return reference directories of existing entities for the Excel Reference Data sheet.
+
+        Returns:
+            Dict of {"Section Title": [{"Column1": val, ...}, ...]}
+        """
+        return {}
+
+    def get_field_dropdowns(self) -> Dict[str, List[str]]:
+        """Return field_key -> list of allowed string values for Excel in-cell dropdowns."""
+        dropdowns: Dict[str, List[str]] = {}
+        for f in self.get_fields():
+            if f.choices:
+                dropdowns[f.key] = [str(c[0]) for c in f.choices]
+            elif f.field_type == "bool":
+                dropdowns[f.key] = ["TRUE", "FALSE"]
+        return dropdowns
+
     def prepare_batch(
         self,
         rows: List[Dict[str, Any]],
@@ -263,6 +302,6 @@ class BaseImporter(ABC):
                 }
                 for o in self.get_options()
             ],
-            "sample_rows": self.get_sample_rows(),
+            "sample_rows": self.get_dynamic_sample_rows(),
             "dedupe_keys": self.get_dedupe_keys(),
         }

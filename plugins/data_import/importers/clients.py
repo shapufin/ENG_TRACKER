@@ -66,3 +66,10 @@ class ClientImporter(StaffOnlyAuthority, CodeKeyedImporter):
                 "description": "Retail support contract",
             },
         ]
+
+    def get_reference_data(self) -> Dict[str, List[Dict[str, Any]]]:
+        clients = [
+            {"Client Code": c.code, "Client Name": c.name, "Description": c.description or ""}
+            for c in Client.objects.all().order_by("code")
+        ]
+        return {"Existing Clients": clients} if clients else {}

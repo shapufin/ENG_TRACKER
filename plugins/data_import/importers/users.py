@@ -260,6 +260,131 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
             },
         ]
 
+    def _build_dynamic_sample_rows(self) -> List[Dict[str, Any]]:
+        """Query real database models for valid entity codes and usernames."""
+        teams = list(Team.objects.all().order_by("code")[:2])
+        italian_tls = list(
+            User.objects.filter(profile__is_italian_tl_role=True, is_active=True).order_by("username")[:2]
+        )
+        albanian_tls = list(
+            User.objects.filter(profile__is_albanian_tl_role=True, is_active=True).order_by("username")[:2]
+        )
+        techs = list(Tech.objects.filter(is_active=True).order_by("code")[:2])
+
+        if not teams and not italian_tls and not albanian_tls and not techs:
+            return []
+
+        team_1 = teams[0].code if teams else "ENG"
+        team_2 = teams[1].code if len(teams) > 1 else team_1
+
+        it_tl_1 = italian_tls[0].username if italian_tls else ""
+        al_tl_1 = albanian_tls[0].username if albanian_tls else ""
+        al_tl_2 = albanian_tls[1].username if len(albanian_tls) > 1 else al_tl_1
+
+        tech_1_str = ""
+        if techs:
+            t1 = techs[0]
+            lvl = t1.levels.first()
+            tech_1_str = f"{t1.code}:{lvl.code}" if lvl else t1.code
+            if len(techs) > 1:
+                tech_1_str += f",{techs[1].code}"
+
+        tech_2_str = techs[0].code if techs else ""
+
+        return [
+            {
+                "username": "new.employee1",
+                "email": "employee1@example.com",
+                "first_name": "Employee",
+                "last_name": "One",
+                "team_code": team_1,
+                "tech_codes": tech_1_str,
+                "is_hr": False,
+                "is_italian_tl": False,
+                "is_albanian_tl": False,
+                "italian_tl_username": it_tl_1,
+                "albanian_tl_username": al_tl_1,
+                "phone": "+355 4 1234567",
+                "code": "EMP001",
+                "hire_date": "2026-01-15",
+                "is_active": True,
+            },
+            {
+                "username": "new.employee2",
+                "email": "employee2@example.com",
+                "first_name": "Employee",
+                "last_name": "Two",
+                "team_code": team_2,
+                "tech_codes": tech_2_str,
+                "is_hr": False,
+                "is_italian_tl": False,
+                "is_albanian_tl": False,
+                "italian_tl_username": it_tl_1,
+                "albanian_tl_username": al_tl_2,
+                "phone": "+355 4 7654321",
+                "code": "EMP002",
+                "hire_date": "2026-02-01",
+                "is_active": True,
+            },
+        ]
+
+    def get_field_dropdowns(self) -> Dict[str, List[str]]:
+        dropdowns = super().get_field_dropdowns()
+        team_codes = list(Team.objects.values_list("code", flat=True).order_by("code"))
+        it_tls = list(
+            User.objects.filter(profile__is_italian_tl_role=True, is_active=True)
+            .values_list("username", flat=True)
+            .order_by("username")
+        )
+        al_tls = list(
+            User.objects.filter(profile__is_albanian_tl_role=True, is_active=True)
+            .values_list("username", flat=True)
+            .order_by("username")
+        )
+        if team_codes:
+            dropdowns["team_code"] = team_codes
+        if it_tls:
+            dropdowns["italian_tl_username"] = it_tls
+        if al_tls:
+            dropdowns["albanian_tl_username"] = al_tls
+        return dropdowns
+
+    def get_reference_data(self) -> Dict[str, List[Dict[str, Any]]]:
+        ref: Dict[str, List[Dict[str, Any]]] = {}
+        teams = [
+            {"Team Code": t.code, "Team Name": t.name}
+            for t in Team.objects.all().order_by("code")
+        ]
+        if teams:
+            ref["Active Teams"] = teams
+
+        managers = [
+            {"Username": u.username, "Full Name": u.get_full_name() or u.username}
+            for u in User.objects.filter(profile__is_italian_tl_role=True, is_active=True).order_by("username")
+        ]
+        if managers:
+            ref["Managers"] = managers
+
+        line_managers = [
+            {"Username": u.username, "Full Name": u.get_full_name() or u.username}
+            for u in User.objects.filter(profile__is_albanian_tl_role=True, is_active=True).order_by("username")
+        ]
+        if line_managers:
+            ref["Line Managers"] = line_managers
+
+        techs = [
+            {
+                "Tech Code": t.code,
+                "Tech Name": t.name,
+                "Available Levels": ";".join(t.levels.values_list("code", flat=True)),
+            }
+            for t in Tech.objects.filter(is_active=True).order_by("code")
+        ]
+        if techs:
+            ref["Tech Classifications"] = techs
+
+        return ref
+
     def _resolve_existing_user(self, mapped_row: Dict[str, Any], options: Dict[str, Any]) -> Optional[User]:
         """Find an existing user by username, or by email if allowed."""
         username = mapped_row.get("username")
