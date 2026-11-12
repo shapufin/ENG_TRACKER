@@ -1,3 +1,4 @@
+import { currentBusinessYear } from "@/lib/date-format-utils";
 import React from "react";
 import { ScrollFadeX } from "@/components/ui/ScrollFadeX";
 import { PageShell } from "@/components/layout/PageShell";
@@ -24,7 +25,7 @@ const VIEWS: { value: HbprView; label: string }[] = [
 ];
 
 const yearOptions = (): number[] => {
-  const current = new Date().getFullYear();
+  const current = currentBusinessYear();
   return [current - 3, current - 2, current - 1, current, current + 1];
 };
 

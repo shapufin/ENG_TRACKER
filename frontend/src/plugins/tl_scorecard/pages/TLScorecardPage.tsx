@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { currentBusinessYear } from "@/lib/date-format-utils";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { usePermissions } from "@/context/PermissionContext";
 import { EvidenceExportSection } from "../components/scorecard/EvidenceExportSection";
 import { HbprCadenceDialog } from "../components/scorecard/HbprCadenceDialog";
 import { HbprCadenceMissingBanner } from "../components/scorecard/HbprCadenceMissingBanner";
+import { ReportingYearSelect } from "../components/scorecard/ReportingYearSelect";
 import { HbprPartnershipSection } from "../components/scorecard/HbprPartnershipSection";
 import { ScorecardOverview } from "../components/scorecard/ScorecardOverview";
 import { TeamGovernanceSection } from "../components/scorecard/TeamGovernanceSection";
@@ -56,7 +58,21 @@ const TLScorecardAuthoring: React.FC = () => {
   const rawTab = params.get("tab");
   const tab: TLScorecardTab =
     rawTab === "records" || rawTab === "evidence" || rawTab === "team" ? rawTab : "overview";
-  const year = new Date().getFullYear();
+  // Match the API's bounds (2000-2100); a hand-edited `?year=` falls back to the business year.
+  const yearParam = Number(params.get("year"));
+  const year =
+    Number.isInteger(yearParam) && yearParam >= 2000 && yearParam <= 2100
+      ? yearParam
+      : currentBusinessYear();
+  const setYear = (next: number) =>
+    setParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.set("year", String(next));
+        return params;
+      },
+      { replace: true }
+    );
 
   const setTab = (next: TLScorecardTab) =>
     setParams(
@@ -325,6 +341,7 @@ const TLScorecardAuthoring: React.FC = () => {
         tab={tab}
         onTabChange={setTab}
       >
+        <ReportingYearSelect year={year} onYearChange={setYear} />
         <HbprPartnershipSection
           partnership={partnershipQuery.data}
           evidence={partnershipEvidence}
@@ -404,6 +421,7 @@ const TLScorecardAuthoring: React.FC = () => {
         survey={surveyQuery.data}
       />
 
+      <ReportingYearSelect year={year} onYearChange={setYear} />
       <TeamGovernanceSection
         scorecard={scorecard}
         escalations={escalationsQuery.data}

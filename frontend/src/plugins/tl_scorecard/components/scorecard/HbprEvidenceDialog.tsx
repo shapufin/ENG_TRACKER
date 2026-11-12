@@ -1,3 +1,4 @@
+import { currentBusinessYear } from "@/lib/date-format-utils";
 import React, { useState } from "react";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import { FormDialog } from "@/components/ui/FormDialog";
@@ -56,7 +57,7 @@ export const HbprEvidenceDialog: React.FC<HbprEvidenceDialogProps> = ({
   const [kind, setKind] = useState<HbprEvidenceKind>(initial?.kind ?? "cadence_meeting");
   const [occurredOn, setOccurredOn] = useState(initial?.occurred_on ?? suggestedDate ?? todayIso());
   const [year, setYear] = useState(
-    String(initial?.reporting_year ?? defaultYear ?? new Date().getFullYear())
+    String(initial?.reporting_year ?? defaultYear ?? currentBusinessYear())
   );
   const [summary, setSummary] = useState(initial?.shared_summary ?? "");
   const [actionItems, setActionItems] = useState(initial?.action_items ?? "");

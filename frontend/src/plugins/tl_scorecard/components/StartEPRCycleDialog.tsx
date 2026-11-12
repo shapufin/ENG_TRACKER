@@ -1,3 +1,4 @@
+import { currentBusinessYear } from "@/lib/date-format-utils";
 import React, { useState } from "react";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { MemberSelectField } from "./MemberSelectField";
@@ -17,7 +18,7 @@ export const StartEPRCycleDialog: React.FC<StartEPRCycleDialogProps> = ({
   const [employeeId, setEmployeeId] = useState<number | null>(null);
   const { options: memberOptions, loadError } = useTeamMemberOptions(open);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const year = new Date().getFullYear();
+  const year = currentBusinessYear();
 
   const canSubmit = employeeId !== null;
 

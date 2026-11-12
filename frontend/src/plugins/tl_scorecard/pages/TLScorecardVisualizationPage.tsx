@@ -1,3 +1,4 @@
+import { currentBusinessYear } from "@/lib/date-format-utils";
 import React, { useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -104,7 +105,7 @@ const monthTooltip = (
 const percentOrDash = (value: number | null) => (value === null ? "—" : `${value}%`);
 
 const TLScorecardVisualization: React.FC = () => {
-  const year = new Date().getFullYear();
+  const year = currentBusinessYear();
   const trendQuery = useQuery({
     queryKey: ["tl-scorecard", "trend"],
     queryFn: async () => (await tlScorecardService.getTrend(6)).data,

@@ -1,3 +1,4 @@
+import { currentBusinessYear } from "@/lib/date-format-utils";
 import React from "react";
 import { Link } from "react-router-dom";
 import {
@@ -70,7 +71,7 @@ export const TeamMemberDetailPanel: React.FC<TeamMemberDetailPanelProps> = ({
   const { wage, leave, epr, governance, meetings } = member;
   const wageText = formatWage(wage.gross_monthly);
   const unavailableReason = wageUnavailableReason(wage.status);
-  const currentYear = new Date().getFullYear();
+  const currentYear = currentBusinessYear();
   const total = toDays(leave.total_days) ?? 0;
   const used = toDays(leave.used_days) ?? 0;
   const usedPct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;

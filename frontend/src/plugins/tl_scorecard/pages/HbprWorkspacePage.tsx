@@ -1,3 +1,4 @@
+import { currentBusinessYear } from "@/lib/date-format-utils";
 import React from "react";
 import { useSearchParams } from "react-router-dom";
 import { ErrorCard } from "@/components/ui/ErrorCard";
@@ -49,7 +50,7 @@ export const HbprWorkspacePage: React.FC = () => {
   const year =
     Number.isInteger(yearParam) && yearParam >= 2000 && yearParam <= 2100
       ? yearParam
-      : new Date().getFullYear();
+      : currentBusinessYear();
   const leaderParam = Number(params.get("leader")) || null;
   const kindParam = params.get("evidence_kind");
   const evidenceKind: EvidenceKindValue = EVIDENCE_KIND_ORDER.includes(

@@ -7,6 +7,7 @@ import {
   parseLocalDate,
   isPastMonth,
   currentBusinessMonthKey,
+  currentBusinessYear,
   currentBusinessDateISO,
   businessToday,
 } from "./date-format-utils";
@@ -222,5 +223,12 @@ describe("businessToday", () => {
       if (originalTz === undefined) delete process.env.TZ;
       else process.env.TZ = originalTz;
     }
+  });
+});
+
+describe("currentBusinessYear", () => {
+  it("rolls over at midnight Europe/Tirane, not at the browser's midnight", () => {
+    expect(currentBusinessYear(new Date("2026-12-31T23:30:00Z"))).toBe(2027);
+    expect(currentBusinessYear(new Date("2026-12-31T22:30:00Z"))).toBe(2026);
   });
 });
