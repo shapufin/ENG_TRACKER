@@ -7,9 +7,11 @@ onboarding exports, so a multi-GB set never streams through gunicorn.
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse
 from django.urls import reverse
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
@@ -23,6 +25,7 @@ from core.utils.protected_download import (
 )
 
 from .models import YearSnapshot, YearSnapshotFile
+from .services import archive_sets, archive_view
 from .serializers import YearSnapshotFileSerializer, YearSnapshotSerializer
 
 TOKEN_KIND = 'year-snapshot-file'
@@ -66,7 +69,7 @@ class YearSnapshotFileViewSet(SuperuserOnlyMixin, mixins.RetrieveModelMixin,
     plugin_name = 'year_close'
     serializer_class = YearSnapshotFileSerializer
     queryset = YearSnapshotFile.objects.select_related('snapshot')
-    permission_action_map = {'download_link': 'export'}
+    permission_action_map = {'download_link': 'export', 'verify': 'view'}
 
     def get_authenticators(self):
         # The signed token is the credential for the download itself.
@@ -80,6 +83,11 @@ class YearSnapshotFileViewSet(SuperuserOnlyMixin, mixins.RetrieveModelMixin,
                 raise PermissionDenied('The year close plugin is disabled.')
             return
         super().check_permissions(request)
+
+    @action(detail=True, methods=['post'])
+    def verify(self, request, pk=None):
+        row = self.get_object()
+        return Response({'result': archive_view.verify_file(row)})
 
     @action(detail=True, methods=['post'], url_path='download-link', url_name='download-link')
     def download_link(self, request, pk=None):
@@ -152,3 +160,44 @@ class YearSnapshotFileViewSet(SuperuserOnlyMixin, mixins.RetrieveModelMixin,
             object_repr=f'Snapshot file {row.relative_path}',
             extra_data={'operation': 'year_snapshot_download', 'file_id': row.pk},
         )
+
+
+class ArchivesViewSet(SuperuserOnlyMixin, viewsets.ViewSet):
+    """The Archives area: per-year categories and leader history (read-only)."""
+
+    plugin_name = 'year_close'
+    permission_action_map = {'list': 'view', 'leaders': 'view', 'leaders_export': 'export'}
+
+    def list(self, request):
+        return Response(archive_view.archive_entries())
+
+    @action(detail=False, methods=['get'])
+    def leaders(self, request):
+        return Response(archive_view.leader_summary(self._year(request)))
+
+    @action(detail=False, methods=['get'], url_path='leaders/export', url_name='leaders-export')
+    def leaders_export(self, request):
+        year = self._year(request)
+        try:
+            leader = int(request.query_params.get('leader', ''))
+        except ValueError:
+            raise ValidationError({'leader': 'leader must be an integer.'})
+        data, _counts = archive_sets.leaders_workbook(year, leader_id=leader)
+        if data is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        response = HttpResponse(
+            data,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = f'attachment; filename="leader-{leader}-{year}.xlsx"'
+        return response
+
+    @staticmethod
+    def _year(request) -> int:
+        try:
+            year = int(request.query_params.get('year', ''))
+        except ValueError:
+            raise ValidationError({'year': 'year must be an integer.'})
+        if not 2000 <= year <= 2100:
+            raise ValidationError({'year': 'year must be between 2000 and 2100.'})
+        return year

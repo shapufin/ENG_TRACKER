@@ -93,11 +93,14 @@ def epr_workbook(year: int) -> tuple[bytes | None, dict]:
     return data, {'epr_cycles': len(cycles), 'epr_stage_records': len(record_rows)}
 
 
-def _snapshot_rows(year: int) -> list[list]:
+def _snapshot_rows(year: int, leader_id=None) -> list[list]:
     from plugins.tl_scorecard.models import ScorecardMonthSnapshot
 
     rows = []
-    for snap in (ScorecardMonthSnapshot.objects.filter(month__year=year)
+    queryset = ScorecardMonthSnapshot.objects.filter(month__year=year)
+    if leader_id:
+        queryset = queryset.filter(leader_id=leader_id)
+    for snap in (queryset
                  .select_related('leader').order_by('leader__username', 'month')):
         rows.append([
             _name(snap.leader), snap.month.isoformat(), len(snap.member_ids or []),
@@ -107,13 +110,16 @@ def _snapshot_rows(year: int) -> list[list]:
     return rows
 
 
-def _engagement_rows(year: int) -> list[list]:
+def _engagement_rows(year: int, leader_id=None) -> list[list]:
     if not engagement_available():
         return []
     from plugins.engagement.models import TLApprovalMetric
 
     rows = []
-    for metric in (TLApprovalMetric.objects.filter(month__year=year)
+    queryset = TLApprovalMetric.objects.filter(month__year=year)
+    if leader_id:
+        queryset = queryset.filter(leader_id=leader_id)
+    for metric in (queryset
                    .select_related('leader').order_by('leader__username', 'month')):
         rows.append([
             _name(metric.leader), metric.team_name, metric.team_code, metric.month.isoformat(),
@@ -125,19 +131,28 @@ def _engagement_rows(year: int) -> list[list]:
     return rows
 
 
-def _evidence_rows(year: int) -> list[list]:
+def _evidence_queryset(year: int):
     from django.db.models import Q
 
     from plugins.tl_scorecard.models import HbprGovernanceEvidence
+
+    return (
+        HbprGovernanceEvidence.objects.filter(is_deleted=False)
+        .filter(Q(reporting_year=year) | Q(kind='cadence_meeting', occurred_on__year=year))
+    )
+
+
+def _evidence_rows(year: int, leader_id=None) -> list[list]:
     from plugins.tl_scorecard.serializers import HbprGovernanceEvidenceSerializer
 
     serializer = HbprGovernanceEvidenceSerializer()  # one instance: it caches attendees
     queryset = (
-        HbprGovernanceEvidence.objects.filter(is_deleted=False)
-        .filter(Q(reporting_year=year) | Q(kind='cadence_meeting', occurred_on__year=year))
+        _evidence_queryset(year)
         .select_related('assignment__albanian_tl', 'assignment__hbpr', 'recorded_by')
         .order_by('assignment__albanian_tl__username', 'occurred_on', 'id')
     )
+    if leader_id:
+        queryset = queryset.filter(assignment__albanian_tl_id=leader_id)
     rows = []
     for row in queryset:
         attended = ', '.join(e['name'] for e in serializer.get_attended_employees(row))
@@ -150,41 +165,44 @@ def _evidence_rows(year: int) -> list[list]:
     return rows
 
 
-def _record_rows(year: int) -> list[list]:
+def _record_rows(year: int, leader_id=None) -> list[list]:
     """Leader-authored records of the year. Private notes are never written."""
     from plugins.tl_scorecard.models import Absence, IdleFlag, Meeting, PIPRecord, PromotionFlag
 
     rows = []
-    for obj in IdleFlag.objects.filter(flagged_on__year=year, is_deleted=False).select_related(
-            'flagged_by', 'employee'):
+    def authored(queryset, author_field):
+        return queryset.filter(**{author_field: leader_id}) if leader_id else queryset
+
+    for obj in authored(IdleFlag.objects.filter(flagged_on__year=year, is_deleted=False),
+                        'flagged_by_id').select_related('flagged_by', 'employee'):
         rows.append(['Idle flag', _name(obj.flagged_by), _name(obj.employee),
                      obj.flagged_on.isoformat(), obj.status, obj.productivity_task[:CELL_LIMIT]])
-    for obj in Absence.objects.filter(absence_date__year=year, is_deleted=False).select_related(
-            'flagged_by', 'employee'):
+    for obj in authored(Absence.objects.filter(absence_date__year=year, is_deleted=False),
+                        'flagged_by_id').select_related('flagged_by', 'employee'):
         rows.append(['Absence', _name(obj.flagged_by), _name(obj.employee),
                      obj.absence_date.isoformat(), '', obj.reason[:CELL_LIMIT]])
-    for obj in PIPRecord.objects.filter(start_date__year=year, is_deleted=False).select_related(
-            'tl', 'employee'):
+    for obj in authored(PIPRecord.objects.filter(start_date__year=year, is_deleted=False),
+                        'tl_id').select_related('tl', 'employee'):
         rows.append(['PIP', _name(obj.tl), _name(obj.employee), obj.start_date.isoformat(),
                      obj.status, obj.shared_notes[:CELL_LIMIT]])
-    for obj in Meeting.objects.filter(occurred_on__year=year, is_deleted=False).select_related(
-            'organizer', 'counterparty'):
+    for obj in authored(Meeting.objects.filter(occurred_on__year=year, is_deleted=False),
+                        'organizer_id').select_related('organizer', 'counterparty'):
         rows.append([f'Meeting ({obj.meeting_type})', _name(obj.organizer),
                      _name(obj.counterparty), obj.occurred_on.isoformat(), '',
                      obj.shared_summary[:CELL_LIMIT]])
-    for obj in PromotionFlag.objects.filter(nominated_on__year=year, is_deleted=False).select_related(
-            'nominated_by', 'employee'):
+    for obj in authored(PromotionFlag.objects.filter(nominated_on__year=year, is_deleted=False),
+                        'nominated_by_id').select_related('nominated_by', 'employee'):
         rows.append(['Promotion nomination', _name(obj.nominated_by), _name(obj.employee),
                      obj.nominated_on.isoformat(), obj.status, obj.decision_note[:CELL_LIMIT]])
     return rows
 
 
-def leaders_workbook(year: int) -> tuple[bytes | None, dict]:
+def leaders_workbook(year: int, leader_id=None) -> tuple[bytes | None, dict]:
     """Per-leader history of ``year``: frozen months, engagement, evidence, records."""
     if not scorecard_available():
         return None, {}
-    snapshots, engagement = _snapshot_rows(year), _engagement_rows(year)
-    evidence, records = _evidence_rows(year), _record_rows(year)
+    snapshots, engagement = _snapshot_rows(year, leader_id), _engagement_rows(year, leader_id)
+    evidence, records = _evidence_rows(year, leader_id), _record_rows(year, leader_id)
     data = _workbook({
         'Scorecard months': (
             ['Leader', 'Month', 'Team size', 'Frozen at', 'Metrics (JSON)'], snapshots),

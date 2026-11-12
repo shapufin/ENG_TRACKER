@@ -199,7 +199,21 @@ def _build_manifest(snapshot: YearSnapshot, warnings: list[str]):
 def builder_counts(snapshot: YearSnapshot) -> dict:
     from .readiness import pending_counts
 
-    return pending_counts(snapshot.year)
+    counts = pending_counts(snapshot.year)
+    counts.update(_company_counts(snapshot.year))
+    return counts
+
+
+def _company_counts(year: int) -> dict:
+    """Counts the company ZIP recorded (payroll months, scorecard, EPR, ...)."""
+    import json
+    import zipfile
+
+    path = builder.snapshot_root() / str(year) / f'company_{year}.zip'
+    if not path.exists():
+        return {}
+    with zipfile.ZipFile(path) as archive:
+        return json.loads(archive.read('MANIFEST.json')).get('counts', {})
 
 
 def _finalize(snapshot: YearSnapshot, actor) -> YearSnapshot:
