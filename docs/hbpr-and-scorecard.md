@@ -253,6 +253,18 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
   `stages_completed` and `stages_with_evidence` for `scoreable_member_ids(leader)`.
   Line Managers are excluded, as everywhere in the scorecard.
 
+## Year rollover and the closed-year archive (2026-11-12)
+
+- The TL scorecard has a **Reporting year** selector (`?year=`, default the Europe/Tirane business year), so a cycle or
+  partnership log of last year stays reachable in January. The HBPR workspace already had one.
+- One partnership row per Line Manager, kind and year is unchanged; the row now lists `attended_employees` (the
+  employees whose EPR review the HBPR attended). Names only, never review text.
+- A closed year's EPR progress and a past month's export use the roster frozen in the final scorecard snapshot, not
+  today's team (`epr_roster`, `frozen_member_ids` in `snapshots.py`).
+- The year-close company ZIP carries `scorecard/epr.xlsx` and `scorecard/leaders.xlsx`; a missing final December
+  snapshot blocks the close. Rules: `docs/workflow-invariants.md` items 74-75. Planned next (not built):
+  `docs/superpowers/plans/2026-11-12-closed-year-archive-and-retention.md`.
+
 ## Reminders and backfill (2026-11-11)
 
 The hourly job `cadence_reminders` (`reminders.py`) notifies the Line Manager on the day the next

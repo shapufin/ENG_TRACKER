@@ -396,13 +396,21 @@ def build_company(year: int, warnings: list[str]) -> tuple[Path, dict]:
             months += 1
 
     files['year_summary.xlsx'] = _year_summary(year)
+    counts = {'payroll_months': months}
+    from . import archive_sets
+
+    for name, build in (('epr', archive_sets.epr_workbook), ('leaders', archive_sets.leaders_workbook)):
+        data, part_counts = build(year)
+        if data is not None:
+            files[f'scorecard/{name}.xlsx'] = data
+            counts.update(part_counts)
     files['MANIFEST.json'] = _manifest_payload(
         year, files, warnings,
-        {'bundle': {'kind': 'company'}, 'counts': {'payroll_months': months}},
+        {'bundle': {'kind': 'company'}, 'counts': counts},
     )
     target = snapshot_root() / str(year) / f'company_{year}.zip'
     _write_zip(target, files)
-    return target, {'payroll_months': months}
+    return target, counts
 
 
 def _year_summary(year: int) -> bytes:

@@ -516,7 +516,9 @@ class HbprGovernanceEvidenceSerializer(serializers.ModelSerializer):
             return []
         stage = 'mid_year' if obj.kind == 'epr_mid_year' else 'final_review'
         leader_id = obj.assignment.albanian_tl_id
-        cache = self.__dict__.setdefault('_attendee_cache', {})
+        cache = getattr(self, '_attendee_cache', None)
+        if cache is None:
+            cache = self._attendee_cache = {}
         key = (leader_id, obj.reporting_year, stage)
         if key not in cache:
             records = (

@@ -111,6 +111,9 @@ def check_year_readiness(year: int) -> dict:
     if pending_leave:
         blockers.append(f'{pending_leave} leave request(s) overlapping {year} are still pending.')
 
+    from .archive_sets import december_snapshot_blockers
+
+    blockers.extend(december_snapshot_blockers(year))
     warnings.extend(_warning_list(year, first_day, last_day))
     return {'blockers': blockers, 'warnings': warnings}
 
