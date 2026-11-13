@@ -442,6 +442,7 @@ const BuilderCanvas: React.FC = () => {
         import("jspdf"),
       ]);
       const canvas = await html2canvas(viewport, {
+        // ds-allow-hardcode: the PDF is printed on paper, so it stays white in both themes.
         backgroundColor: "#ffffff",
         scale: 2,
         logging: false,
