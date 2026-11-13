@@ -168,9 +168,9 @@ export const HbprPartnershipSection: React.FC<HbprPartnershipSectionProps> = ({
 
             <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-3">
               <div>
-                <dt className="text-muted-foreground">Last held</dt>
+                <dt className="text-muted-foreground">Last meeting held</dt>
                 <dd className="mt-0.5 font-medium tabular-nums">
-                  {formatDate(assignment.last_meeting_on)}
+                  {assignment.last_meeting_on ? formatDate(assignment.last_meeting_on) : "None yet"}
                 </dd>
               </div>
               <div>

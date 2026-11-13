@@ -261,3 +261,51 @@ class EprEvidenceExportTests(HbprScorecardBase):
         self.assertIn('HBPR present', text)
         self.assertNotIn('Private review notes', text)
         self.assertNotIn('https://workday.example/x', text)
+
+
+class PipSharedNotesAndPdfEvidenceTests(HbprScorecardBase):
+    """Decisions D3 and D6: shared PIP notes reach every export (the HBPR can
+    already read them in-app); private PIP notes never do. The PDF prints the
+    full stage summary and goal titles for the leader and staff only."""
+
+    def setUp(self):
+        super().setUp()
+        from django.utils import timezone
+        from .models import EPRCycle, EPRGoal, EPRStageRecord
+
+        PIPRecord.objects.create(
+            employee=self.member, tl=self.tl, start_date=date.today(),
+            shared_notes='Shared target: close two tickets a week',
+            notes='Private PIP evidence',
+        )
+        self.cycle, _ = EPRCycle.objects.get_or_create(user=self.member, year=date.today().year)
+        EPRCycle.objects.filter(pk=self.cycle.pk).update(goal_setting_completed_at=timezone.now())
+        EPRGoal.objects.create(cycle=self.cycle, description='Reduce backlog')
+        EPRStageRecord.objects.create(
+            cycle=self.cycle, stage='mid_year', summary='Agreed review summary text',
+            recorded_by=self.tl, hbpr_present=True)
+
+    def _export(self, user, file_format):
+        request = self.factory.get('/x/', {'leader_id': self.tl.id, 'file_format': file_format})
+        force_authenticate(request, user=user)
+        return TLScorecardViewSet.as_view({'get': 'export'})(request)
+
+    def test_shared_pip_notes_reach_leader_and_hbpr_xlsx_but_private_notes_never(self):
+        for user in (self.tl, self.hbpr):
+            wb = load_workbook(io.BytesIO(self._export(user, 'xlsx').content))
+            text = ' '.join(
+                str(c) for row in wb['Governance'].iter_rows(values_only=True) for c in row if c)
+            self.assertIn('Shared target: close two tickets a week', text)
+            self.assertNotIn('Private PIP evidence', text)
+
+    def test_leader_pdf_prints_full_stage_summary_and_goal_titles(self):
+        # The summary wraps inside its cell, so compare on whitespace-normalised text.
+        text = ' '.join(_pdf_text(self._export(self.tl, 'pdf').content).split())
+        self.assertIn('Agreed review summary text', text)
+        self.assertIn('Reduce backlog', text)
+        self.assertIn('Shared target', text)
+
+    def test_hbpr_pdf_never_prints_stage_summary_or_private_notes(self):
+        text = _pdf_text(self._export(self.hbpr, 'pdf').content)
+        self.assertNotIn('Agreed review summary text', text)
+        self.assertNotIn('Private PIP evidence', text)

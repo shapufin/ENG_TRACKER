@@ -112,7 +112,7 @@ export const AssignedLeadersTable: React.FC<AssignedLeadersTableProps> = ({ lead
                   Cadence
                 </th>
                 <th scope="col" className={HEAD_CELL}>
-                  Last held
+                  Last meeting held
                 </th>
                 <th scope="col" className={HEAD_CELL}>
                   Next meeting

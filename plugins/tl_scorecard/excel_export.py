@@ -228,9 +228,9 @@ def _build_governance_sheet(wb, fmt, governance):
 
     sections = [
         ("Open PIPs", "OpenPIPs",
-         ["Employee", "Status", "Start date", "HR approved"], governance["open_pips"],
+         ["Employee", "Status", "Start date", "HR approved", "Shared notes"], governance["open_pips"],
          [lambda r: r["employee"], lambda r: r["status"], lambda r: r["start_date"],
-          lambda r: "Yes" if r["approved"] else "No"]),
+          lambda r: "Yes" if r["approved"] else "No", lambda r: r["shared_notes"] or "—"]),
         ("Open absences", "OpenAbsences",
          ["Employee", "Absence date", "Reason"], governance["open_absences"],
          [lambda r: r["employee"], lambda r: r["absence_date"], lambda r: r["reason"] or "—"]),

@@ -265,6 +265,10 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
   snapshot blocks the close. Rules: `docs/workflow-invariants.md` items 74-75. Planned next (not built):
   `docs/superpowers/plans/2026-11-12-closed-year-archive-and-retention.md`.
 
+## Export evidence and labels (2026-11-13)
+
+Open PIP `shared_notes` appear in the Excel and PDF Governance sections for every viewer (private `notes` and `reference_url` never). The leader PDF shows the full EPR stage summary (leader and staff only, never the HBPR). The HBPR cadence field reads "Last meeting held" ("None yet" when empty). Year pickers use `reportingYearOptions`, floored at 2026. See `docs/workflow-invariants.md` item 81.
+
 ## Reminders and backfill (2026-11-11)
 
 The hourly job `cadence_reminders` (`reminders.py`) notifies the Line Manager on the day the next

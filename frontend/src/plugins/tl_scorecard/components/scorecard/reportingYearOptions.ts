@@ -1,7 +1,12 @@
-import { currentBusinessYear } from "@/lib/date-format-utils";
+import { APP_INCEPTION_YEAR, currentBusinessYear } from "@/lib/date-format-utils";
 
-/** Last three years, this year and next; the selected year is always present. */
+/**
+ * Up to three years back (never before the platform launch), this year and
+ * next. A selected year is always present, even when it is outside that range.
+ */
 export const reportingYearOptions = (selected: number, current = currentBusinessYear()): number[] => {
-  const years = [current - 3, current - 2, current - 1, current, current + 1];
+  const start = Math.max(APP_INCEPTION_YEAR, current - 3);
+  const years: number[] = [];
+  for (let year = start; year <= current + 1; year += 1) years.push(year);
   return years.includes(selected) ? years : [...years, selected].sort((a, b) => a - b);
 };

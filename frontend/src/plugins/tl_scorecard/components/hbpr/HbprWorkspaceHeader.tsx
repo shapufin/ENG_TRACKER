@@ -1,5 +1,5 @@
-import { currentBusinessYear } from "@/lib/date-format-utils";
 import React from "react";
+import { reportingYearOptions } from "../scorecard/reportingYearOptions";
 import { ScrollFadeX } from "@/components/ui/ScrollFadeX";
 import { PageShell } from "@/components/layout/PageShell";
 import { Label } from "@/components/ui/label";
@@ -23,11 +23,6 @@ const VIEWS: { value: HbprView; label: string }[] = [
   { value: "records", label: "Records" },
   { value: "evidence", label: "Partnership log" },
 ];
-
-const yearOptions = (): number[] => {
-  const current = currentBusinessYear();
-  return [current - 3, current - 2, current - 1, current, current + 1];
-};
 
 interface HbprWorkspaceHeaderProps {
   view: HbprView;
@@ -115,7 +110,7 @@ export const HbprWorkspaceHeader: React.FC<HbprWorkspaceHeaderProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {yearOptions().map((option) => (
+                {reportingYearOptions(year).map((option) => (
                   <SelectItem key={option} value={String(option)}>
                     {option}
                   </SelectItem>

@@ -137,6 +137,20 @@ describe("HbprPartnershipSection", () => {
     expect(screen.getByText("Year-end EPR: not logged")).toBeInTheDocument();
   });
 
+  it("labels the past meeting as held, and says None yet before any meeting", () => {
+    renderSection();
+    expect(screen.getByText("Last meeting held")).toBeInTheDocument();
+    expect(screen.queryByText("Last held")).not.toBeInTheDocument();
+
+    renderSection({
+      partnership: {
+        ...PARTNERSHIP,
+        assignment: { ...PARTNERSHIP.assignment!, last_meeting_on: null },
+      },
+    });
+    expect(screen.getByText("None yet")).toBeInTheDocument();
+  });
+
   const MISSING: HbprPartnership = {
     ...PARTNERSHIP,
     assignment: {

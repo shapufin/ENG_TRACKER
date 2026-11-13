@@ -57,9 +57,9 @@ export const AssignedLeaderCard: React.FC<AssignedLeaderCardProps> = ({ leader, 
 
       <dl className="mt-3 grid grid-cols-2 gap-3 text-xs">
         <div>
-          <dt className="text-muted-foreground">Last held</dt>
+          <dt className="text-muted-foreground">Last meeting held</dt>
           <dd className="mt-0.5 font-medium whitespace-nowrap tabular-nums">
-            {formatDate(leader.last_meeting_on)}
+            {leader.last_meeting_on ? formatDate(leader.last_meeting_on) : "None yet"}
           </dd>
         </div>
         <div>

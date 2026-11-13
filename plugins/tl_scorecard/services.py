@@ -575,7 +575,7 @@ def governance_records(
 
     open_pips = [
         {'employee': str(p.employee), 'status': p.status, 'start_date': p.start_date.isoformat(),
-         'approved': p.approved_at is not None}
+         'approved': p.approved_at is not None, 'shared_notes': p.shared_notes}
         for p in _limit(PIPRecord.objects.filter(tl=leader), 'employee_id')
         .exclude(status__in=('completed', 'cancelled')).select_related('employee')
     ]

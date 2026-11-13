@@ -123,6 +123,9 @@ export function currentBusinessMonthKey(now: Date = new Date()): string {
   return currentBusinessDateISO(now).slice(0, 7);
 }
 
+/** First year the platform holds operational data; reporting pickers never offer an earlier one. */
+export const APP_INCEPTION_YEAR = 2026;
+
 /** The current year on the business clock (Europe/Tirane), not the browser's. */
 export function currentBusinessYear(now: Date = new Date()): number {
   return Number(currentBusinessDateISO(now).slice(0, 4));

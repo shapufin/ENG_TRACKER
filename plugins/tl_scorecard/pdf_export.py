@@ -151,8 +151,9 @@ def _stage_with_hbpr(row, stage):
 def _governance_section(story, governance):
     pdf.section_title(story, 'Governance records')
     tables = [
-        ('Open PIPs', ['Employee', 'Status', 'Start date', 'HR approved'],
-         [[r['employee'], r['status'], r['start_date'], 'Yes' if r['approved'] else 'No']
+        ('Open PIPs', ['Employee', 'Status', 'Start date', 'HR approved', 'Shared notes'],
+         [[r['employee'], r['status'], r['start_date'], 'Yes' if r['approved'] else 'No',
+           r['shared_notes'] or NO_DATA]
           for r in governance['open_pips']]),
         ('Open absences', ['Employee', 'Absence date', 'Reason'],
          [[r['employee'], r['absence_date'], r['reason'] or NO_DATA]
@@ -164,11 +165,12 @@ def _governance_section(story, governance):
            r.get('goal_setting_on') or ('Done' if r['goal_setting_done'] else 'Pending'),
            _stage_with_hbpr(r, 'mid_year'),
            _stage_with_hbpr(r, 'final_review'),
-           r['goal_count']]
+           '; '.join(r.get('goal_titles') or []) or NO_DATA]
           for r in governance['epr_cycles']]),
-        ('EPR stage evidence', ['Employee', 'Stage', 'Completed on', 'Recorded by', 'HBPR present'],
+        ('EPR stage evidence',
+         ['Employee', 'Stage', 'Completed on', 'Recorded by', 'HBPR present', 'Summary'],
          [[r['employee'], r['stage'], r['completed_on'] or NO_DATA, r['recorded_by'] or NO_DATA,
-           'Yes' if r['hbpr_present'] else 'No']
+           'Yes' if r['hbpr_present'] else 'No', r['summary'] or NO_DATA]
           for r in governance.get('epr_stage_evidence', [])]),
     ]
     for title, headers, rows in tables:
