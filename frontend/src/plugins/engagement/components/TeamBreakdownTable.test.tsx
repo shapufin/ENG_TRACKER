@@ -110,11 +110,7 @@ describe("TeamBreakdownTable", () => {
   });
 
   it("labels a team the leader has moved away from, keeping the decisions they made there", () => {
-    render(
-      <TeamBreakdownTable
-        rows={[{ ...ROW, team_size: 0, active_submitters: 1 }]}
-      />
-    );
+    render(<TeamBreakdownTable rows={[{ ...ROW, team_size: 0, active_submitters: 1 }]} />);
 
     expect(
       screen.getByRole("status", { name: /no current members.*decisions kept/i })

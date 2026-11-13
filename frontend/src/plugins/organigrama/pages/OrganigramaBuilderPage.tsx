@@ -176,7 +176,7 @@ const SHAPE_CATEGORIES: { category: string; items: ShapePaletteItem[] }[] = [
       {
         shape: "section",
         label: "Group Section",
-        icon: <Folder className="h-3.5 w-3.5 text-muted-foreground" />,
+        icon: <Folder className="text-muted-foreground h-3.5 w-3.5" />,
       },
       {
         shape: "label",
@@ -730,7 +730,8 @@ const BuilderCanvas: React.FC = () => {
                   if (d?.shape_type === "department" || d?.shape_type === "division")
                     return themeColor("--chart-5");
                   if (d?.shape_type === "team") return themeColor("--info");
-                  if (d?.shape_type === "vacant" || d?.status === "vacant") return themeColor("--warning");
+                  if (d?.shape_type === "vacant" || d?.status === "vacant")
+                    return themeColor("--warning");
                   return themeColor("--muted-foreground");
                 }}
               />
