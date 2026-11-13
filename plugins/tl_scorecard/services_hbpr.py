@@ -54,10 +54,9 @@ def parse_reporting_year(raw):
 
 
 def _scoped(model, scope, owner_field, subject_field='employee'):
-    return model.objects.filter(**{
-        f'{owner_field}__in': scope.tl_ids,
-        f'{subject_field}__in': scope.user_ids,
-    })
+    # Owner only (ruling 2026-11-13): records about an employee who later moved stay visible
+    # to the HBPR of the Line Manager who wrote them; same rule as ``limit_to_viewer``.
+    return model.objects.filter(**{f'{owner_field}__in': scope.tl_ids})
 
 
 def _people_queryset(scope):

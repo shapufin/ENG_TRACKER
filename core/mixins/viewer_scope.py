@@ -10,9 +10,11 @@ decides a promotion; HR/staff do). Every write keeps the own-rows rule, so HBPR
 scope never widens what someone can edit, delete or action.
 
 A record is in the HBPR slice when its owning TL is one of the viewer's assigned
-Line Managers AND its subject is in that assignment's population — owner and
-subject both, so a record about an in-scope person written up by a TL outside
-the assignment stays hidden.
+Line Managers. The subject is NOT re-checked against the CURRENT population (ruling
+2026-11-13): a Line Manager's own PIPs, flags, absences and reviews stay visible to the
+HBPR after the employee moves, is deactivated or is promoted, and the Manager's
+``tl_sync`` meetings are visible too. A record written up by a TL outside the assignment
+stays hidden. A model with no owner field (only a subject) keeps the population check.
 
 Employee one-on-one meetings are **never** in the HBPR slice (pass
 ``hbpr_exclude=~Q(meeting_type='one_on_one')``): an HBPR sees governance
@@ -50,7 +52,7 @@ class HbprReadScopeMixin:
         hbpr_q = Q()
         if leader_field:
             hbpr_q &= Q(**{f'{leader_field}__in': scope.tl_ids})
-        if member_field:
+        if member_field and not leader_field:
             member_q = Q(**{f'{member_field}__in': scope.user_ids})
             if member_nullable:
                 member_q |= Q(**{f'{member_field}__isnull': True})

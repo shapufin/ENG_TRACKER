@@ -794,13 +794,12 @@ class HbprAfterMoveTests(MoveWorld):
         for path in ('absences', 'idle-flags', 'pip-records'):
             self.assertNotIn(SECRET, str(self.call(self.hbpr1, 'get', f'{self.base}{path}/').data), path)
 
-    def test_hbpr_cannot_see_tl_sync_with_the_manager_ruling(self):
-        """NEEDS-RULING: a tl_sync meeting has the Manager as counterparty; the HBPR slice requires
-        the counterparty to be a member of the assigned Line Manager (``member_nullable`` only
-        admits NULL), so an assigned Line Manager's TL-sync is hidden from their HBPR."""
+    def test_hbpr_sees_tl_sync_with_the_manager(self):
+        """Ruled 2026-11-13: an assigned Line Manager's TL-sync with the Manager is visible to their
+        HBPR (the slice no longer re-checks the counterparty against the current population)."""
         visible = self.tl_sync in self.ids(self.hbpr1, f'{self.base}meetings/')
         sim('hbpr1 sees lm1 tl_sync with the Manager', visible)
-        self.assertFalse(visible)
+        self.assertTrue(visible)
 
     def test_hbpr_is_read_only_on_every_record_after_a_move(self):
         self._link(self.emp, lm=self.lm2)
@@ -811,10 +810,10 @@ class HbprAfterMoveTests(MoveWorld):
                 self.assertIn(self.call(hbpr, 'delete', url).status_code, (403, 404), (hbpr.username, path))
         self.assertEqual(PIPRecord.objects.get(pk=self.pip).notes, SECRET)
 
-    def test_moved_employee_evidence_follows_subject_for_epr_but_hides_leader_authored_rows_ruling(self):
-        """NEEDS-RULING: after lm1 -> lm2, hbpr1 (assignment lm1) loses lm1's own records about the
-        moved employee (the subject left the population) and hbpr2 (lm2) cannot read them (author
-        lm1 is outside the assignment). The EPR follows the employee to hbpr2."""
+    def test_moved_employee_evidence_keeps_leader_authored_rows_with_their_hbpr(self):
+        """Ruled 2026-11-13: after lm1 -> lm2, hbpr1 (assignment lm1) keeps lm1's own records about
+        the moved employee; hbpr2 (lm2) still cannot read them (author lm1 is outside its
+        assignment). The EPR follows the employee to hbpr2."""
         self._link(self.emp, lm=self.lm2)
         epr = f'{self.base}epr-cycles/'
         absences = f'{self.base}absences/'
@@ -825,7 +824,7 @@ class HbprAfterMoveTests(MoveWorld):
         self.assertNotIn(self.epr, self.ids(self.hbpr1, epr))
         self.assertIn(self.epr, self.ids(self.hbpr2, epr))
         self.assertNotIn(self.absence, self.ids(self.hbpr2, absences))
-        self.assertNotIn(self.absence, self.ids(self.hbpr1, absences))
+        self.assertIn(self.absence, self.ids(self.hbpr1, absences))
 
     def test_demoting_an_assigned_line_manager_is_refused_even_when_members_were_moved(self):
         for member in (self.emp, self.emp2):
