@@ -13,7 +13,7 @@ import type { HbprRecordResource } from "../../hooks/useHbprWorkspaceQueries";
 import type { Tone } from "@/components/ui/tone";
 import { currentBusinessMonthKey } from "@/lib/date-format-utils";
 
-export { CADENCE_LABELS, CADENCE_STATUS_LABELS };
+export { CADENCE_STATUS_LABELS };
 
 /** Tone token per cadence state, so a badge colour is never chosen ad hoc. */
 export const CADENCE_STATUS_TONE: Record<

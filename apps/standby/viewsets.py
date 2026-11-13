@@ -472,7 +472,7 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
         queryset = StandbyLog.objects.all().select_related('user', 'approved_by', 'pattern').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level').filter(status='pending')
 
         try:
-            queryset = self._filter_team_leader_queryset(queryset, user)
+            queryset = self._filter_owned_by_leader(queryset, user)
         except PermissionDenied as exc:
             return Response({'error': str(exc)}, status=status.HTTP_403_FORBIDDEN)
 
@@ -503,7 +503,7 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
 
         queryset = StandbyLog.objects.filter(status='pending')
         try:
-            queryset = self._filter_team_leader_queryset(queryset, user)
+            queryset = self._filter_owned_by_leader(queryset, user)
         except PermissionDenied as exc:
             return Response({'error': str(exc)}, status=status.HTTP_403_FORBIDDEN)
 
@@ -535,7 +535,7 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
 
         queryset = StandbyLog.objects.all().select_related('user', 'approved_by', 'pattern').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level')
 
-        queryset = self._filter_team_leader_queryset(queryset, user)
+        queryset = self._filter_owned_by_leader(queryset, user)
 
         status_filter = request.query_params.get('status')
         date_filter = request.query_params.get('date')

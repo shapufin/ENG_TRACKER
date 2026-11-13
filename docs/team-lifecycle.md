@@ -223,5 +223,8 @@ A move is one write (`italian_tl`/`albanian_tl` on the member's profile). It nev
 | HBPR governance evidence | the Line Manager's HBPR assignment | stays with that assignment; a successor never receives it (`docs/hbpr-and-scorecard.md`) |
 | Scorecard month numbers | leader and month | live while provisional, then `ScorecardMonthSnapshot` is final after the freeze (day 10 of M+1); a move mid-month shifts that month's provisional numbers to the new leader, frozen months never change |
 | Engagement `TLApprovalMetric` | leader, team, month | same freeze rule; frozen rows are immutable, the old leader's history stays |
+| Overtime and standby rows (owner rule, 2026-11-13) | the row's owner: the leader who **decided** it, else the employee's **current** leader | a decided row stays with its approver after a move; a pending row follows the new leader; team queues and the scorecard turnaround use this owner, so no row is listed twice (`apps/users/services/leader_ownership.py`, `apps/overtime/test_lm_reassignment_scope.py`) |
+
+Overtime and standby (owner rule, item 82 of `docs/workflow-invariants.md`): a decided row stays with the leader who decided it, and every other row follows the current leader. Engagement and year-close assign each row to one team of its owner, so the same row is never counted twice. Leave, payroll and user-level bundle files still follow the current link.
 
 Known operational gap, by design today: an **open** item authored by the old leader (idle flag, PIP, absence) is not visible to the new leader and the old leader can no longer open new ones for that member. Hand it over (resolve or recreate) when you move someone; a handover feature is not built.

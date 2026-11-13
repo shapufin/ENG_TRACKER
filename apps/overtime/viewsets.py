@@ -609,7 +609,7 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
         # workspace_ids is optional for team_logs; when omitted, all team members' entries are returned
         queryset = OvertimeLog.objects.all().select_related('user', 'client', 'approved_by').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level')
 
-        queryset = self._filter_team_leader_queryset(queryset, user)
+        queryset = self._filter_owned_by_leader(queryset, user)
 
         # Apply filters from query params (using DjangoFilterBackend logic manually for actions)
         status_filter = request.query_params.get('status')
@@ -652,7 +652,7 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
         queryset = OvertimeLog.objects.all().select_related('user', 'client', 'approved_by').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level').filter(status='pending')
 
         try:
-            queryset = self._filter_team_leader_queryset(queryset, user)
+            queryset = self._filter_owned_by_leader(queryset, user)
         except PermissionDenied as exc:
             return Response({'error': str(exc)}, status=status.HTTP_403_FORBIDDEN)
 
@@ -684,7 +684,7 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
 
         queryset = OvertimeLog.objects.filter(status='pending')
         try:
-            queryset = self._filter_team_leader_queryset(queryset, user)
+            queryset = self._filter_owned_by_leader(queryset, user)
         except PermissionDenied as exc:
             return Response({'error': str(exc)}, status=status.HTTP_403_FORBIDDEN)
 

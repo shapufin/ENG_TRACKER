@@ -109,6 +109,20 @@ describe("TeamBreakdownTable", () => {
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
 
+  it("labels a team the leader has moved away from, keeping the decisions they made there", () => {
+    render(<TeamBreakdownTable rows={[{ ...ROW, team_size: 0, active_submitters: 1 }]} />);
+
+    expect(
+      screen.getByRole("status", { name: /no current members.*decisions kept/i })
+    ).toBeInTheDocument();
+  });
+
+  it("does not show the moved-away label for a team with members", () => {
+    render(<TeamBreakdownTable rows={[ROW]} />);
+
+    expect(screen.queryByRole("status", { name: /no current members/i })).not.toBeInTheDocument();
+  });
+
   it("shows a Changed manager date badge on frozen transferred snapshots and omits it otherwise", () => {
     const { rerender } = render(<TeamBreakdownTable rows={[ROW]} />);
     expect(screen.queryByText(/changed manager/i)).not.toBeInTheDocument();

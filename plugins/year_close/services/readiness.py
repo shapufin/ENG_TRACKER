@@ -152,6 +152,21 @@ def _warning_list(year: int, first_day: date, last_day: date) -> list[str]:
     if inactive:
         warnings.append(f'{len(inactive)} deactivated user(s) have rows in {year}.')
 
+    # Owner rule (item 82): rows whose owner has no team of theirs go to the Unassigned bundle.
+    # Named here so the close says it, never a silent gap.
+    from .builder import bundles_for_year
+
+    unassigned_rows = sum(
+        len(bundle.get('ot_ids', {}).get(kind, []))
+        for bundle in bundles_for_year(year) if bundle['kind'] == 'unassigned'
+        for kind in ('overtime', 'standby')
+    )
+    if unassigned_rows:
+        warnings.append(
+            f'{unassigned_rows} overtime or standby row(s) of {year} have no owner team and go to the '
+            f'Unassigned bundle.'
+        )
+
     return warnings
 
 

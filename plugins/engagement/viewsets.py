@@ -11,6 +11,7 @@ from datetime import date
 
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.http import HttpResponse
 from core.utils.metrics_freeze import is_frozen
 from rest_framework import viewsets, status
@@ -71,9 +72,11 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
     def _base_queryset(self, request):
         # Deactivated TLs drop off every read surface: their rows are no longer
         # refreshed, so showing them would present numbers that can silently age.
-        # Zero-size snapshots carry no members or metrics and are never served.
+        # Empty snapshots carry no members and no requests and are never served. A leader
+        # whose team has moved away still sees the decisions they made there (owner rule).
         qs = TLApprovalMetric.objects.select_related('leader', 'team').filter(
-            leader__is_active=True, team_size__gt=0
+            Q(team_size__gt=0) | Q(active_submitters__gt=0),
+            leader__is_active=True,
         )
         user = request.user
         if user.is_staff or user.is_superuser:

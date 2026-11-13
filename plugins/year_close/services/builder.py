@@ -119,6 +119,8 @@ def candidate_pairs() -> list[tuple[int, int]]:
         for member_id in managed.get(leader_id, set()):
             for team_id in member_teams.get(member_id, set()):
                 pairs.add((leader_id, team_id))
+        for team_id in member_teams.get(leader_id, set()):  # the leader's own teams (owner rule)
+            pairs.add((leader_id, team_id))
     return sorted(pairs)
 
 
@@ -191,14 +193,70 @@ def users_with_rows(year: int) -> set[int]:
     return ids
 
 
+def ot_standby_rows_by_bundle(year: int, user_pair: dict) -> dict:
+    """Map ``(leader_id, team_id)`` (or ``None`` for Unassigned) to overtime and standby row ids.
+
+    Owner rule (``apps.users.services.leader_ownership``): every overtime and standby row
+    of ``year`` sits in exactly one bundle, its owner leader's team bundle. A row with no
+    owner team (no leader link, or a leader who holds no team) falls back to the user's
+    user-level bundle ``user_pair``, the same place it had before this rule, and is
+    Unassigned only when that bundle is missing too.
+    """
+    from collections import defaultdict
+
+    from apps.users.models import TeamMembership
+    from apps.users.services.leader_ownership import leader_user_ids, owner_leader_id, owner_team_id
+
+    teams_of_leader: dict[int, set[int]] = defaultdict(set)
+    for leader_id, team_id in candidate_pairs():
+        teams_of_leader[leader_id].add(team_id)
+    leaders = leader_user_ids()
+    first_day, last_day = _year_window(year)
+
+    collected = []
+    for kind, model in (('overtime', OvertimeLog), ('standby', StandbyLog)):
+        collected += [(kind, row) for row in model.objects.filter(
+            date__gte=first_day, date__lte=last_day, is_deleted=False,
+        ).values_list('id', 'user_id', 'status', 'approved_by_id',
+                      'user__profile__albanian_tl_id', 'user__profile__italian_tl_id')]
+    employee_ids = {row[1] for _, row in collected}
+    teams_of: dict[int, set[int]] = defaultdict(set)
+    for user_id, team_id in TeamMembership.objects.filter(
+        is_deleted=False, user_profile__user_id__in=employee_ids,
+    ).values_list('user_profile__user_id', 'team_id'):
+        teams_of[user_id].add(team_id)
+    # A decision keeps its approver's team even when the employee has since left it
+    # (same team universe as engagement's leader_team_pairs).
+    for _, (_, user_id, status, approver_id, _, _) in collected:
+        if status in ('approved', 'rejected') and approver_id in leaders:
+            teams_of_leader[approver_id] |= teams_of[user_id]
+
+    out: dict = defaultdict(lambda: {'overtime': [], 'standby': []})
+    for kind, (row_id, user_id, status, approver_id, albanian_id, italian_id) in collected:
+        owner = owner_leader_id(status, approver_id, albanian_id, italian_id, leaders)
+        if owner is None:
+            key = user_pair.get(user_id)  # no leader link at all: the user's own bundle
+        else:
+            team_id = owner_team_id(teams_of_leader.get(owner, set()), teams_of[user_id])
+            key = (owner, team_id) if team_id is not None else None
+        out[key][kind].append(row_id)
+    return out
+
+
 def bundles_for_year(year: int) -> list[dict]:
-    """Disjoint bundles: one per (leader, team) pair that owns rows, plus Unassigned."""
+    """Disjoint bundles: one per (leader, team) pair that owns rows, plus Unassigned.
+
+    User-level files (leave, payslips) keep one bundle per user. Overtime and standby
+    rows are placed by owner (``ot_standby_rows_by_bundle``), so a moved employee's
+    earlier decisions stay with the leader who made them.
+    """
     from django.contrib.auth.models import User
     from apps.users.models import Team
 
     pairs = candidate_pairs()
     members = _pair_members(pairs, year)
     needing = users_with_rows(year)
+    empty_rows = {'overtime': [], 'standby': []}
 
     owners: dict[int, tuple[int, int]] = {}
     for pair in pairs:  # deterministic: sorted (leader, team)
@@ -206,13 +264,17 @@ def bundles_for_year(year: int) -> list[dict]:
             if user_id in needing:
                 owners.setdefault(user_id, pair)
 
-    leaders = {u.id: u for u in User.objects.filter(id__in={p[0] for p in pairs})}
-    teams = {t.id: t for t in Team.objects.filter(id__in={p[1] for p in pairs})}
+    rows_by_bundle = ot_standby_rows_by_bundle(year, owners)
+    row_pairs = {key for key in rows_by_bundle if key is not None}
+    bundle_pairs = sorted(set(pairs) | row_pairs)
+    leaders = {u.id: u for u in User.objects.filter(id__in={p[0] for p in bundle_pairs})}
+    teams = {t.id: t for t in Team.objects.filter(id__in={p[1] for p in bundle_pairs})}
 
     bundles: list[dict] = []
-    for pair in pairs:
+    for pair in bundle_pairs:
         assigned = sorted(uid for uid, owner in owners.items() if owner == pair)
-        if not assigned:
+        row_ids = rows_by_bundle.get(pair, empty_rows)
+        if not assigned and not row_ids['overtime'] and not row_ids['standby']:
             continue
         leader = leaders.get(pair[0])
         team = teams.get(pair[1])
@@ -223,10 +285,12 @@ def bundles_for_year(year: int) -> list[dict]:
             'leader_name': getattr(leader, 'username', '') or f'leader-{pair[0]}',
             'team_name': getattr(team, 'code', '') or f'team-{pair[1]}',
             'member_ids': assigned,
+            'ot_ids': row_ids,
         })
 
     orphans = sorted(needing - set(owners))
-    if orphans:
+    unowned_rows = rows_by_bundle.get(None, empty_rows)
+    if orphans or unowned_rows['overtime'] or unowned_rows['standby']:
         bundles.append({
             'kind': 'unassigned',
             'leader_id': None,
@@ -234,16 +298,31 @@ def bundles_for_year(year: int) -> list[dict]:
             'leader_name': UNASSIGNED_LABEL,
             'team_name': '',
             'member_ids': orphans,
+            'ot_ids': unowned_rows,
         })
     return bundles
 
 
 def completeness_gap(year: int, bundles: list[dict]) -> set[int]:
-    """Users with rows in ``year`` that no bundle covers (empty = complete)."""
+    """Users with rows in ``year`` that no bundle covers (empty = complete).
+
+    Checked for users (user-level files) and for every overtime and standby row.
+    """
     covered: set[int] = set()
+    covered_rows: dict[str, set[int]] = {'overtime': set(), 'standby': set()}
     for bundle in bundles:
         covered |= set(bundle['member_ids'])
-    return users_with_rows(year) - covered
+        for kind, ids in bundle.get('ot_ids', {}).items():
+            covered_rows[kind] |= set(ids)
+    gap = users_with_rows(year) - covered
+    first_day, last_day = _year_window(year)
+    for kind, model in (('overtime', OvertimeLog), ('standby', StandbyLog)):
+        all_ids = set(model.objects.filter(
+            date__gte=first_day, date__lte=last_day, is_deleted=False,
+        ).values_list('id', flat=True))
+        uncovered = all_ids - covered_rows[kind]
+        gap |= set(model.objects.filter(id__in=uncovered).values_list('user_id', flat=True))
+    return gap
 
 
 def bundle_filename(bundle: dict) -> str:
@@ -255,15 +334,16 @@ def bundle_filename(bundle: dict) -> str:
 # ------------------------------------------------------------------ builders
 
 
-def _querysets_for(year: int, member_ids: list[int]):
+def _querysets_for(year: int, member_ids: list[int], row_ids: dict | None = None):
     from apps.leave_management.models import LeaveRequest
 
     first_day, last_day = _year_window(year)
+    row_ids = row_ids or {'overtime': [], 'standby': []}
     ot = OvertimeLog.objects.filter(
-        date__gte=first_day, date__lte=last_day, user_id__in=member_ids, is_deleted=False,
+        id__in=row_ids['overtime'], is_deleted=False,
     ).order_by('user__username', 'date', 'start_time')
     sb = StandbyLog.objects.filter(
-        date__gte=first_day, date__lte=last_day, user_id__in=member_ids, is_deleted=False,
+        id__in=row_ids['standby'], is_deleted=False,
     ).order_by('user__username', 'date', 'start_time')
     # Overlap, not containment: a leave running 31 Dec -> 2 Jan belongs to both years.
     leave = LeaveRequest.objects.filter(
@@ -331,7 +411,7 @@ def build_bundle(year: int, bundle: dict, warnings: list[str]) -> tuple[Path, di
     """Write one bundle ZIP. Returns ``(path, counts)``."""
     from apps.reports.services.export_service import ExportService
 
-    ot, sb, leave = _querysets_for(year, bundle['member_ids'])
+    ot, sb, leave = _querysets_for(year, bundle['member_ids'], bundle.get('ot_ids'))
     counts = {'overtime': ot.count(), 'standby': sb.count(), 'leave': leave.count()}
 
     files: dict[str, bytes] = {}

@@ -62,7 +62,7 @@ export const ImportSampleButton: React.FC<ImportSampleButtonProps> = ({ targetKe
           Sample Excel
         </Button>
       </div>
-      <p className="text-muted-foreground text-[11px]">
+      <p className="text-muted-foreground text-xs">
         Pre-populated with live system entities &amp; Excel in-cell dropdowns.
       </p>
     </div>

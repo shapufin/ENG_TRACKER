@@ -78,6 +78,11 @@ import type {
   ValidationResult,
 } from "../types";
 
+// MiniMap paints SVG presentation attributes, which cannot read CSS variables,
+// so resolve the theme token to a concrete colour when the minimap renders.
+const themeColor = (token: string): string =>
+  `hsl(${getComputedStyle(document.documentElement).getPropertyValue(token).trim()})`;
+
 const nodeTypes: NodeTypes = { builderNode: BuilderNode };
 
 interface ShapePaletteItem {
@@ -171,7 +176,7 @@ const SHAPE_CATEGORIES: { category: string; items: ShapePaletteItem[] }[] = [
       {
         shape: "section",
         label: "Group Section",
-        icon: <Folder className="h-3.5 w-3.5 text-slate-500" />,
+        icon: <Folder className="text-muted-foreground h-3.5 w-3.5" />,
       },
       {
         shape: "label",
@@ -437,6 +442,7 @@ const BuilderCanvas: React.FC = () => {
         import("jspdf"),
       ]);
       const canvas = await html2canvas(viewport, {
+        // ds-allow-hardcode: the PDF is printed on paper, so it stays white in both themes.
         backgroundColor: "#ffffff",
         scale: 2,
         logging: false,
@@ -720,12 +726,13 @@ const BuilderCanvas: React.FC = () => {
                 className="!bg-background/80 !border-border !rounded-lg !border !shadow-sm"
                 nodeColor={(n) => {
                   const d = n.data as unknown as BuilderNodeData;
-                  if (d?.shape_type === "person") return "#3b82f6";
+                  if (d?.shape_type === "person") return themeColor("--chart-1");
                   if (d?.shape_type === "department" || d?.shape_type === "division")
-                    return "#6366f1";
-                  if (d?.shape_type === "team") return "#0284c7";
-                  if (d?.shape_type === "vacant" || d?.status === "vacant") return "#f59e0b";
-                  return "#94a3b8";
+                    return themeColor("--chart-5");
+                  if (d?.shape_type === "team") return themeColor("--info");
+                  if (d?.shape_type === "vacant" || d?.status === "vacant")
+                    return themeColor("--warning");
+                  return themeColor("--muted-foreground");
                 }}
               />
             </ReactFlow>

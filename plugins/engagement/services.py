@@ -239,10 +239,40 @@ def leader_team_pairs(leader_ids=None, scope=None):
     ).values_list('user_profile__user_id', 'team_id'):
         member_teams[user_id].add(team_id)
 
+    # A leader's own teams count too: a decision made by a leader whose managed members have
+    # all moved away still needs a team to sit in (owner rule, leader_ownership.owner_team_id).
+    own_teams = defaultdict(set)
+    for user_id, team_id in TeamMembership.objects.filter(
+        is_deleted=False, user_profile__user_id__in=leaders
+    ).values_list('user_profile__user_id', 'team_id'):
+        own_teams[user_id].add(team_id)
+
+    # Teams of employees a leader decided this month. A decision stays with its approver after
+    # a move, so the approver needs a snapshot in the employee's team to show it there.
+    month_start = _local_midnight(business_today().replace(day=1))
+    decided_teams = defaultdict(set)
+    for model in (OvertimeLog, StandbyLog):
+        decided = list(model.objects.filter(
+            approved_by_id__in=leaders, status__in=('approved', 'rejected'),
+            approved_at__gte=month_start, is_deleted=False,
+        ).values_list('approved_by_id', 'user_id'))
+        employees = {user_id for _, user_id in decided}
+        employee_teams = defaultdict(set)
+        for user_id, team_id in TeamMembership.objects.filter(
+            is_deleted=False, user_profile__user_id__in=employees,
+        ).values_list('user_profile__user_id', 'team_id'):
+            employee_teams[user_id].add(team_id)
+        for approver_id, user_id in decided:
+            decided_teams[approver_id] |= employee_teams[user_id]
+
     team_ids = set()
     team_sets = {}
     for leader_id in leaders:
-        team_sets[leader_id] = {t for m in managed[leader_id] for t in member_teams[m]}
+        team_sets[leader_id] = (
+            {t for m in managed[leader_id] for t in member_teams[m]}
+            | own_teams[leader_id]
+            | decided_teams[leader_id]
+        )
         team_ids |= team_sets[leader_id]
     teams = {t.id: t for t in Team.objects.filter(is_deleted=False, is_active=True, id__in=team_ids)}
     return [(leaders[lid], teams[tid]) for lid in sorted(leaders) for tid in sorted(team_sets[lid]) if tid in teams]
@@ -260,12 +290,15 @@ def ensure_current_month_snapshots(leader_ids=None, scope=None):
     pairs = leader_team_pairs(leader_ids, scope)
     scope.team_members({team.id for _, team in pairs})  # one query for every team about to be computed
     have = set(TLApprovalMetric.objects.filter(month=month).values_list('leader_id', 'team_id'))
+    owned_by_leader = {}
     for leader, team in pairs:
         if (leader.id, team.id) in have:
             continue
+        if leader.id not in owned_by_leader:
+            owned_by_leader[leader.id] = owned_scopes(leader, scope)
         try:
             with transaction.atomic():  # savepoint: keep the request's transaction usable
-                compute_tl_metric(leader, team, month, scope)
+                compute_tl_metric(leader, team, month, scope, owned_by_leader[leader.id])
         except IntegrityError:  # a concurrent read created the same row
             pass
 
@@ -284,10 +317,10 @@ def holiday_dates_for(leader, window_start, window_end):
     )
 
 
-def _resubmission_count(model, date_field, member_ids, month_start, month_end):
+def _resubmission_count(model, date_field, scope, month_start, month_end):
     """Count rejections that were resubmitted (same user/date) within the window."""
     rejected = list(model.objects.filter(
-        user_id__in=member_ids,
+        scope,
         status='rejected',
         submitted_at__gte=month_start,
         submitted_at__lt=month_end,
@@ -343,21 +376,18 @@ def _empty_type_metrics():
     }
 
 
-def compute_type_metrics(type_key, member_ids, month_start, month_end, holidays, now):
+def compute_type_metrics(type_key, scope, month_start, month_end, holidays, now):
     """Judge every request of one type submitted in the month against its SLA.
 
     Returns (metrics, deadline_fractions, next_pending_deadline, submitter_ids).
     `deadline_fractions` holds, per decided request, the share of its deadline
     window that was used (0 = instant, 1 = at the deadline).
     """
-    if not member_ids:
-        return _empty_type_metrics(), [], None, set()
-
     model = _TYPE_CONFIG[type_key]['model']
     date_field = _TYPE_CONFIG[type_key]['date_field']
     rows = list(
         model.objects.filter(
-            user_id__in=member_ids,
+            scope,
             submitted_at__gte=month_start,
             submitted_at__lt=month_end,
             is_deleted=False,
@@ -395,7 +425,7 @@ def compute_type_metrics(type_key, member_ids, month_start, month_end, holidays,
     metrics['p50_tta_hours'] = percentile(tta_hours, 0.50)
     metrics['p90_tta_hours'] = percentile(tta_hours, 0.90)
     metrics['median_fraction'] = round(statistics.median(fractions), 4) if fractions else None
-    metrics['resubmission_count'] = _resubmission_count(model, date_field, member_ids, month_start, month_end)
+    metrics['resubmission_count'] = _resubmission_count(model, date_field, scope, month_start, month_end)
     return metrics, fractions, next_deadline, submitters
 
 
@@ -440,16 +470,13 @@ def compute_engagement_score(type_metrics, all_fractions):
     }
 
 
-def _decisions_during_leave(leader, member_ids, month_start, month_end):
+def _decisions_during_leave(leader, scopes, month_start, month_end):
     """Count team-member requests this leader decided while on their own approved leave.
 
     Leave periods are clipped to this snapshot's own month (Tirana-local dates)
     so a leave spanning a month boundary is credited to each month only for the
     slice that falls in it.
     """
-    if not member_ids:
-        return 0
-
     month_start_date = month_start.astimezone(business_tz()).date()
     month_end_date = month_end.astimezone(business_tz()).date()  # exclusive
 
@@ -473,7 +500,7 @@ def _decisions_during_leave(leader, member_ids, month_start, month_end):
     for type_key in REQUEST_TYPES:
         model = _TYPE_CONFIG[type_key]['model']
         decided = model.objects.filter(
-            user_id__in=member_ids,
+            scopes[type_key],
             approved_by=leader,
             status__in=('approved', 'rejected'),
             approved_at__gte=window_start,
@@ -487,16 +514,16 @@ def _decisions_during_leave(leader, member_ids, month_start, month_end):
     return len(counted)
 
 
-def _decisions_on_holidays(leader, member_ids, month_start, month_end, holidays):
+def _decisions_on_holidays(leader, scopes, month_start, month_end, holidays):
     """Count team-member requests this leader decided on a public holiday (evidence only)."""
-    if not member_ids or not holidays:
+    if not holidays:
         return 0
     counted = set()
     tz = business_tz()
     for type_key in REQUEST_TYPES:
         model = _TYPE_CONFIG[type_key]['model']
         decided = model.objects.filter(
-            user_id__in=member_ids,
+            scopes[type_key],
             approved_by=leader,
             status__in=('approved', 'rejected'),
             approved_at__gte=month_start,
@@ -537,11 +564,63 @@ def closure_outcome(member_ids, month, now):
     return False, LATE_CLOSURE_PENALTY_POINTS
 
 
-def compute_tl_metric(leader, team, month, scope=None):
-    """Compute (or refresh) one (leader, team, month) snapshot. Idempotent."""
+def owned_row_ids_by_team(leader, leader_team_ids, model, leaders):
+    """``{team_id: row ids}``: each of the leader's rows of ``model`` in exactly one team.
+
+    Owner rule (``apps.users.services.leader_ownership``): the row belongs to the leader
+    who owns it, and to one of that leader's teams. Rows with no team of the leader are
+    left out of every team snapshot here and shown as unassigned in the year-close export.
+    """
+    from apps.users.services.leader_ownership import owned_by_leader_q, owner_team_id
+
+    rows = list(
+        model.objects.filter(owned_by_leader_q(leader.id, leaders), is_deleted=False)
+        .values_list('id', 'user_id')
+    )
+    employee_ids = {user_id for _, user_id in rows}
+    teams_of = defaultdict(set)
+    for user_id, team_id in TeamMembership.objects.filter(
+        is_deleted=False, user_profile__user_id__in=employee_ids
+    ).values_list('user_profile__user_id', 'team_id'):
+        teams_of[user_id].add(team_id)
+    by_team = defaultdict(set)
+    for row_id, user_id in rows:
+        team_id = owner_team_id(leader_team_ids, teams_of[user_id])
+        if team_id is not None:
+            by_team[team_id].add(row_id)
+    return by_team
+
+
+def owned_scopes(leader, scope=None):
+    """``{type_key: {team_id: row ids}}`` for one leader's overtime and standby rows.
+
+    Costs a fixed number of queries per leader, not per team, so callers that loop over
+    a leader's teams compute it once and pass it to ``compute_tl_metric``.
+    """
+    from apps.users.services.leader_ownership import leader_user_ids
+
+    leaders = leader_user_ids()
+    leader_team_ids = {t.id for leader_row, t in leader_team_pairs([leader.id], scope) if leader_row.id == leader.id}
+    return {
+        type_key: owned_row_ids_by_team(leader, leader_team_ids, _TYPE_CONFIG[type_key]['model'], leaders)
+        for type_key in ('overtime', 'standby')
+    }
+
+
+def compute_tl_metric(leader, team, month, scope=None, owned=None):
+    """Compute (or refresh) one (leader, team, month) snapshot. Idempotent.
+
+    Leave is counted for the team's members. Overtime and standby are counted by owner
+    (``owned_row_ids_by_team``), so a decision stays with its approver and is not repeated
+    across the leader's teams.
+    """
     month_start, month_end = month_bounds(month)
     member_ids = team_member_ids(leader, team, scope)
     now = _now()
+    owned = owned if owned is not None else owned_scopes(leader, scope)
+    scopes = {'leave': Q(user_id__in=member_ids)}
+    for type_key in ('overtime', 'standby'):
+        scopes[type_key] = Q(id__in=owned[type_key].get(team.id, set()))
     holidays = holiday_dates_for(
         leader,
         month_start.date() - timedelta(days=HOLIDAY_WINDOW_DAYS),
@@ -554,7 +633,7 @@ def compute_tl_metric(leader, team, month, scope=None):
     next_deadline = None
     for type_key in REQUEST_TYPES:
         type_metrics, fractions, type_next, submitters = compute_type_metrics(
-            type_key, member_ids, month_start, month_end, holidays, now
+            type_key, scopes[type_key], month_start, month_end, holidays, now
         )
         metrics[type_key] = type_metrics
         all_fractions.extend(fractions)
@@ -584,8 +663,8 @@ def compute_tl_metric(leader, team, month, scope=None):
         'engagement_score': engagement_score,
         'closure_on_time': closure_on_time,
         'late_closure_penalty': late_closure_penalty,
-        'decisions_during_leave': _decisions_during_leave(leader, member_ids, month_start, month_end),
-        'decisions_on_holidays': _decisions_on_holidays(leader, member_ids, month_start, month_end, holidays),
+        'decisions_during_leave': _decisions_during_leave(leader, scopes, month_start, month_end),
+        'decisions_on_holidays': _decisions_on_holidays(leader, scopes, month_start, month_end, holidays),
         'next_deadline_at': next_deadline,
         'computed_at': now,
         **sub_scores,
@@ -668,17 +747,27 @@ def stale_snapshot_ids(rows, scope=None):
     all_members = set().union(*members.values()) if members else set()
     computed = [r.computed_at for r in rows if r.computed_at]
     last_touched = {}
-    if computed and all_members:
+    decision_touched = {}  # leader id -> last change to a request that leader decided
+    if computed:
         earliest = min(computed)
         # A snapshot only depends on requests submitted in its own month, so
         # bound the scan by submitted_at (indexed) instead of each member's whole history.
         first_month_start = _local_midnight(min(r.month for r in rows).replace(day=1))
+        leader_ids = {r.leader_id for r in rows}
         for type_key in REQUEST_TYPES:
             model = _TYPE_CONFIG[type_key]['model']
-            for user_id, updated_at in model.objects.filter(
-                user_id__in=all_members, updated_at__gt=earliest, submitted_at__gte=first_month_start
-            ).values_list('user_id', 'updated_at'):
-                last_touched[user_id] = max(last_touched.get(user_id, updated_at), updated_at)
+            if all_members:
+                for user_id, updated_at in model.objects.filter(
+                    user_id__in=all_members, updated_at__gt=earliest, submitted_at__gte=first_month_start
+                ).values_list('user_id', 'updated_at'):
+                    last_touched[user_id] = max(last_touched.get(user_id, updated_at), updated_at)
+            if type_key != 'leave':
+                # Owner rule: a decision counts for its approver even after the employee
+                # has left that leader's teams, so it is checked by approver, not by member.
+                for approver_id, updated_at in model.objects.filter(
+                    approved_by_id__in=leader_ids, updated_at__gt=earliest, submitted_at__gte=first_month_start,
+                ).values_list('approved_by_id', 'updated_at'):
+                    decision_touched[approver_id] = max(decision_touched.get(approver_id, updated_at), updated_at)
 
     now = _now()
     stale = set()
@@ -701,6 +790,7 @@ def stale_snapshot_ids(rows, scope=None):
             or len(member_ids) != row.team_size
             or sorted(member_ids) != (row.member_ids or [])
             or any(last_touched.get(user_id, row.computed_at) > row.computed_at for user_id in member_ids)
+            or decision_touched.get(row.leader_id, row.computed_at) > row.computed_at
         ):
             stale.add(row.pk)
     return stale

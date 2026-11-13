@@ -33,6 +33,8 @@ for (const f of walk(ROOT)) {
   if (f.endsWith(join("components", "ui", "dialog.tsx"))) continue;
   const lines = src.split("\n");
   lines.forEach((line, i) => {
+    // An explicit, reviewed exception: the line below a `ds-allow-hardcode` comment is skipped.
+    if (i > 0 && lines[i - 1].includes("ds-allow-hardcode")) return;
     for (const r of RULES) {
       if (r.re.test(line)) hits.push(`${relative(process.cwd(), f)}:${i + 1} [${r.id}] ${line.trim().slice(0, 140)}`);
     }
