@@ -252,12 +252,21 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({'error': 'Team not found'}, status=status.HTTP_404_NOT_FOUND)
 
         # 3 aggregate queries instead of 9 sequential COUNT queries
-        ot_stats = OvertimeLog.objects.filter(user_id__in=team_member_ids).aggregate(
+        # A leader's overtime/standby counts follow the owner rule (item 82), so the badge
+        # matches their queue; staff and HR see the whole team.
+        ot_rows = OvertimeLog.objects.filter(user_id__in=team_member_ids)
+        sb_rows = StandbyLog.objects.filter(user_id__in=team_member_ids)
+        user = request.user
+        if not (user.is_staff or user.is_superuser or has_hr_role(user)):
+            from apps.users.services.leader_ownership import owned_by_leader_q
+            ot_rows = ot_rows.filter(owned_by_leader_q(user.id))
+            sb_rows = sb_rows.filter(owned_by_leader_q(user.id))
+        ot_stats = ot_rows.aggregate(
             pending=Count('id', filter=Q(status='pending')),
             approved=Count('id', filter=Q(status='approved')),
             rejected=Count('id', filter=Q(status='rejected')),
         )
-        sb_stats = StandbyLog.objects.filter(user_id__in=team_member_ids).aggregate(
+        sb_stats = sb_rows.aggregate(
             pending=Count('id', filter=Q(status='pending')),
             approved=Count('id', filter=Q(status='approved')),
             rejected=Count('id', filter=Q(status='rejected')),

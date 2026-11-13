@@ -8,7 +8,6 @@ from django.dispatch import receiver
 from apps.leave_management.models import LeaveRequest
 from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
-from apps.users.models import Team
 
 from .models import Notification, NotificationEventTypeConfig, NotificationPreference
 from .push_service import send_push_notification
@@ -39,19 +38,21 @@ def _preference_enabled(user, event_type, channel):
     return registered.push_by_default if registered and channel == 'push' else True
 
 
-def _team_recipients(user):
+def _team_recipients(user, owner_only=False):
     profile = getattr(user, 'profile', None)
     recipient_ids = set()
     if profile:
         recipient_ids.update(
             user_id for user_id in (profile.albanian_tl_id, profile.italian_tl_id) if user_id
         )
-        recipient_ids.update(
-            Team.objects.filter(
-                members__user_id=user.id,
-                team_leader__isnull=False,
-            ).values_list('team_leader_id', flat=True)
-        )
+        # Team.team_leader is calendar-only (item 64): it confers no approval authority, so
+        # an alert to it would disclose a request its holder cannot act on.
+    if owner_only and profile:
+        # Overtime and standby have one owner leader (item 82): alert only the one who can
+        # list and decide the row, not a second linked leader who cannot see it.
+        from apps.users.services.leader_ownership import leader_user_ids, owner_leader_id
+        owner = owner_leader_id('pending', None, profile.albanian_tl_id, profile.italian_tl_id, leader_user_ids())
+        recipient_ids = {owner} if owner else set()
     # A deactivated leader cannot read the alert, so it would only go unseen.
     return User.objects.filter(id__in=recipient_ids, is_active=True).distinct()
 

@@ -373,6 +373,8 @@ class OvertimeSignalTest(TestCase):
             username="teamleader", email="tl@test.com", password="testpass123"
         )
         team = Team.objects.create(name="Operations", code="OPS", team_leader=team_leader)
+        self.user.profile.albanian_tl = team_leader  # the link gives authority, Team.team_leader does not
+        self.user.profile.save()
         TeamMembership.objects.create(user_profile=self.user.profile, team=team)
         client = Client.objects.create(name="Test Client")
 

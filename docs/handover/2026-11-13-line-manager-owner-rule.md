@@ -64,6 +64,7 @@ Remaining limits as the reviewer should know them (the first two are by decision
 - Leave ownership by decider: same field, different balances. Decide before touching leave.
 - Demoted-approver history: confirmed as the current rule; ask the owner only if an ex-leader must keep sight of history.
 - (Closed 2026-11-13, item 82 (h)) Review follow-ups: leader set aligned with `is_team_leader`, approval follows the owner, past-month engagement recompute, superuser re-check on year-close download. Still open: leave ownership; the placeholder backup key stays accepted by production settings.
+- Mid-month move simulation (item 82 (i)) left these open for a ruling: leave ownership (both linked leaders may decide), team-leave without link change, HBPR records after a Line Manager move, `tl_sync` meetings and HBPR, Control Room archived-team members.
 - Cache `leader_user_ids()` per request, only if the engagement page becomes slow (measure first).
 
 ## 9. How to maintain this

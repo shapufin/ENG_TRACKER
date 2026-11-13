@@ -27,7 +27,7 @@ class TeamActionRequiredNotification(NotificationType):
 
     def recipients(self, context):
         from plugins.notifications.signals import _team_recipients
-        return _team_recipients(context['instance'].user)
+        return _team_recipients(context['instance'].user, owner_only=context['entity_type'] != 'leave')
 
     def title(self, context):
         entity = context['entity_type']
@@ -86,7 +86,7 @@ class _TeamLogDeletedNotification(NotificationType):
 
     def recipients(self, context):
         from plugins.notifications.signals import _team_recipients
-        return _team_recipients(context['instance'].user)
+        return _team_recipients(context['instance'].user, owner_only=True)
 
     def title(self, context):
         return f'{self.noun} Deleted'
