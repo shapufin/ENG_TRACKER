@@ -50,6 +50,24 @@ export const useTeamColumns = (
         cell: ({ row }) => <OvertimeHoursBadge log={row.original} />,
       },
       {
+        id: "payroll_period",
+        header: "Payroll",
+        size: 110,
+        meta: { flex: true },
+        cell: ({ row }) =>
+          row.original.is_carried_over ? (
+            <Badge
+              variant="outline"
+              className="whitespace-nowrap"
+              title={`Submitted: ${row.original.submitted_at ?? "server timestamp"}`}
+            >
+              Next month
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground whitespace-nowrap">Same month</span>
+          ),
+      },
+      {
         accessorKey: "client_name",
         header: "Client",
         size: 110,
@@ -117,6 +135,23 @@ export const useTeamColumns = (
             {row.original.hours}h
           </Badge>
         ),
+      },
+      {
+        id: "payroll_period",
+        header: "Payroll",
+        size: 130,
+        meta: { flex: true },
+        cell: ({ row }) =>
+          row.original.is_carried_over ? (
+            <Badge
+              variant="outline"
+              title={`Submitted: ${row.original.submitted_at ?? "server timestamp"}`}
+            >
+              Carried to {row.original.requested_period_label ?? "next"}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground">Same month</span>
+          ),
       },
       {
         accessorKey: "status",
