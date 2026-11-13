@@ -223,9 +223,12 @@ def candidate_leader_ids():
     )
 
 
-def leader_team_pairs(leader_ids=None, scope=None):
+def leader_team_pairs(leader_ids=None, scope=None, month=None):
     """(leader, team) pairs worth a snapshot: active teams that contain at least
-    one active managed user of the leader. Fixed number of queries."""
+    one active managed user of the leader. Fixed number of queries.
+
+    ``month`` is the month whose decisions add teams (default: the current month); a past
+    month is recomputed with its own decisions."""
     ids = candidate_leader_ids() if leader_ids is None else set(leader_ids)
     leaders = {
         u.id: u for u in User.objects.filter(id__in=ids, is_active=True).select_related('profile')
@@ -249,12 +252,12 @@ def leader_team_pairs(leader_ids=None, scope=None):
 
     # Teams of employees a leader decided this month. A decision stays with its approver after
     # a move, so the approver needs a snapshot in the employee's team to show it there.
-    month_start = _local_midnight(business_today().replace(day=1))
+    month_start, month_end = month_bounds(month or business_today())
     decided_teams = defaultdict(set)
     for model in (OvertimeLog, StandbyLog):
         decided = list(model.objects.filter(
             approved_by_id__in=leaders, status__in=('approved', 'rejected'),
-            approved_at__gte=month_start, is_deleted=False,
+            approved_at__gte=month_start, approved_at__lt=month_end, is_deleted=False,
         ).values_list('approved_by_id', 'user_id'))
         employees = {user_id for _, user_id in decided}
         employee_teams = defaultdict(set)
@@ -591,7 +594,7 @@ def owned_row_ids_by_team(leader, leader_team_ids, model, leaders):
     return by_team
 
 
-def owned_scopes(leader, scope=None):
+def owned_scopes(leader, scope=None, month=None):
     """``{type_key: {team_id: row ids}}`` for one leader's overtime and standby rows.
 
     Costs a fixed number of queries per leader, not per team, so callers that loop over
@@ -600,7 +603,7 @@ def owned_scopes(leader, scope=None):
     from apps.users.services.leader_ownership import leader_user_ids
 
     leaders = leader_user_ids()
-    leader_team_ids = {t.id for leader_row, t in leader_team_pairs([leader.id], scope) if leader_row.id == leader.id}
+    leader_team_ids = {t.id for leader_row, t in leader_team_pairs([leader.id], scope, month) if leader_row.id == leader.id}
     return {
         type_key: owned_row_ids_by_team(leader, leader_team_ids, _TYPE_CONFIG[type_key]['model'], leaders)
         for type_key in ('overtime', 'standby')
@@ -617,7 +620,7 @@ def compute_tl_metric(leader, team, month, scope=None, owned=None):
     month_start, month_end = month_bounds(month)
     member_ids = team_member_ids(leader, team, scope)
     now = _now()
-    owned = owned if owned is not None else owned_scopes(leader, scope)
+    owned = owned if owned is not None else owned_scopes(leader, scope, month)
     scopes = {'leave': Q(user_id__in=member_ids)}
     for type_key in ('overtime', 'standby'):
         scopes[type_key] = Q(id__in=owned[type_key].get(team.id, set()))

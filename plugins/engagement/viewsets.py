@@ -25,6 +25,7 @@ from .models import TLApprovalMetric
 from .pdf_export import build_report_pdf
 from .serializers import TLApprovalMetricSerializer
 from .services import (
+    leader_team_pairs,
     ReadScope,
     _now,
     aggregate_rows,
@@ -106,10 +107,20 @@ class TLEngagementMetricsViewSet(PluginPermissionMixin, viewsets.ViewSet):
         today = business_today()
         fresh = []
         delete_pks, stamp_pks, clear_pks = [], [], []
+        pair_cache = {}
+
+        def keeps_decisions(row):
+            # A memberless team stays while the leader's own decisions (owner rule) still
+            # put it in their team set for that month; otherwise it would be deleted and
+            # recreated on every read.
+            key = (row.leader_id, row.month)
+            if key not in pair_cache:
+                pair_cache[key] = {t.id for _, t in leader_team_pairs([row.leader_id], scope, row.month)}
+            return row.team_id in pair_cache[key]
         for row in rows:
             has_members = bool(members.get((row.leader_id, row.team_id))) if row.team_id is not None else True
             if row.pk in stale:
-                if not has_members:
+                if not has_members and not keeps_decisions(row):
                     delete_pks.append(row.pk)
                     continue
                 row = compute_tl_metric(row.leader, row.team, row.month, scope)
