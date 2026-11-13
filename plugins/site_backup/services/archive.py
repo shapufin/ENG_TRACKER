@@ -13,6 +13,12 @@ class ArchiveError(Exception):
 
 
 def open_archive(file_obj) -> zipfile.ZipFile:
+    """Open a backup zip. An encrypted archive is decrypted to a temp file first
+    (plain zips from before encryption still open)."""
+    from .encryption import decrypt_to_tempfile, is_encrypted
+
+    if is_encrypted(file_obj):
+        file_obj = decrypt_to_tempfile(file_obj)
     try:
         return zipfile.ZipFile(file_obj)
     except zipfile.BadZipFile as exc:

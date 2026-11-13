@@ -10,7 +10,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
-from rest_framework_simplejwt.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.exceptions import AuthenticationFailed, TokenError
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -422,7 +422,8 @@ class CustomTokenRefreshSerializer(TokenRefreshSerializer):
                 )
         except AuthenticationFailed:
             raise
-        except Exception:
+        except TokenError:
+            # Malformed/blacklisted token: super().validate() below rejects it.
             pass
 
         try:

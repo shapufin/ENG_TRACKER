@@ -85,7 +85,12 @@ The volume is on the same host as the database. Copy it to an encrypted offsite
 location on a schedule you control; a host loss otherwise loses the backups too.
 
 Application-level backups from the Site Backup plugin (superuser only) are a
-separate mechanism and are not covered by this loop.
+separate mechanism and are not covered by this loop. Those archives are encrypted
+at rest with `BACKUP_ENCRYPTION_KEYS` (required in production; generate it like
+`MFA_ENCRYPTION_KEYS` and keep it with `SECRET_KEY`, never in the `db_backup`
+volume). The `*.dump` and tar files above are **not** encrypted by the application:
+encrypt the volume at the host or copy it to encrypted offsite storage, and check
+the volume's permissions so only the backup user can read it.
 
 ## 4. Restore
 

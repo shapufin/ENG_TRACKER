@@ -28,6 +28,10 @@ class Command(BaseCommand):
             help='Delete rows that exist in the database but not in the backup (for the restored models).',
         )
         parser.add_argument('--restore-media', action='store_true', help='Extract media files into MEDIA_ROOT.')
+        parser.add_argument(
+            '--confirm-privilege-changes', action='store_true',
+            help='Allow the restore to change superuser/staff/active/password/role fields (listed first).',
+        )
         parser.add_argument('--yes', '-y', action='store_true', help='Do not ask for confirmation.')
 
     def handle(self, *args, **options):
@@ -62,6 +66,10 @@ class Command(BaseCommand):
                         f"{group['model']}: {group['new']} new, {group['overwritten']} overwritten, "
                         f"{group['db_only']} not in backup"
                     )
+            for change in preview.get('privilege_changes', []):
+                self.stdout.write(self.style.WARNING(
+                    f"privilege: {change['model']} {change['name']} {change['field']}: {change['from']} -> {change['to']}"
+                ))
             if options['delete_missing']:
                 self.stdout.write(self.style.WARNING('Rows missing from the backup will be deleted.'))
 
@@ -76,6 +84,7 @@ class Command(BaseCommand):
                     delete_missing_models=approved if options['delete_missing'] else None,
                     restore_media=options['restore_media'],
                     confirmed=True,
+                    confirm_privilege_changes=options['confirm_privilege_changes'],
                 )
             except (restore_service.RestoreError, ArchiveError) as exc:
                 raise CommandError(str(exc))

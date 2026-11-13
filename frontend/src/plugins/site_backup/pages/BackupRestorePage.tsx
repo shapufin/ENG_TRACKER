@@ -226,6 +226,7 @@ const RestoreTab: React.FC = () => {
   const [deleteMissingModels, setDeleteMissingModels] = useState<Set<string>>(new Set());
   const [restoreMedia, setRestoreMedia] = useState(false);
   const [understood, setUnderstood] = useState(false);
+  const [privilegesReviewed, setPrivilegesReviewed] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [commitResult, setCommitResult] = useState<RestoreCommitResult | null>(null);
 
@@ -244,6 +245,7 @@ const RestoreTab: React.FC = () => {
     },
     onSuccess: () => {
       setApprovedModels(new Set());
+      setPrivilegesReviewed(false);
       setDeleteMissingModels(new Set());
       setCommitResult(null);
     },
@@ -258,6 +260,7 @@ const RestoreTab: React.FC = () => {
         deleteMissingModels: Array.from(deleteMissingModels),
         restoreMedia,
         confirmed: true,
+        confirmPrivilegeChanges: privilegesReviewed,
       });
     },
     onSuccess: (result) => {
@@ -310,7 +313,16 @@ const RestoreTab: React.FC = () => {
     }
   };
 
-  const canRestore = approvedModels.size > 0 && understood;
+  const privilegeChanges = preview?.privilege_changes ?? [];
+  const closedYearConflicts = preview?.closed_year_conflicts ?? {};
+  const blockedByClosedYear = Object.keys(closedYearConflicts).some((label) =>
+    approvedModels.has(label)
+  );
+  const canRestore =
+    approvedModels.size > 0 &&
+    understood &&
+    !blockedByClosedYear &&
+    (privilegeChanges.length === 0 || privilegesReviewed);
 
   return (
     <div className="space-y-6">
@@ -325,7 +337,7 @@ const RestoreTab: React.FC = () => {
               ref={fileInputRef}
               id="restore-file"
               type="file"
-              accept=".zip"
+              accept=".zip,.enc"
               className="sr-only"
               onChange={(e) => {
                 setFile(e.target.files?.[0] ?? null);
@@ -428,6 +440,39 @@ const RestoreTab: React.FC = () => {
             onToggleDeleteMissing={toggleDeleteMissing}
             onToggleAll={toggleAll}
           />
+
+          {Object.keys(closedYearConflicts).length > 0 && (
+            <InfoCallout
+              tone="danger"
+              label={`Closed years are frozen: restoring ${Object.keys(closedYearConflicts).join(", ")} would change records in closed year(s) ${Array.from(new Set(Object.values(closedYearConflicts).flat())).join(", ")}. The server refuses it; a superuser can reopen the year first.`}
+            />
+          )}
+
+          {privilegeChanges.length > 0 && (
+            <div className="space-y-2" data-testid="privilege-changes">
+              <InfoCallout
+                tone="warning"
+                label={`This restore changes who has access: ${privilegeChanges.length} account change(s) below come from the backup file. Review them before you confirm.`}
+              />
+              <ul className="text-muted-foreground max-h-40 list-disc space-y-1 overflow-y-auto pl-5 text-xs">
+                {privilegeChanges.slice(0, 50).map((change) => (
+                  <li key={`${change.model}-${change.pk}-${change.field}`}>
+                    {change.name}: {change.field} {String(change.from ?? "none")} to{" "}
+                    {String(change.to ?? "none")}
+                  </li>
+                ))}
+                {privilegeChanges.length > 50 && <li>and {privilegeChanges.length - 50} more</li>}
+              </ul>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={privilegesReviewed}
+                  onCheckedChange={(checked) => setPrivilegesReviewed(checked === true)}
+                  aria-label="I reviewed the privilege changes"
+                />
+                I reviewed these privilege changes and accept them.
+              </label>
+            </div>
+          )}
 
           <div className="border-line-subtle flex flex-wrap items-center justify-between gap-3 border-t pt-4">
             <label className="flex items-center gap-2 text-sm">

@@ -1,4 +1,5 @@
 /** Interactive org chart using React Flow + Dagre layout with 3D perspective mode and export. */
+import { toast } from "sonner";
 import React, { useMemo, useState, useCallback, useRef } from "react";
 import {
   ReactFlow,
@@ -243,7 +244,7 @@ const OrgChartInner: React.FC<OrgChartPageProps> = ({
   const handleExportPng = useCallback(async () => {
     const success = await exportCanvasToPng(canvasRef.current, "company-organigrama.png");
     if (!success) {
-      alert("Failed to export image.");
+      toast.error("Failed to export image.");
     }
   }, []);
 

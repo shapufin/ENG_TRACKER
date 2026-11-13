@@ -44,8 +44,7 @@ export const PluginProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     if (!error) return;
     console.error("Failed to fetch active plugins metadata:", error);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const err = error as any;
+    const err = error as { response?: { status?: number }; message?: string };
     if (err?.response?.status === 401) {
       console.warn("Authentication required for plugin metadata - user may need to log in");
     } else if (err?.response?.status === 403) {

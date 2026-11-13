@@ -40,6 +40,113 @@ def _group_by_model(deserialized_objects) -> dict:
     return grouped
 
 
+# Models whose rows are frozen once their year is closed (item 31), keyed by
+# label. A restore writes raw rows, so it must apply the same lock itself.
+CLOSED_YEAR_LOCKED_MODELS = ('overtime.overtimelog', 'standby.standbylog')
+
+# Fields that grant or remove access. A restore may carry them from the file
+# into the live database, so they are listed and need a separate confirmation.
+PRIVILEGE_FIELDS = {
+    'auth.user': ('is_superuser', 'is_staff', 'is_active', 'password'),
+    'users.userprofile': ('is_hr_user', 'is_italian_tl_role', 'is_albanian_tl_role', 'mfa_required'),
+}
+ROLE_GRANT_MODEL = 'permissions.userrole'
+
+
+def closed_year_conflicts(by_model, labels, delete_missing=()) -> dict:
+    """Closed years a restore of ``labels`` would touch, as ``{label: [years]}``.
+
+    A row is a conflict when it is created, overwritten or deleted inside a
+    closed year (checked on both the file row and the live row).
+    """
+    from apps.users.models import ClosedYear
+
+    closed = set(ClosedYear.objects.values_list('year', flat=True))
+    if not closed:
+        return {}
+    conflicts = {}
+    for label in CLOSED_YEAR_LOCKED_MODELS:
+        if label not in labels:
+            continue
+        model = _model_from_label(label)
+        file_rows = by_model.get(label, [])
+        years = {
+            d.object.date.year for d in file_rows
+            if d.object.date is not None and d.object.date.year in closed
+        }
+        file_pks = {d.object.pk for d in file_rows}
+        live = model._default_manager.filter(date__year__in=closed)
+        for pk, row_date in live.values_list('pk', 'date'):
+            if pk in file_pks or label in delete_missing:
+                years.add(row_date.year)
+        if years:
+            conflicts[label] = sorted(years)
+    return conflicts
+
+
+def _closed_year_message(conflicts) -> str:
+    parts = '; '.join(f"{label}: {', '.join(map(str, years))}" for label, years in sorted(conflicts.items()))
+    return (
+        f'Restore blocked: it would change records in a closed year ({parts}). Closed years '
+        'are frozen. A superuser can reopen one with `manage.py reopen_year --year Y --reason "..."`, '
+        'then restore again.'
+    )
+
+
+def privilege_changes(by_model, labels, delete_missing=()) -> list:
+    """Access-granting changes a restore would make, for review before commit.
+
+    Passwords are reported as "changed" only, never with a value.
+    """
+    changes = []
+    for label, fields in PRIVILEGE_FIELDS.items():
+        if label not in labels:
+            continue
+        model = _model_from_label(label)
+        rows = by_model.get(label, [])
+        live = model._default_manager.in_bulk([d.object.pk for d in rows])
+        for deserialized in rows:
+            obj = deserialized.object
+            current = live.get(obj.pk)
+            name = getattr(obj, 'username', None) or f'user #{getattr(obj, "user_id", obj.pk)}'
+            for field in fields:
+                new_value = getattr(obj, field)
+                if current is None:
+                    if field not in ('password', 'is_active') and new_value is True:
+                        changes.append({
+                            'model': label, 'pk': obj.pk, 'name': name, 'field': field,
+                            'from': None, 'to': True,
+                        })
+                    continue
+                old_value = getattr(current, field)
+                if old_value != new_value:
+                    secret = field == 'password'
+                    changes.append({
+                        'model': label, 'pk': obj.pk, 'name': name, 'field': field,
+                        'from': 'set' if secret else old_value,
+                        'to': 'changed' if secret else new_value,
+                    })
+    if ROLE_GRANT_MODEL in labels:
+        model = _model_from_label(ROLE_GRANT_MODEL)
+        rows = by_model.get(ROLE_GRANT_MODEL, [])
+        file_pks = {d.object.pk for d in rows}
+        existing = set(model._default_manager.values_list('pk', flat=True))
+        for deserialized in rows:
+            if deserialized.object.pk not in existing:
+                obj = deserialized.object
+                changes.append({
+                    'model': ROLE_GRANT_MODEL, 'pk': obj.pk, 'name': f'user #{obj.user_id}',
+                    'field': 'role granted', 'from': None, 'to': f'role #{obj.role_id}',
+                })
+        if ROLE_GRANT_MODEL in delete_missing:
+            for pk in sorted(existing - file_pks):
+                changes.append({
+                    'model': ROLE_GRANT_MODEL, 'pk': pk, 'name': f'role grant #{pk}',
+                    'field': 'role removed', 'from': 'granted', 'to': None,
+                })
+    return changes
+
+
 def _preview_media(archive) -> dict:
     media_root = str(settings.MEDIA_ROOT)
     new = overwritten = total = 0
@@ -63,6 +170,8 @@ def preview(file_obj) -> dict:
     schema_compatible = manifest.get('migration_state_hash') == migration_state_hash()
 
     model_groups = []
+    conflicts = {}
+    privileges = []
     if schema_compatible:
         objects = read_db_objects(archive)
         by_model = _group_by_model(objects)
@@ -82,6 +191,9 @@ def preview(file_obj) -> dict:
                 'db_only': len(db_pks - file_pks),
                 'forced_dependents': dependents,
             })
+        labels = set(by_model)
+        conflicts = closed_year_conflicts(by_model, labels)
+        privileges = privilege_changes(by_model, labels)
 
     media = _preview_media(archive) if manifest.get('includes_media') else {'new': 0, 'overwritten': 0, 'total': 0}
 
@@ -89,6 +201,8 @@ def preview(file_obj) -> dict:
         'manifest': manifest,
         'schema_compatible': schema_compatible,
         'model_groups': model_groups,
+        'closed_year_conflicts': conflicts,
+        'privilege_changes': privileges,
         'media': media,
     }
 
@@ -174,6 +288,7 @@ def commit(
     delete_missing_models=None,
     restore_media: bool = False,
     confirmed: bool = False,
+    confirm_privilege_changes: bool = False,
     user=None,
 ) -> dict:
     """Restore only the approved model groups (plus their forced dependents).
@@ -181,6 +296,10 @@ def commit(
     ``delete_missing_models`` is a separate, explicit opt-in: rows that exist
     in the DB but not in the backup are only deleted for models listed here,
     never as a side effect of approving create/update for that model.
+
+    A restore refuses to touch a closed year (``closed_year_conflicts``) and
+    refuses to change access-granting fields unless
+    ``confirm_privilege_changes`` is set after reviewing the preview.
     """
     if not confirmed:
         raise RestoreError('Restore must be explicitly confirmed.')
@@ -207,7 +326,21 @@ def commit(
         label: items for label, items in _group_by_model(objects).items() if label in expanded
     }
 
-    result = {'created': {}, 'updated': {}, 'deleted': {}, 'media_extracted': 0}
+    conflicts = closed_year_conflicts(by_model, expanded, delete_missing)
+    if conflicts:
+        raise RestoreError(_closed_year_message(conflicts))
+    privileges = privilege_changes(by_model, expanded, delete_missing)
+    if privileges and not confirm_privilege_changes:
+        raise RestoreError(
+            f'Restore would change access for {len(privileges)} account field(s) '
+            '(superuser, staff, active, password or role flags). Review the preview '
+            'and confirm the privilege changes explicitly. Nothing was restored.'
+        )
+
+    result = {
+        'created': {}, 'updated': {}, 'deleted': {}, 'media_extracted': 0,
+        'privilege_changes': len(privileges),
+    }
 
     staging = None
     try:

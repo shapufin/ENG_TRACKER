@@ -651,6 +651,35 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
         return usernames
 
 
+class TestTeamMembershipIsNotAReportingLink(OrganigramaTreeTestCase):
+    """Item 64: led_teams membership is calendar-only, never an org-chart link."""
+
+    def _usernames(self, nodes):
+        out = set()
+        for node in nodes:
+            if node.get("type") == "person" and node.get("username"):
+                out.add(node["username"])
+            out |= self._usernames(node.get("children", []))
+        return out
+
+    def test_team_only_member_is_not_placed_under_line_manager(self):
+        from apps.users.models.core import Team
+
+        team = Team.objects.create(
+            name="Cal Team", code="CAL_ONLY", team_leader=self.albanian_tl
+        )
+        team_only = User.objects.create_user(username="team_only", password="x")
+        team_only.profile.teams.add(team)
+
+        full = self._get_tree(self.admin).data["roots"]
+        self.assertNotIn("team_only", self._usernames(full))
+        sub_it = self._get_tree(self.italian_tl).data["roots"]
+        self.assertNotIn("team_only", self._usernames(sub_it))
+        sub_al = self._get_tree(self.albanian_tl).data["roots"]
+        self.assertNotIn("team_only", self._usernames(sub_al))
+        self.assertIn("emp1", self._usernames(full))
+
+
 class TestTreePerformance(OrganigramaTreeTestCase):
     """Query count tests — no N+1."""
 

@@ -10,7 +10,7 @@ from django.test import TestCase, override_settings
 
 from plugins.site_backup.services import backup as backup_service
 from plugins.site_backup.services import restore as restore_service
-from plugins.site_backup.services.archive import ArchiveError
+from plugins.site_backup.services.archive import ArchiveError, open_archive
 
 
 class RestorePreviewAndCommitTests(TestCase):
@@ -276,7 +276,7 @@ class NonAsciiRoundTripTests(TestCase):
             record = backup_service.create_backup(user, include_media=False)
             with record.file.open('rb') as fh:
                 result = restore_service.preview(fh)
-            with record.file.open('rb') as fh, zipfile.ZipFile(fh) as zf:
+            with record.file.open('rb') as fh, open_archive(fh) as zf:
                 dump = gzip.decompress(zf.read('db.json.gz')).decode('utf-8')
 
         entry = next(g for g in result['model_groups'] if g['model'] == 'auth.user')

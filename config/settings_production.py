@@ -29,6 +29,17 @@ if not os.getenv('MFA_ENCRYPTION_KEYS', '').strip():
         "locks out every user who enrolled a second factor."
     )
 
+# Site backups are encrypted at rest; a dev key derived from SECRET_KEY would
+# die with a SECRET_KEY rotation, so production must carry its own key.
+if not os.getenv('BACKUP_ENCRYPTION_KEYS', '').strip():
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured(
+        "BACKUP_ENCRYPTION_KEYS is required in production (comma-separated keys; "
+        "generate one with: python -c \"from cryptography.fernet import Fernet; "
+        "print(Fernet.generate_key().decode())\"). Keep it with SECRET_KEY, never next "
+        "to the backups: without it no backup can be restored."
+    )
+
 # P3-8: Strip django_extensions from production INSTALLED_APPS.
 # It adds management commands (shell_plus, runserver_plus, sqldiff,
 # show_urls) and template tags that are unnecessary attack surface in

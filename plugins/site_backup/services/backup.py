@@ -22,6 +22,7 @@ from django.core.management import call_command
 from django.db import connection
 
 from ..models import BackupRecord
+from .encryption import encrypt_file
 
 MANIFEST_SCHEMA_VERSION = 1
 # ``year_close``: a snapshot set is durable evidence on its own volume, archived by
@@ -177,9 +178,14 @@ def create_backup(user, note: str = '', include_media: bool = True) -> BackupRec
             }
             archive.writestr('manifest.json', json.dumps(manifest, indent=2))
 
-        checksum = _sha256_file(zip_path)
-        size_bytes = os.path.getsize(zip_path)
-        filename = f"backup_{datetime.now(dt_timezone.utc):%Y%m%d_%H%M%S}.zip"
+        # Encrypted at rest: the stored file (and its checksum/size) is the
+        # ciphertext, so a copied volume or download exposes nothing readable.
+        stored_path = os.path.join(tmp_dir, 'backup.zip.enc')
+        encrypt_file(zip_path, stored_path)
+
+        checksum = _sha256_file(stored_path)
+        size_bytes = os.path.getsize(stored_path)
+        filename = f"backup_{datetime.now(dt_timezone.utc):%Y%m%d_%H%M%S}.zip.enc"
 
         record = BackupRecord(
             filename=filename,
@@ -191,7 +197,7 @@ def create_backup(user, note: str = '', include_media: bool = True) -> BackupRec
             note=note,
             created_by=user,
         )
-        with open(zip_path, 'rb') as fh:
+        with open(stored_path, 'rb') as fh:
             record.file.save(filename, File(fh), save=False)
         record.save()
         _log_backup(user, record)

@@ -31,8 +31,8 @@ export const useLeaveBalances = (options?: UseLeaveBalancesOptions) => {
     queryFn: () => userService.getUsers({ page_size: 1000 }),
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const balances = (data as any)?.results ?? data ?? [];
+  // leaveService.getBalances already unwraps the paginated response.
+  const balances: LeaveBalance[] = data ?? [];
   const users = usersData?.results ?? [];
 
   const createMutation = useMutation({

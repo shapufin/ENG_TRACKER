@@ -39,6 +39,7 @@ class RestoreCommitSerializer(serializers.Serializer):
     )
     restore_media = serializers.BooleanField(required=False, default=False)
     confirmed = serializers.BooleanField(required=False, default=False)
+    confirm_privilege_changes = serializers.BooleanField(required=False, default=False)
 
     def validate(self, attrs):
         if not attrs.get('file') and not attrs.get('backup_id'):

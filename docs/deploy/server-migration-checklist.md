@@ -14,6 +14,7 @@ throw-away project before you need it: `docker compose -p et-rehearsal ...` with
 | Generated exports | `export_files` volume | **do not carry** | Transient (24 h) and regenerable: request the ZIP again after the move |
 | `SECRET_KEY` | `.env` | password manager | Everyone is signed out; signed values (OnlyOffice document keys) are re-issued |
 | `MFA_ENCRYPTION_KEYS` | `.env` | password manager, **never** in the backup volume | Every user with two-factor on cannot sign in (fails closed) until reset |
+| `BACKUP_ENCRYPTION_KEYS` | `.env` | password manager, **never** in the backup volume | Every Site Backup archive (`*.zip.enc`) becomes unreadable and cannot be restored; the plain DB dump is unaffected |
 | `DB_PASSWORD`, `REDIS_PASSWORD` | `.env` | any new value is fine | Nothing else depends on them |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | `.env` | password manager | Every browser's push subscription stops working |
 | `ONLYOFFICE_JWT_SECRET`, `EMAIL_*` | `.env` | password manager | Must match the OnlyOffice and SMTP servers |

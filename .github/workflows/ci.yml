@@ -146,6 +146,7 @@ jobs:
         env:
           SECRET_KEY: ci-deploy-check-secret-key-that-is-long-enough-for-django-check-50chars
           MFA_ENCRYPTION_KEYS: eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=
+          BACKUP_ENCRYPTION_KEYS: eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=
           ALLOWED_HOSTS: localhost
           DB_NAME: ci
           DB_USER: ci
@@ -323,6 +324,7 @@ jobs:
             echo "DB_PASSWORD=ci-dummy"
             echo "REDIS_PASSWORD=ci-dummy"
             echo "MFA_ENCRYPTION_KEYS=eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg="
+            echo "BACKUP_ENCRYPTION_KEYS=eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg="
           } > "$RUNNER_TEMP/compose-ci.env"
           docker compose --env-file "$RUNNER_TEMP/compose-ci.env" config -q
       # The official nginx entrypoint renders /etc/nginx/templates/*.template with

@@ -57,6 +57,17 @@ class SessionTimeoutTests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(resp.data.get('code'), 'session_expired')
 
+    def test_refresh_fails_closed_when_session_check_errors(self):
+        from unittest import mock
+
+        refresh = RefreshToken.for_user(self.user)
+        self.client.cookies['refresh_token'] = str(refresh)
+        with mock.patch(
+            'apps.users.views.auth.RefreshToken', side_effect=RuntimeError('boom')
+        ):
+            with self.assertRaises(RuntimeError):
+                self.client.post('/api/auth/token/refresh/', {}, format='json')
+
     def test_rotated_token_exp_capped_at_session_exp(self):
         refresh = RefreshToken.for_user(self.user)
         now = int(time.time())

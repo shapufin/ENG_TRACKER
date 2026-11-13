@@ -43,7 +43,9 @@ import {
   UserX,
   Users,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SearchField } from "@/components/ui/SearchField";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { BuilderCanvasInspector } from "../components/BuilderCanvasInspector";
@@ -286,6 +288,7 @@ const BuilderCanvas: React.FC = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isImporting, setIsImporting] = useState(false);
+  const [confirmImportOpen, setConfirmImportOpen] = useState(false);
 
   const lastLoadedRevision = useRef<number | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
@@ -364,15 +367,7 @@ const BuilderCanvas: React.FC = () => {
     window.setTimeout(() => reactFlow.fitView({ padding: 0.2, duration: 600 }), 50);
   }, [nodes, edges, recordSnapshot, reactFlow]);
 
-  const handleImportLiveOrg = useCallback(async () => {
-    if (
-      nodes.length > 0 &&
-      !window.confirm(
-        "Importing the company hierarchy will replace existing canvas nodes. Continue?"
-      )
-    ) {
-      return;
-    }
+  const runImportLiveOrg = useCallback(async () => {
     setIsImporting(true);
     try {
       const tree = await organigramaService.getTree();
@@ -384,11 +379,19 @@ const BuilderCanvas: React.FC = () => {
         window.setTimeout(() => reactFlow.fitView({ padding: 0.2, duration: 600 }), 100);
       }
     } catch {
-      alert("Failed to fetch live company hierarchy.");
+      toast.error("Failed to fetch live company hierarchy.");
     } finally {
       setIsImporting(false);
     }
   }, [nodes, edges, recordSnapshot, reactFlow]);
+
+  const handleImportLiveOrg = useCallback(() => {
+    if (nodes.length > 0) {
+      setConfirmImportOpen(true);
+      return;
+    }
+    void runImportLiveOrg();
+  }, [nodes.length, runImportLiveOrg]);
 
   const handleSearchNode = useCallback(
     (query: string) => {
@@ -420,7 +423,7 @@ const BuilderCanvas: React.FC = () => {
     const filename = `${chart?.name || "org-chart"}-export.png`;
     const success = await exportCanvasToPng(canvasRef.current, filename);
     if (!success) {
-      alert("Failed to export chart image.");
+      toast.error("Failed to export chart image.");
     }
   }, [chart]);
 
@@ -447,7 +450,7 @@ const BuilderCanvas: React.FC = () => {
       pdf.addImage(imgData, "PNG", 40, 60, pageWidth - 80, pageHeight - 100);
       pdf.save(`${chart?.name || "org-chart"}.pdf`);
     } catch {
-      alert("Failed to export PDF.");
+      toast.error("Failed to export PDF.");
     }
   }, [chart]);
 
@@ -802,6 +805,18 @@ const BuilderCanvas: React.FC = () => {
           />
         </GlassCard>
       </div>
+      <ConfirmDialog
+        open={confirmImportOpen}
+        onOpenChange={setConfirmImportOpen}
+        title="Replace canvas with company hierarchy?"
+        description="Importing the company hierarchy will replace existing canvas nodes."
+        confirmLabel="Replace"
+        variant="destructive"
+        onConfirm={() => {
+          setConfirmImportOpen(false);
+          void runImportLiveOrg();
+        }}
+      />
     </PageShell>
   );
 };

@@ -1,4 +1,5 @@
 /** Custom chart viewer — renders a published org chart for end users. */
+import { toast } from "sonner";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
@@ -705,7 +706,7 @@ const CustomChartDesktopInner: React.FC<{
   const handleExportPng = useCallback(async () => {
     const success = await exportCanvasToPng(canvasRef.current, "custom-organigrama.png");
     if (!success) {
-      alert("Failed to export image.");
+      toast.error("Failed to export image.");
     }
   }, []);
 

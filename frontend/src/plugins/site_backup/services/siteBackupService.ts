@@ -72,6 +72,7 @@ export const siteBackupService = {
       deleteMissingModels?: string[];
       restoreMedia?: boolean;
       confirmed: boolean;
+      confirmPrivilegeChanges?: boolean;
     }
   ): Promise<RestoreCommitResult> {
     const { data: body, headers } = archiveSourcePayload(source, {
@@ -79,6 +80,7 @@ export const siteBackupService = {
       delete_missing_models: options.deleteMissingModels ?? [],
       restore_media: options.restoreMedia ?? false,
       confirmed: options.confirmed,
+      confirm_privilege_changes: options.confirmPrivilegeChanges ?? false,
     });
     const { data } = await api.post(`${BASE}/restore/commit/`, body, {
       headers,

@@ -27,6 +27,15 @@ export interface RestoreMediaPreview {
   total: number;
 }
 
+export interface RestorePrivilegeChange {
+  model: string;
+  pk: number;
+  name: string;
+  field: string;
+  from: string | boolean | null;
+  to: string | boolean | null;
+}
+
 export interface RestorePreviewResult {
   manifest: {
     schema_version: number;
@@ -39,6 +48,10 @@ export interface RestorePreviewResult {
   };
   schema_compatible: boolean;
   model_groups: RestoreModelGroup[];
+  /** Closed years a restore of that model would touch (refused by the server). */
+  closed_year_conflicts: Record<string, number[]>;
+  /** Access-granting changes that need explicit confirmation. */
+  privilege_changes: RestorePrivilegeChange[];
   media: RestoreMediaPreview;
 }
 
@@ -47,6 +60,7 @@ export interface RestoreCommitResult {
   updated: Record<string, number>;
   deleted: Record<string, number>;
   media_extracted: number;
+  privilege_changes: number;
 }
 
 /** Either an uploaded archive or a previously stored backup's id. */

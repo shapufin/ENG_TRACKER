@@ -156,23 +156,15 @@ def _get_albanian_tls_for_italian(italian_tl: User) -> List[User]:
 
 
 def _get_employees_for_albanian(albanian_tl: User) -> List[UserProfile]:
-    """Get active employee profiles reporting to a Line Manager (FK or real Team)."""
-    # Direct FK assignments
-    direct = UserProfile.objects.filter(
-        albanian_tl=albanian_tl, user__is_active=True
-    )
-    # Team members of teams led by this TL
-    led_team_ids = set(albanian_tl.led_teams.filter(is_active=True).values_list("id", flat=True))
-    if led_team_ids:
-        # Combine via Q objects (avoids "cannot combine unique with non-unique")
-        profiles = UserProfile.objects.filter(
-            Q(albanian_tl=albanian_tl) | Q(teams__id__in=led_team_ids),
-            user__is_active=True,
-        ).exclude(user=albanian_tl).distinct()
-    else:
-        profiles = direct.exclude(user=albanian_tl)
+    """Active employee profiles linked to a Line Manager (``albanian_tl`` FK only).
+
+    Team membership (``led_teams``) is calendar-only and never places a person
+    on the org chart (workflow-invariants item 64).
+    """
     return list(
-        profiles.select_related("user", "albanian_tl", "italian_tl")
+        UserProfile.objects.filter(albanian_tl=albanian_tl, user__is_active=True)
+        .exclude(user=albanian_tl)
+        .select_related("user", "albanian_tl", "italian_tl")
         .order_by("user__username")
     )
 
@@ -219,22 +211,17 @@ def _batch_get_employees(
 ) -> Dict[int, List[UserProfile]]:
     """Batch-fetch all active employees for multiple Line Managers (2 queries).
 
-    Employees are matched via direct ``albanian_tl`` FK or membership in a team
-    led by one of the Line Managers. Returns a mapping of
-    {albanian_tl_id: [employee_profiles]}.
-
-    Grouping: a profile is assigned to its ``albanian_tl`` FK when that FK is
-    one of the supplied Line Managers; otherwise it is assigned to the team
-    leader of the first matching led-team it belongs to.
+    Employees are matched by the direct ``albanian_tl`` FK only (item 64);
+    team membership never places someone under a Line Manager. Returns a
+    mapping of {albanian_tl_id: [employee_profiles]}.
     """
     if not albanian_tls:
         return {}
     al_ids = [al.id for al in albanian_tls]
-    al_id_set = set(al_ids)
 
     employees = list(
         UserProfile.objects.filter(
-            Q(albanian_tl_id__in=al_ids) | Q(teams__team_leader_id__in=al_ids),
+            albanian_tl_id__in=al_ids,
             user__is_active=True,
         )
         .exclude(user_id__in=al_ids)
@@ -246,26 +233,9 @@ def _batch_get_employees(
         .order_by("user__username")
     )
 
-    # Build team_id -> leader_id map from the prefetched teams so we can group
-    # team-membership-only employees (no albanian_tl FK) under their leader.
-    team_to_leader: Dict[int, int] = {}
-    for profile in employees:
-        for team in profile.teams.all():
-            if team.team_leader_id in al_id_set:
-                team_to_leader.setdefault(team.id, team.team_leader_id)
-
     by_albanian: Dict[int, List[UserProfile]] = {al_id: [] for al_id in al_ids}
     for profile in employees:
-        leader_id = profile.albanian_tl_id
-        if leader_id not in al_id_set:
-            # Fall back to team-leader mapping.
-            for team in profile.teams.all():
-                mapped = team_to_leader.get(team.id)
-                if mapped is not None:
-                    leader_id = mapped
-                    break
-        if leader_id in al_id_set:
-            by_albanian.setdefault(leader_id, []).append(profile)
+        by_albanian.setdefault(profile.albanian_tl_id, []).append(profile)
     return by_albanian
 
 
@@ -345,7 +315,6 @@ def build_full_tree() -> Dict[str, Any]:
     employees = list(
         UserProfile.objects.filter(
             Q(albanian_tl_id__in=al_id_set)
-            | Q(teams__team_leader_id__in=al_id_set)
             | Q(italian_tl_id__in=it_id_set),
             user__is_active=True,
         )
@@ -358,25 +327,12 @@ def build_full_tree() -> Dict[str, Any]:
         .order_by("user__username")
     )
 
-    # Map team_id -> leader_id from prefetched teams for Line Manager fallback
-    team_to_leader: Dict[int, int] = {}
-    for profile in employees:
-        for team in profile.teams.all():
-            if team.team_leader_id in al_id_set:
-                team_to_leader.setdefault(team.id, team.team_leader_id)
-
     by_it_and_al: Dict[tuple, List[UserProfile]] = {}
     direct_to_it: Dict[int, List[UserProfile]] = {}
     by_al_no_it: Dict[int, List[UserProfile]] = {}
 
     for profile in employees:
         al_id = profile.albanian_tl_id
-        if al_id not in al_id_set:
-            for team in profile.teams.all():
-                mapped = team_to_leader.get(team.id)
-                if mapped is not None:
-                    al_id = mapped
-                    break
         if al_id not in al_id_set:
             al_id = None
 
@@ -519,8 +475,7 @@ def build_subtree(user: User) -> Dict[str, Any]:
         employees = list(
             UserProfile.objects.filter(
                 Q(italian_tl=user)
-                | Q(albanian_tl_id__in=direct_al_ids, italian_tl__isnull=True)
-                | Q(teams__team_leader_id__in=direct_al_ids, italian_tl__isnull=True),
+                | Q(albanian_tl_id__in=direct_al_ids, italian_tl__isnull=True),
                 user__is_active=True,
             )
             .exclude(user=user)
@@ -533,12 +488,6 @@ def build_subtree(user: User) -> Dict[str, Any]:
             .order_by("user__username")
         )
 
-        team_to_leader: Dict[int, int] = {}
-        for emp in employees:
-            for team in emp.teams.all():
-                if team.team_leader_id in al_id_set:
-                    team_to_leader.setdefault(team.id, team.team_leader_id)
-
         by_al: Dict[int, List[UserProfile]] = {al_id: [] for al_id in al_id_set}
         direct_to_it: List[UserProfile] = []
 
@@ -547,12 +496,6 @@ def build_subtree(user: User) -> Dict[str, Any]:
                 continue
 
             al_id = emp.albanian_tl_id
-            if al_id not in al_id_set:
-                for team in emp.teams.all():
-                    mapped = team_to_leader.get(team.id)
-                    if mapped is not None:
-                        al_id = mapped
-                        break
             if al_id in al_id_set:
                 by_al[al_id].append(emp)
             else:

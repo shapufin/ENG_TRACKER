@@ -17,6 +17,7 @@ from .serializers import (
     RestoreCommitSerializer,
     RestorePreviewSerializer,
 )
+from .services.encryption import is_encrypted
 from .services import backup as backup_service
 from .services import restore as restore_service
 from .services.archive import ArchiveError
@@ -52,14 +53,16 @@ ZIP_MAGIC = b'PK\x03\x04'
 
 
 def _require_zip_upload(uploaded):
-    """SEC-17: only a .zip carrying the zip signature reaches the archive reader."""
-    if not (getattr(uploaded, 'name', '') or '').lower().endswith('.zip'):
-        raise ValidationError('Upload a .zip backup archive.')
+    """SEC-17: only a .zip (plain, from before encryption) or an encrypted
+    .zip.enc carrying the matching signature reaches the archive reader."""
+    name = (getattr(uploaded, 'name', '') or '').lower()
+    if not (name.endswith('.zip') or name.endswith('.zip.enc')):
+        raise ValidationError('Upload a .zip or .zip.enc backup archive.')
     position = uploaded.tell()
     head = uploaded.read(len(ZIP_MAGIC))
     uploaded.seek(position)
-    if head != ZIP_MAGIC:
-        raise ValidationError('The uploaded file is not a zip archive.')
+    if head != ZIP_MAGIC and not is_encrypted(uploaded):
+        raise ValidationError('The uploaded file is not a zip or encrypted backup archive.')
 
 
 @contextmanager
@@ -143,6 +146,7 @@ class RestoreViewSet(SuperuserOnlyMixin, viewsets.ViewSet):
                     delete_missing_models=data.get('delete_missing_models', []),
                     restore_media=data.get('restore_media', False),
                     confirmed=data.get('confirmed', False),
+                    confirm_privilege_changes=data.get('confirm_privilege_changes', False),
                     user=request.user,
                 )
         except (ArchiveError, restore_service.RestoreError) as exc:

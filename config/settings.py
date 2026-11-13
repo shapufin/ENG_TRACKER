@@ -49,6 +49,18 @@ if not MFA_ENCRYPTION_KEYS:
     MFA_ENCRYPTION_KEYS = [
         base64.urlsafe_b64encode(hashlib.sha256(SECRET_KEY.encode()).digest()).decode()
     ]
+
+# Site backup archives are encrypted at rest (AES-256-GCM). Comma-separated
+# urlsafe-base64 32-byte keys (Fernet.generate_key() format): the first
+# encrypts, all decrypt. Production requires it; dev/test derive one from
+# SECRET_KEY. Keep it with SECRET_KEY, never next to the backups.
+BACKUP_ENCRYPTION_KEYS = [k.strip() for k in os.getenv('BACKUP_ENCRYPTION_KEYS', '').split(',') if k.strip()]
+if not BACKUP_ENCRYPTION_KEYS:
+    import base64
+    import hashlib
+    BACKUP_ENCRYPTION_KEYS = [
+        base64.urlsafe_b64encode(hashlib.sha256(b'site-backup:' + SECRET_KEY.encode()).digest()).decode()
+    ]
 MFA_ISSUER = os.getenv('MFA_ISSUER', 'Engineering Tracker')
 
 # ALLOWED_HOSTS: read from env var (comma-separated) or use safe dev defaults.

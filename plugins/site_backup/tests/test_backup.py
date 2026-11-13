@@ -1,13 +1,13 @@
 import gzip
 import json
 import tempfile
-import zipfile
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 
 from plugins.site_backup.models import BackupRecord
 from plugins.site_backup.services import backup as backup_service
+from plugins.site_backup.services.archive import open_archive
 
 
 class CreateBackupTests(TestCase):
@@ -26,7 +26,7 @@ class CreateBackupTests(TestCase):
             self.assertEqual(record.created_by, self.user)
 
             with record.file.open('rb') as fh:
-                with zipfile.ZipFile(fh) as archive:
+                with open_archive(fh) as archive:
                     names = archive.namelist()
                     self.assertIn('manifest.json', names)
                     self.assertIn('db.json.gz', names)
