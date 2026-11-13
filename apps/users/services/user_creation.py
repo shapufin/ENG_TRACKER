@@ -490,4 +490,8 @@ def _set_cr_admin_role(user: User, *, active: bool) -> None:
     # .update() bypasses post_save/post_delete signals, so refresh the
     # denormalized role_codes cache manually.
     from apps.permissions.services.role_service import _refresh_role_cache
+    from core.utils.cache import invalidate_permission_cache_for_user
     _refresh_role_cache(user)
+    # .update() sends no signal, so the cached permissions must be cleared explicitly (as
+    # revoke_role does), or a revoked cr_admin keeps access until the cache expires.
+    invalidate_permission_cache_for_user(user)

@@ -81,7 +81,7 @@ def get_allowed_team_ids(user: User) -> Optional[Set[int]]:
     if access is not None:
         return set(
             ControlRoomTeamScope.objects
-            .filter(access=access)
+            .filter(access=access, team__is_active=True)  # an archived team confers no visibility
             .values_list('team_id', flat=True)
         )
 
@@ -94,7 +94,7 @@ def get_allowed_team_ids(user: User) -> Optional[Set[int]]:
         from apps.users.models.core import TeamMembership
         return set(
             TeamMembership.objects
-            .filter(user_profile__user=user)
+            .filter(user_profile__user=user, team__is_active=True)
             .values_list('team_id', flat=True)
             .distinct()
         )
@@ -120,6 +120,7 @@ def get_allowed_user_ids(user: User, team_ids: Optional[Set[int]] = None) -> Set
         # Global scope: all users who belong to at least one team.
         return set(
             TeamMembership.objects
+            .filter(team__is_active=True)
             .values_list('user_profile__user_id', flat=True)
             .distinct()
         )
@@ -129,7 +130,7 @@ def get_allowed_user_ids(user: User, team_ids: Optional[Set[int]] = None) -> Set
 
     return set(
         TeamMembership.objects
-        .filter(team_id__in=team_ids)
+        .filter(team_id__in=team_ids, team__is_active=True)
         .values_list('user_profile__user_id', flat=True)
         .distinct()
     )

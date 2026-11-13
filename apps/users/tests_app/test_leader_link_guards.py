@@ -146,3 +146,18 @@ class DeferredImporterLinkTests(TestCase):
             importer.commit_row(row, options, context=context)
         importer.finalize_batch(context, options)
         self.assertIsNone(User.objects.get(username='dl_emp').profile.italian_tl_id)
+
+
+class CrAdminRoleCacheTests(TestCase):
+    def test_revoking_cr_admin_clears_the_permission_cache(self):
+        from unittest.mock import patch
+
+        from apps.permissions.models import Role
+        from apps.users.services.user_creation import _set_cr_admin_role
+
+        Role.objects.get_or_create(code='cr_admin', defaults={'name': 'cr_admin'})
+        user = User.objects.create_user(username='cra_user', password='x')
+        _set_cr_admin_role(user, active=True)
+        with patch('core.utils.cache.invalidate_permission_cache_for_user') as invalidate:
+            _set_cr_admin_role(user, active=False)
+        invalidate.assert_called_once_with(user)
