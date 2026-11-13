@@ -1,5 +1,6 @@
 """Filter utilities for reports module."""
 
+from django.db.models import Q
 from django_filters import rest_framework as filters
 from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
@@ -35,6 +36,11 @@ def apply_visibility_constraints(queryset, user):
         return queryset
 
     if has_team_leader_role(user):
+        if queryset.model._meta.model_name in ('overtimelog', 'standbylog'):
+            # Owner rule (item 82): one leader owns each overtime/standby row, so a leader's
+            # export matches their queue and no row is in two exports. Own rows stay too.
+            from apps.users.services.leader_ownership import owned_by_leader_q
+            return queryset.filter(Q(user_id=user.id) | owned_by_leader_q(user.id))
         visible_ids = profile.get_team_member_ids() if profile else set()
         visible_ids.add(user.id)
     else:

@@ -52,13 +52,13 @@ def owned_by_leader_q(leader_id: int, leaders: set[int] | None = None, prefix: s
 
     decided = Q(**{f'{prefix}status__in': DECIDED_STATUSES})
     profile = f'{prefix}user__profile__'
+    if leader_id not in leaders:
+        return Q(pk__in=[])  # Python twin: only a user in the leader set owns anything
+    # An inactive or demoted Line Manager holds no queue, so the Manager owns the row then.
     current_leader_is_me = Q(**{f'{profile}albanian_tl_id': leader_id}) | (
-        Q(**{f'{profile}albanian_tl__isnull': True}) & Q(**{f'{profile}italian_tl_id': leader_id})
+        ~Q(**{f'{profile}albanian_tl_id__in': leaders}) & Q(**{f'{profile}italian_tl_id': leader_id})
     )
-    # Python twin: only a user in the leader set owns a row as its decider.
-    decided_by_me = (
-        decided & Q(**{f'{prefix}approved_by_id': leader_id}) if leader_id in leaders else Q(pk__in=[])
-    )
+    decided_by_me = decided & Q(**{f'{prefix}approved_by_id': leader_id})
     decided_by_other_leader = decided & Q(**{f'{prefix}approved_by_id__in': other_leaders})
     return decided_by_me | (current_leader_is_me & ~decided_by_other_leader)
 
@@ -71,7 +71,9 @@ def owner_leader_id(status, approved_by_id, albanian_tl_id, italian_tl_id, leade
     """
     if status in DECIDED_STATUSES and approved_by_id is not None and approved_by_id in leaders:
         return approved_by_id
-    return albanian_tl_id if albanian_tl_id is not None else italian_tl_id
+    if albanian_tl_id is not None and albanian_tl_id in leaders:
+        return albanian_tl_id
+    return italian_tl_id if italian_tl_id is not None and italian_tl_id in leaders else None
 
 
 def owner_team_id(leader_team_ids, employee_team_ids) -> int | None:

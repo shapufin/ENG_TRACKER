@@ -65,6 +65,6 @@ class NotificationRecipientTests(TestCase):
         member.profile.teams.add(team)
         member.profile.italian_tl = linked
         member.profile.save()
-        self.assertEqual({u.pk for u in _team_recipients(member)}, {leader.pk, linked.pk})
+        self.assertEqual({u.pk for u in _team_recipients(member)}, {linked.pk})  # Team.team_leader is calendar-only
         User.objects.filter(pk__in=[leader.pk, linked.pk]).update(is_active=False)
         self.assertEqual(list(_team_recipients(member)), [])

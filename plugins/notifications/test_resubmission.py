@@ -22,6 +22,8 @@ class ResubmissionNotificationTests(TestCase):
         self.user = User.objects.create_user(username='emp', password='x')
         self.tl = User.objects.create_user(username='tl', password='x')
         team = Team.objects.create(name='Ops', code='OPS', team_leader=self.tl)
+        self.user.profile.albanian_tl = self.tl  # the link gives authority, Team.team_leader does not
+        self.user.profile.save()
         TeamMembership.objects.create(user_profile=self.user.profile, team=team)
         self.client_obj = Client.objects.create(name='Acme')
 
@@ -75,6 +77,8 @@ class PendingDeletionNotificationTests(TestCase):
         self.user = User.objects.create_user(username='emp', password='x')
         self.tl = User.objects.create_user(username='tl', password='x')
         team = Team.objects.create(name='Ops', code='OPS', team_leader=self.tl)
+        self.user.profile.albanian_tl = self.tl  # the link gives authority, Team.team_leader does not
+        self.user.profile.save()
         TeamMembership.objects.create(user_profile=self.user.profile, team=team)
 
     def _overtime(self, status):
