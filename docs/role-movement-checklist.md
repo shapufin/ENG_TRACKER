@@ -28,6 +28,7 @@ checklist and the map.
 | Leave, payroll scope, calendar, skills, KPI, org chart | live links via `get_team_member_ids()` / `get_calendar_member_ids()` |
 
 ## 3. Rules for new code
+0. Never write a leader link, role flag or team membership outside the guarded paths: use `leader_link_error` + `record_leader_link_change` (`user_creation.py`), `change_user_teams`, and the user edit/bulk/set-leader/importer paths. Profile PATCH is read-only for these fields.
 1. Never filter an approval, export, count or alert by `user_id__in` of team members for overtime or standby. Use `owned_by_leader_q` (and the Python twin `owner_leader_id`).
 2. Never copy the leader definition. Change `leader_user_ids()` and `owned_by_leader_q` together and keep `test_python_owner_matches_the_queryset_owner` green; extend it with the new case.
 3. Never use `Team.team_leader` or `TeamMembership` to grant data, approval or alerts.
