@@ -51,7 +51,7 @@ Decisions (2026-11-13, see item 82 (g)):
 - Stale snapshots: FIXED. A late decision by a leader marks that leader's snapshots stale (test `test_a_late_decision_by_a_leader_marks_their_snapshot_stale`).
 - Leader with no team: FIXED for engagement. A leader's own teams and the teams where they decided someone become their teams. A team row with size 0 and submitters is shown as "Moved away" (frontend test `TeamBreakdownTable.test.tsx`).
 - Row with no owner team: DECIDED. It goes to Unassigned and the year-close readiness warns with the count (test `test_rows_without_an_owner_team_are_named_in_the_readiness_warnings`). It is not in engagement; that is accepted because the employee has no team to show it in.
-- Demoted approver: DECIDED to keep the current rule. Ex-leaders have no team view, so their history follows the employee's current leader.
+- Demoted approver: DECIDED to keep the current rule, and since the review follow-ups (item 82 (h)) it also holds for deactivated approvers and for ones who only lead an archived team. Ex-leaders have no team view, so their history follows the employee's current leader.
 - Leave ownership: DECIDED NOT to change now (person-based balances). Own ruling needed later.
 - `leader_user_ids()` cost: ACCEPTED (one query per call).
 Remaining limits as the reviewer should know them (the first two are by decision, not bugs):
@@ -63,6 +63,7 @@ Remaining limits as the reviewer should know them (the first two are by decision
 ## 8. Open backlog (needs an owner ruling before any change)
 - Leave ownership by decider: same field, different balances. Decide before touching leave.
 - Demoted-approver history: confirmed as the current rule; ask the owner only if an ex-leader must keep sight of history.
+- (Closed 2026-11-13, item 82 (h)) Review follow-ups: leader set aligned with `is_team_leader`, approval follows the owner, past-month engagement recompute, superuser re-check on year-close download. Still open: leave ownership; the placeholder backup key stays accepted by production settings.
 - Cache `leader_user_ids()` per request, only if the engagement page becomes slow (measure first).
 
 ## 9. How to maintain this

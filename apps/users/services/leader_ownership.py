@@ -15,15 +15,17 @@ TL_ROLE_CODES = ('italian_tl', 'albanian_tl')
 
 
 def leader_user_ids() -> set[int]:
-    """Users who are a Line Manager or Manager: by role, legacy flag, link target or team lead.
+    """Active users who can hold a leader queue: by role, legacy flag, link target or a lead
+    of an ACTIVE team (the same sources as ``UserProfile.is_team_leader``).
 
-    Mirrors the freeze job's leader set (``tl_scorecard.snapshots._leaders``) and counts
-    deactivated leaders too, because their decisions are history.
+    A deactivated or demoted approver, or one who only leads an archived team, is not in this
+    set: they cannot open a leader queue, so owning their old decisions would hide those rows
+    from everyone. Their decisions follow the employee's current leader (decided 2026-11-13).
     """
     from django.contrib.auth.models import User
 
     return set(
-        User.objects.filter(
+        User.objects.filter(is_active=True).filter(
             Q(profile__is_italian_tl_role=True)
             | Q(profile__is_albanian_tl_role=True)
             | Q(
@@ -33,7 +35,7 @@ def leader_user_ids() -> set[int]:
             )
             | Q(italian_team_members__isnull=False)
             | Q(albanian_team_members__isnull=False)
-            | Q(led_teams__isnull=False)
+            | Q(led_teams__is_active=True, led_teams__is_deleted=False)
         ).values_list('id', flat=True).distinct()
     )
 
@@ -53,7 +55,10 @@ def owned_by_leader_q(leader_id: int, leaders: set[int] | None = None, prefix: s
     current_leader_is_me = Q(**{f'{profile}albanian_tl_id': leader_id}) | (
         Q(**{f'{profile}albanian_tl__isnull': True}) & Q(**{f'{profile}italian_tl_id': leader_id})
     )
-    decided_by_me = decided & Q(**{f'{prefix}approved_by_id': leader_id})
+    # Python twin: only a user in the leader set owns a row as its decider.
+    decided_by_me = (
+        decided & Q(**{f'{prefix}approved_by_id': leader_id}) if leader_id in leaders else Q(pk__in=[])
+    )
     decided_by_other_leader = decided & Q(**{f'{prefix}approved_by_id__in': other_leaders})
     return decided_by_me | (current_leader_is_me & ~decided_by_other_leader)
 

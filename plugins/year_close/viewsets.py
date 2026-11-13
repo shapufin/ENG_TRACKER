@@ -125,7 +125,7 @@ class YearSnapshotFileViewSet(SuperuserOnlyMixin, mixins.RetrieveModelMixin,
         # The token binds the user, so someone who lost access since the link was
         # minted must be refused BEFORE the nonce is consumed — otherwise a
         # refused request would burn the single-use link.
-        user = get_user_model().objects.filter(pk=payload['user_id'], is_active=True).first()
+        user = get_user_model().objects.filter(pk=payload['user_id'], is_active=True, is_superuser=True).first()
         if user is None:
             return Response(status=status.HTTP_403_FORBIDDEN)
 

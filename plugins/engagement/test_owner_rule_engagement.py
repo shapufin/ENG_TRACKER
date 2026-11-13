@@ -117,3 +117,21 @@ class EngagementOwnerRuleTests(TestCase):
             rejection_reason='late', updated_at=self.now + timedelta(minutes=5),
         )
         self.assertTrue(is_stale(snapshot))
+
+    def test_recomputing_a_past_month_keeps_the_decision_in_the_employee_team(self):
+        """A past month is recomputed with that month's decisions, not this month's."""
+        from datetime import timedelta
+
+        past = self.now - timedelta(days=65)
+        past_month = past.date().replace(day=1)
+        team_c = Team.objects.create(name='Eng C', code='EC')
+        log = OvertimeLog.objects.create(
+            user=self.emp, client=self.client_row, date=past.date(), hours=2,
+            status='approved', approved_by=self.old_lm,
+        )
+        OvertimeLog.objects.filter(pk=log.pk).update(submitted_at=past, approved_at=past)
+        self.emp.profile.albanian_tl = self.new_lm
+        self.emp.profile.save()
+        change_user_teams(self.emp.profile, [team_c.id])
+        decided = compute_tl_metric(self.old_lm, team_c, past_month).metrics['overtime']['decided']
+        self.assertEqual(decided, 1)

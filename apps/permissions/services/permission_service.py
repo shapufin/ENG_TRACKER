@@ -92,6 +92,21 @@ class PermissionService:
             pass
         return False
 
+    @staticmethod
+    def _leader_owns_row(user, obj):
+        """Owner rule for overtime and standby: one leader owns each row, so another leader
+        who merely has a link to the employee (a Manager when a Line Manager is set) cannot
+        decide a row they cannot list. Other request types keep the membership check."""
+        if obj._meta.model_name not in ('overtimelog', 'standbylog'):
+            return True
+        from apps.users.services.leader_ownership import leader_user_ids, owner_leader_id
+
+        profile = obj.user.profile
+        owner = owner_leader_id(
+            obj.status, obj.approved_by_id, profile.albanian_tl_id, profile.italian_tl_id, leader_user_ids(),
+        )
+        return owner is None or owner == user.id
+
     def can_approve(self, user, obj):
         """
         Centralized approval permission logic moved from PermissionChecker.
@@ -138,7 +153,7 @@ class PermissionService:
                 if obj_user is not None:
                     try:
                         target_user_ids = profile.get_team_member_ids()
-                        if obj_user.id in target_user_ids:
+                        if obj_user.id in target_user_ids and self._leader_owns_row(user, obj):
                             return True
                     except Exception:
                         logger.exception(

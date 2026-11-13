@@ -95,6 +95,14 @@ class PreviousYearsApiTests(YearCloseFixture):
         User.objects.filter(pk=self.superuser.pk).update(is_active=True)
         self.assertEqual(self.client.get(url).status_code, status.HTTP_200_OK)
 
+    def test_a_token_from_a_user_demoted_from_superuser_is_refused(self):
+        self.client.force_authenticate(self.superuser)
+        row = self.snapshot.files.filter(kind='company').first()
+        url = self.client.post(f'/api/plugins/year_close/files/{row.pk}/download-link/').data['url']
+
+        User.objects.filter(pk=self.superuser.pk).update(is_superuser=False)
+        self.assertEqual(self.client.get(url).status_code, status.HTTP_403_FORBIDDEN)
+
     def test_a_failed_file_cannot_be_linked(self):
         self.client.force_authenticate(self.superuser)
         row = self.snapshot.files.filter(kind='company').first()
