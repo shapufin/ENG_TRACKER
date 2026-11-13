@@ -37,7 +37,7 @@ from core.utils.timezone_local import business_today
 
 
 class MeetingViewSet(CsvExportMixin, HbprScopedQuerysetMixin, PluginPermissionMixin, viewsets.ModelViewSet):
-    """1-on-1s, TL-Italy syncs, and team meetings — a TL only ever manages
+    """1-on-1s, Manager syncs, and team meetings — a TL only ever manages
     their own (organizer=request.user); staff see everything."""
     plugin_name = 'tl_scorecard'
     serializer_class = MeetingSerializer

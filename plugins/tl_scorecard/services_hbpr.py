@@ -110,7 +110,7 @@ def _leader_members(assignments, scope):
     """Line Manager id -> set of in-scope member ids under that TL.
 
     Uses the same ``get_team_member_ids()`` sources the scope population uses
-    (direct `italian_tl`/`albanian_tl` FK **and** shared-team membership), then
+    (direct `italian_tl`/`albanian_tl` links only; shared teams are calendar-only, item 64), then
     intersects with the scope. Counting only the direct FK would report fewer
     members than the HBPR can actually see records for.
 

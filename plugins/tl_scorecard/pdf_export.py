@@ -60,7 +60,7 @@ def _meetings_section(story, trend):
     pdf.bar_chart(
         story, categories=months,
         series={
-            'TL-Italy syncs': [p['meetings']['tl_sync_count'] for p in trend],
+            'Manager syncs': [p['meetings']['tl_sync_count'] for p in trend],
             'Team meetings with HRBP': [p['meetings']['team_meetings_with_hrbp'] for p in trend],
         },
     )
@@ -79,7 +79,7 @@ def _meetings_section(story, trend):
     )
     pdf.data_table(
         story,
-        ['Month', 'TL-Italy syncs', 'Team meetings with HRBP', 'Reviews (YTD)', '1:1 compliance'],
+        ['Month', 'Manager syncs', 'Team meetings with HRBP', 'Reviews (YTD)', '1:1 compliance'],
         [
             [
                 _month_label(p['month']),

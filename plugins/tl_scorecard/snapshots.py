@@ -8,7 +8,6 @@ the command can backfill one, but it then reflects today's membership.
 from datetime import date, datetime, timedelta
 
 from django.contrib.auth.models import User
-from django.db.models import Q
 from django.utils import timezone
 
 from core.utils.metrics_freeze import freeze_at, is_frozen, is_past_freeze
@@ -38,24 +37,10 @@ def _leaders():
     this hourly. ``role_codes`` is only a cache of ``UserRole``, so the role rows are
     authoritative here.
     """
-    return (
-        User.objects.filter(
-            Q(led_teams__is_active=True)
-            | Q(italian_team_members__isnull=False)
-            | Q(albanian_team_members__isnull=False)
-            | Q(profile__is_italian_tl_role=True)
-            | Q(profile__is_albanian_tl_role=True)
-            | Q(
-                user_roles__is_active=True,
-                user_roles__is_deleted=False,
-                user_roles__role__code__in=TL_ROLE_CODES,
-            ),
-            is_active=True,
-            profile__isnull=False,
-        )
-        .select_related('profile')
-        .distinct()
-    )
+    from apps.users.services.leader_ownership import leader_user_ids
+
+    # One definition of a leader (audit 2026-11-13): never a second hand-written copy.
+    return User.objects.filter(id__in=leader_user_ids(), profile__isnull=False).select_related('profile')
 
 
 def freeze_scorecard_months(now: datetime | None = None, month: date | None = None) -> int:

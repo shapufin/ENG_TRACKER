@@ -8,6 +8,22 @@ import type { ApiError, BlockedRevocation, TLFilter } from "@/types";
 
 export const USERS_PAGE_SIZE = 50;
 
+/** Query roots whose lists are scoped by leader links; a link, role or status change makes them stale. */
+const LEADER_SCOPED_QUERY_ROOTS = [
+  "skills",
+  "tl-scorecard",
+  "ticket_kpi",
+  "team",
+  "dashboard",
+  "organigrama",
+] as const;
+
+export const invalidateLeaderScopedQueries = (qc: ReturnType<typeof useQueryClient>) => {
+  for (const root of LEADER_SCOPED_QUERY_ROOTS) {
+    qc.invalidateQueries({ queryKey: [root] });
+  }
+};
+
 interface UseUserManagementOptions {
   onUpdateSuccess?: () => void;
   onCreateSuccess?: () => void;
@@ -146,6 +162,7 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
     mutationFn: ({ id, payload }: UpdateVariables) => userService.updateUser(id, payload),
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ["admin"] });
+      invalidateLeaderScopedQueries(qc);
       if (result?.warnings?.length) {
         toast.warning("Updated, but a team leader link remains", {
           description: result.warnings.map((warning) => warning.message).join(" "),
@@ -205,6 +222,7 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
     mutationFn: (id: number) => userService.deleteUser(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin"] });
+      invalidateLeaderScopedQueries(qc);
       toast.success("User deleted");
       options?.onDeleteSuccess?.();
     },

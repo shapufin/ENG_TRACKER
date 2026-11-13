@@ -37,7 +37,7 @@ class DocumentedEventMixin(models.Model):
 class Meeting(TrackedFieldsMixin, BaseModel, DocumentedEventMixin):
     """Covers three KPIs at once (gap-audit findings #12/#13):
     1-on-1 compliance (meeting_type=one_on_one, counterparty=team member),
-    the TL-Italy sync count (meeting_type=tl_sync, counterparty is whoever
+    the Manager sync count (meeting_type=tl_sync, counterparty is whoever
     that Italy Technical Lead is — deliberately NOT constrained to
     get_team_member_ids(), since a sync counterparty is not a direct
     report), and team-meeting governance (meeting_type=team_meeting, `team`

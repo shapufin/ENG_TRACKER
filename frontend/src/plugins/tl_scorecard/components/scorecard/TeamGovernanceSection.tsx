@@ -153,7 +153,7 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
             progressPercent={meetings.one_on_one_compliance_pct ?? undefined}
           />
           <StatCard
-            label="TL-Italy syncs"
+            label="Manager syncs"
             labelClassName={MICRO_LABEL}
             value={meetings.tl_sync_count}
             icon={PhoneCall}
