@@ -93,12 +93,12 @@ class TLScorecardServiceTests(TestCase):
 
     def test_ot_turnaround_average(self):
         _overtime(self.member, self.month, approved_at=self.month)
-        result = ot_turnaround_metrics({self.member.id}, self.month_start)
+        result = ot_turnaround_metrics(self.leader.id, self.month_start)
         self.assertEqual(result['decided_count'], 1)
         self.assertEqual(result['avg_turnaround_days'], 0)
 
     def test_ot_turnaround_empty_when_nothing_decided(self):
-        result = ot_turnaround_metrics({self.member.id}, self.month_start)
+        result = ot_turnaround_metrics(self.leader.id, self.month_start)
         self.assertEqual(result['decided_count'], 0)
         self.assertIsNone(result['avg_turnaround_days'])
 

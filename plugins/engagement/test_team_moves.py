@@ -337,7 +337,10 @@ class EngagementTeamMoveTests(TestCase):
             rows = self._get('team-breakdown', self.lm1, month=NOV.isoformat()).data
             self.assertEqual(rows[0]['team_size'], 1)
             self.assertEqual(rows[0]['metrics']['overtime']['breaches'], 1)
-            self.assertEqual(rows[0]['engagement_score'], 0.0)
+            # Owner rule (2026-11-13): lm1 keeps the on-time decision they made on m1 before the swap,
+            # so the score is no longer 0; the breach of m2's pending request still counts.
+            self.assertEqual(rows[0]['metrics']['overtime']['decided'], 1)
+            self.assertEqual(rows[0]['engagement_score'], 75.0)
 
     def test_recompute_command_prunes_orphaned_unfrozen_snapshots(self):
         team = _make_team('Cmd Team', 'CMD')

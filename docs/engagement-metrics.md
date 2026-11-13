@@ -208,3 +208,5 @@ the aging buckets and the evidence-only signals. The weights are duplicated in
   API could still have it null.
 
 **Leader moves (2026-11-11):** `TLApprovalMetric` rows belong to (leader, team, month) and are never rewritten by a move; provisional months recompute from the current links, frozen months are final. See `docs/team-lifecycle.md` ("Moving a member...").
+
+**Overtime and standby by owner (2026-11-13, item 82).** For overtime and standby, a row is counted for the leader who owns it (the decider for a decided row, else the current leader) and for one of that leader's teams (`owned_row_ids_by_team`, `owner_team_id`). Leave is still counted per team members. A decision therefore stays with its approver after a move, and the same decision is never counted in two teams of one leader. A leader whose team has moved away still sees the team row while they have submitters (`_base_queryset`).

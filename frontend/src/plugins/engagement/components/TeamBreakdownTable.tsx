@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { toneSurfaceClass } from "@/components/ui/tone";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
-import { ArrowRightLeft, CalendarDays, HeartHandshake, Users2 } from "lucide-react";
+import { ArrowRightLeft, CalendarDays, HeartHandshake, UserMinus, Users2 } from "lucide-react";
 import type { EngagementTeamBreakdownRow } from "../types/engagement";
 
 interface TeamBreakdownTableProps {
@@ -69,6 +69,17 @@ export const TeamBreakdownTable: React.FC<TeamBreakdownTableProps> = ({ rows }) 
           return (
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="font-medium">{row.original.team_name}</span>
+              {row.original.team_size === 0 && row.original.active_submitters > 0 && (
+                <span
+                  role="status"
+                  aria-label="No current members; decisions kept for the leader who made them"
+                  title="No current members. The decisions this leader made here still count for them."
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${toneSurfaceClass.info}`}
+                >
+                  <UserMinus className="h-3 w-3 shrink-0" aria-hidden="true" />
+                  Moved away
+                </span>
+              )}
               {row.original.manager_changed && (
                 <span
                   role="status"

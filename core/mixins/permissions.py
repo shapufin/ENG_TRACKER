@@ -767,6 +767,19 @@ class WorkspaceFilterMixin:
             return queryset.none()
         return queryset.filter(user_id__in=target_user_ids)
 
+    def _filter_owned_by_leader(self, queryset, user):
+        """Leader queue scope for overtime and standby rows (owner rule, Option A).
+
+        Staff see every row. A leader sees the rows they own: decided rows they decided,
+        and pending or undecided rows of their current members. Each row has exactly one
+        owner (``apps.users.services.leader_ownership``), so no two leaders list it.
+        """
+        role = self._validate_team_leader_access(user)
+        if role == 'staff':
+            return queryset
+        from apps.users.services.leader_ownership import owned_by_leader_q
+        return queryset.filter(owned_by_leader_q(user.id))
+
     def filter_for_team_leader(self, queryset, user):
         """Filter TL-visible queryset, intersecting with workspace scope when set.
 

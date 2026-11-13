@@ -19,6 +19,7 @@ from core.utils.timezone_local import business_today
 
 from apps.leave_management.models import LeaveRequest, count_business_days
 from apps.overtime.models.core import OvertimeLog
+from apps.users.services.leader_ownership import owned_by_leader_q
 
 from .scope import scoreable_member_ids
 from .models import (
@@ -83,7 +84,7 @@ class TrendWindow:
             ).values_list('submitted_at', flat=True)
         ]
         self.overtime = list(OvertimeLog.objects.filter(
-            user_id__in=team_member_ids, submitted_at__gte=first_month, submitted_at__lt=end,
+            owned_by_leader_q(leader.id), submitted_at__gte=first_month, submitted_at__lt=end,
         ))
         self.meetings = list(Meeting.objects.filter(
             organizer=leader, occurred_on__gte=first_month, occurred_on__lt=end,
@@ -137,16 +138,20 @@ def leave_sla_metrics(team_member_ids, month: date, window: TrendWindow | None =
     }
 
 
-def ot_turnaround_metrics(team_member_ids, month: date, window: TrendWindow | None = None) -> dict:
+def ot_turnaround_metrics(leader_id: int, month: date, window: TrendWindow | None = None) -> dict:
     """Overtime approval turnaround only — deliberately NOT a measure of
     'unauthorized overtime': that KPI has no data source yet, since
-    OvertimeLog has no pre-approval concept."""
+    OvertimeLog has no pre-approval concept.
+
+    Counts the rows this leader owns (owner rule, ``leader_ownership``): a decision
+    stays with the leader who made it after the employee moves to another leader.
+    """
     month_start, month_end = _month_bounds(month)
     if window is not None:
         rows = window.overtime_in(month_start, month_end)
     else:
         rows = OvertimeLog.objects.filter(
-            user_id__in=team_member_ids, submitted_at__gte=month_start, submitted_at__lt=month_end,
+            owned_by_leader_q(leader_id), submitted_at__gte=month_start, submitted_at__lt=month_end,
         )
     decided = [r for r in rows if r.status in ('approved', 'rejected') and r.approved_at]
     if not decided:
@@ -658,7 +663,7 @@ def month_blocks(user, month: date, team_member_ids, window: TrendWindow | None 
     return {
         'team_size': len(team_member_ids),
         'leave': leave_sla_metrics(team_member_ids, month, window),
-        'overtime': ot_turnaround_metrics(team_member_ids, month, window),
+        'overtime': ot_turnaround_metrics(user.id, month, window),
         'meetings': meeting_compliance_metrics(user, team_member_ids, month, window),
     }
 
