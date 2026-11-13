@@ -120,6 +120,10 @@ def create_user_with_profile(
         raise UserValidationError('teams', archived_message)
     if albanian_tl_id and is_line_manager_after(None, roles=roles, flag=is_albanian_tl_role):
         raise UserValidationError('albanian_tl', LM_ABOVE_LM_ERROR)
+    for field, leader_id in (('albanian_tl', albanian_tl_id), ('italian_tl', italian_tl_id)):
+        problem = leader_link_error(None, field, leader_id)
+        if problem:
+            raise UserValidationError(field, problem)
 
     user = User.objects.create_user(
         username=username,
@@ -222,6 +226,11 @@ def update_user_profile(
     becomes_lm = is_line_manager_after(user.profile, roles=roles, flag=is_albanian_tl_role)
     if becomes_lm and albanian_tl_id and albanian_tl_id != user.profile.albanian_tl_id:
         raise UserValidationError('albanian_tl', LM_ABOVE_LM_ERROR)
+    for field, new_leader in (('albanian_tl', albanian_tl_id), ('italian_tl', italian_tl_id)):
+        if new_leader is not None and new_leader != getattr(user.profile, f'{field}_id'):
+            problem = leader_link_error(user.pk, field, new_leader)
+            if problem:
+                raise UserValidationError(field, problem)
 
     if first_name is not None:
         user.first_name = first_name
@@ -239,8 +248,10 @@ def update_user_profile(
     if hire_date is not None:
         profile.hire_date = hire_date
     if albanian_tl_id is not None:
+        record_leader_link_change(None, profile, 'albanian_tl', profile.albanian_tl_id, albanian_tl_id, source='import')
         profile.albanian_tl_id = albanian_tl_id
     if italian_tl_id is not None:
+        record_leader_link_change(None, profile, 'italian_tl', profile.italian_tl_id, italian_tl_id, source='import')
         profile.italian_tl_id = italian_tl_id
     if is_hr is not None:
         profile.is_hr_user = bool(is_hr)
@@ -297,6 +308,42 @@ MANAGED_ROLE_CODES = frozenset({'employee', 'italian_tl', 'albanian_tl', 'hr', '
 
 
 LM_ABOVE_LM_ERROR = 'A Line Manager cannot have a Line Manager above them.'
+SELF_LEADER_ERROR = 'A user cannot be their own leader.'
+
+
+def leader_link_error(user_id, field, leader_id) -> str | None:
+    """Why ``leader_id`` cannot be ``user_id``'s ``field`` leader, or None when it can.
+
+    One definition for every write path (admin edit, bulk edit, set_team_leader, importer,
+    deferred importer links). A link grants approval rights and payroll scope, so the target
+    must be an active user who holds that leader role; a user is never their own leader and
+    two leaders never point at each other through the same link. A falsy id clears the link.
+    """
+    if not leader_id:
+        return None
+    if user_id is not None and int(leader_id) == int(user_id):
+        return SELF_LEADER_ERROR
+    leader = UserProfile.objects.filter(user_id=leader_id).select_related('user').first()
+    if leader is None or not leader.user.is_active:
+        return f'User {leader_id} is not an active {field} team leader'
+    holds_role = leader.is_italian_tl if field == 'italian_tl' else leader.is_albanian_tl
+    if not holds_role:
+        return f'User {leader_id} is not currently an active {field} team leader'
+    if user_id is not None and getattr(leader, f'{field}_id') == int(user_id):
+        return 'Leaders cannot report to each other.'
+    return None
+
+
+def record_leader_link_change(request, profile, field, old_id, new_id, *, actor=None, source='') -> None:
+    """Audit one leader-link change (who moved an employee, from whom, to whom)."""
+    if old_id == new_id:
+        return
+    from core.services.lifecycle import record_lifecycle_event
+
+    record_lifecycle_event(
+        request, profile.user, 'user', 'UPDATE', 'leader_link_changed',
+        old={field: old_id}, new={field: new_id}, extra={'field': field, 'source': source}, actor=actor,
+    )
 
 
 def is_line_manager_after(profile, *, roles=None, flag=None) -> bool:

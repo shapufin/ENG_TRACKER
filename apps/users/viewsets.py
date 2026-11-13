@@ -422,15 +422,9 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         Same rule as UserProfileViewSet.set_team_leader. A falsy id clears the
         link and is always valid.
         """
-        if not leader_id:
-            return None
-        leader_profile = UserProfile.objects.filter(user_id=leader_id).first()
-        is_valid_tl = leader_profile is not None and (
-            leader_profile.is_italian_tl if field == 'italian_tl' else leader_profile.is_albanian_tl
-        )
-        if is_valid_tl:
-            return None
-        return f'User {leader_id} is not currently an active {field} team leader'
+        from .services.user_creation import leader_link_error
+
+        return leader_link_error(None, field, leader_id)
 
     @staticmethod
     def _forbid_staff_on_staff(request, target, message):
@@ -664,7 +658,9 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             _sync_legacy_roles,
             clear_lm_link_on_promotion,
             is_line_manager_after,
+            leader_link_error,
             no_manager_warning,
+            record_leader_link_change,
         )
         from apps.permissions.models import Role
         from apps.permissions.services.role_service import (
@@ -797,7 +793,20 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     apply_tech_assignments(
                         profile, tech_entries, assigned_by=request.user
                     )
+                for leader_field in ('italian_tl', 'albanian_tl'):
+                    if leader_field in leader_ids:
+                        problem = leader_link_error(profile.user_id, leader_field, leader_ids[leader_field])
+                        if problem:
+                            transaction.set_rollback(True)
+                            return Response(
+                                {'error': f'{profile.user.username}: {problem}'},
+                                status=status.HTTP_400_BAD_REQUEST,
+                            )
                 if 'italian_tl' in leader_ids:
+                    record_leader_link_change(
+                        request, profile, 'italian_tl', profile.italian_tl_id, leader_ids['italian_tl'],
+                        actor=request.user, source='bulk_update',
+                    )
                     profile.italian_tl_id = leader_ids['italian_tl']
                 was_lm = profile.is_albanian_tl
                 becomes_lm = is_line_manager_after(
@@ -811,6 +820,10 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                         status=status.HTTP_400_BAD_REQUEST,
                     )
                 if 'albanian_tl' in leader_ids:
+                    record_leader_link_change(
+                        request, profile, 'albanian_tl', profile.albanian_tl_id, leader_ids['albanian_tl'],
+                        actor=request.user, source='bulk_update',
+                    )
                     profile.albanian_tl_id = leader_ids['albanian_tl']
                 if becomes_lm:
                     clear_lm_link_on_promotion(profile, request=request, actor=request.user)
@@ -910,6 +923,16 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                 # PERF-14: the update row counts are logged; the old per-user COUNT
                 # queries existed only to write log lines.
                 with transaction.atomic():
+                    orphaned_ids = list(
+                        UserProfile.objects.filter(Q(italian_tl=user) | Q(albanian_tl=user))
+                        .values_list('user_id', flat=True)
+                    )
+                    if orphaned_ids:
+                        from core.services.lifecycle import record_lifecycle_event
+                        record_lifecycle_event(
+                            request, user, 'user', 'DELETE', 'leader_links_cleared',
+                            extra={'cleared_for_user_ids': orphaned_ids}, actor=request.user,
+                        )
                     italian_cleared = UserProfile.objects.filter(italian_tl=user).update(italian_tl=None)
                     albanian_cleared = UserProfile.objects.filter(albanian_tl=user).update(albanian_tl=None)
                     led_cleared = Team.objects.filter(team_leader=user).update(team_leader=None)
@@ -1017,7 +1040,9 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             _sync_roles,
             clear_lm_link_on_promotion,
             is_line_manager_after,
+            leader_link_error,
             no_manager_warning,
+            record_leader_link_change,
         )
         from apps.permissions.services.role_service import find_blocked_tl_revocations
         from .services.hbpr_assignments import hbpr_revocation_refusal
@@ -1173,10 +1198,18 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             except TechAssignmentError as exc:
                 transaction.set_rollback(True)
                 return Response({'error': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        if 'albanian_tl' in data:
-            profile.albanian_tl_id = data['albanian_tl'] if data['albanian_tl'] else None
-        if 'italian_tl' in data:
-            profile.italian_tl_id = data['italian_tl'] if data['italian_tl'] else None
+        for leader_field in ('albanian_tl', 'italian_tl'):
+            if leader_field in data:
+                problem = leader_link_error(profile.user_id, leader_field, data[leader_field])
+                if problem:
+                    transaction.set_rollback(True)
+                    return Response({'error': problem, leader_field: [problem]}, status=status.HTTP_400_BAD_REQUEST)
+                new_leader = data[leader_field] if data[leader_field] else None
+                record_leader_link_change(
+                    request, profile, leader_field, getattr(profile, f'{leader_field}_id'), new_leader,
+                    actor=request.user, source='update_user',
+                )
+                setattr(profile, f'{leader_field}_id', new_leader)
         promotion_warnings = []
         if becomes_lm:
             clear_lm_link_on_promotion(profile, request=request, actor=request.user)
@@ -1701,6 +1734,11 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
 
         raw_leader_id = request.data.get('team_leader_user_id')
         if raw_leader_id in (None, ''):
+            from .services.user_creation import record_leader_link_change
+
+            record_leader_link_change(
+                request, profile, role, getattr(profile, f'{role}_id'), None, actor=request.user, source='set_team_leader',
+            )
             setattr(profile, f'{role}_id', None)
             profile.save(update_fields=[f'{role}_id'])
             return Response(UserProfileSerializer(profile).data)
@@ -1712,21 +1750,20 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
                 {'error': 'team_leader_user_id must be an integer or null'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        leader_profile = UserProfile.objects.filter(user_id=leader_id).select_related('user').first()
-        is_valid_tl = leader_profile is not None and (
-            leader_profile.is_italian_tl if role == 'italian_tl' else leader_profile.is_albanian_tl
-        )
-        if not is_valid_tl:
-            return Response(
-                {'error': f'User {leader_id} is not currently an active {role} team leader'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        from .services.user_creation import leader_link_error, record_leader_link_change
+
+        problem = leader_link_error(profile.user_id, role, leader_id)
+        if problem:
+            return Response({'error': problem}, status=status.HTTP_400_BAD_REQUEST)
 
         if role == 'albanian_tl' and profile.is_albanian_tl:
             return Response(
                 {'error': 'A Line Manager cannot have a Line Manager above them.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        record_leader_link_change(
+            request, profile, role, getattr(profile, f'{role}_id'), leader_id, actor=request.user, source='set_team_leader',
+        )
         setattr(profile, f'{role}_id', leader_id)
         profile.save(update_fields=[f'{role}_id'])
         return Response(UserProfileSerializer(profile).data)

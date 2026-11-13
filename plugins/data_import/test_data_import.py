@@ -351,9 +351,14 @@ class UserImporterTests(TestCase):
     # --- TL chain (italian_tl_username / albanian_tl_username) ---------------
 
     def _make_leader(self, username):
-        return User.objects.create_user(
+        # A link target must hold the leader role (audit 2026-11-13), so the test leaders do.
+        leader = User.objects.create_user(
             username=username, email=f"{username}@example.com", password="password"
         )
+        leader.profile.is_italian_tl_role = True
+        leader.profile.is_albanian_tl_role = True
+        leader.profile.save()
+        return leader
 
     def test_create_user_links_the_tl_chain_by_username(self):
         italian = self._make_leader("it.leader")
@@ -402,12 +407,14 @@ class UserImporterTests(TestCase):
                 "__row_index": 1,
                 "username": "it.boss",
                 "email": "it.boss@example.com",
+                "is_italian_tl": True,
                 "albanian_tl_username": "al.boss",
             },
             {
                 "__row_index": 2,
                 "username": "al.boss",
                 "email": "al.boss@example.com",
+                "is_albanian_tl": True,
                 "italian_tl_username": "it.boss",
             },
         ]
