@@ -171,7 +171,7 @@ const SHAPE_CATEGORIES: { category: string; items: ShapePaletteItem[] }[] = [
       {
         shape: "section",
         label: "Group Section",
-        icon: <Folder className="h-3.5 w-3.5 text-slate-500" />,
+        icon: <Folder className="h-3.5 w-3.5 text-muted-foreground" />,
       },
       {
         shape: "label",
