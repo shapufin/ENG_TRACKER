@@ -386,6 +386,7 @@ jobs:
           docker run -d --name smoke --network host \
             -e SECRET_KEY=ci-smoke-key-not-a-secret-long-enough-for-the-production-guard \
             -e MFA_ENCRYPTION_KEYS=eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg= \
+            -e BACKUP_ENCRYPTION_KEYS=eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg= \
             -e ALLOWED_HOSTS=localhost \
             -e FRONTEND_URL=http://localhost \
             -e DB_HOST=127.0.0.1 -e DB_PORT=5432 \
