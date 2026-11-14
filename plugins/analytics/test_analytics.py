@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 import io
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
@@ -1002,12 +1002,16 @@ class SoftDeleteExclusionTests(TestCase):
         cls.deleted_sb = StandbyLog.objects.create(
             user=cls.member, date=today, hours=12, status='approved', is_deleted=True,
         )
+        # Vacation needs a business day: on a weekend `today` has none and the model refuses it.
+        leave_day = today
+        while leave_day.weekday() >= 5:
+            leave_day -= timedelta(days=1)
         cls.live_leave = LeaveRequest.objects.create(
-            user=cls.member, request_type='vacation', start_date=today, end_date=today,
+            user=cls.member, request_type='vacation', start_date=leave_day, end_date=leave_day,
             status='approved', reason='Live',
         )
         cls.deleted_leave = LeaveRequest.objects.create(
-            user=cls.member, request_type='vacation', start_date=today, end_date=today,
+            user=cls.member, request_type='vacation', start_date=leave_day, end_date=leave_day,
             status='approved', reason='Deleted', is_deleted=True,
         )
 
