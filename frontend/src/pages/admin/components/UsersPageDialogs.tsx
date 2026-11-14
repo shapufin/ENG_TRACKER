@@ -4,6 +4,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserEditFormDialog } from "./UserEditFormDialog";
+import { EraseUserDialog } from "./EraseUserDialog";
 import { UserCreateFormDialog } from "./UserCreateFormDialog";
 import {
   PluginCreateCRUserDialog,
@@ -125,6 +126,15 @@ export const UsersPageDialogs: React.FC<UsersPageDialogsProps> = ({ state }) => 
         isConfirming={state.deleteMutation.isPending}
         variant="destructive"
       />
+
+      {state.eraseTarget && (
+        <EraseUserDialog
+          key={state.eraseTarget.user.id}
+          userId={state.eraseTarget.user.id}
+          username={state.eraseTarget.user.username}
+          onClose={() => state.setEraseTarget(null)}
+        />
+      )}
 
       <TlRevokeBlockedDialog
         // Remount per blocked payload — the dialog's resolved/saving state

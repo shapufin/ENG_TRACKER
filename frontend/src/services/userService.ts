@@ -55,6 +55,20 @@ interface ApprovalPeriodFinalizeResult {
   already_finalized: boolean;
 }
 
+interface UserErasePreview {
+  user_id: number;
+  username: string;
+  can_erase: boolean;
+  reasons: string[];
+  will_delete: Record<string, number>;
+  about_other_people: Record<string, number>;
+  protected: Record<string, number>;
+  closed_years: number[];
+  leader_links_cleared: Record<string, number>;
+  confirm_phrase: string;
+  min_reason_length: number;
+}
+
 export const userService = {
   async getUsers(params?: Record<string, unknown>): Promise<PaginatedResponse<User>> {
     const { data } = await api.get<PaginatedResponse<User>>("/users/users/", { params });
@@ -78,6 +92,21 @@ export const userService = {
 
   async deleteUser(id: number): Promise<void> {
     await api.delete(`/users/users/${id}/`);
+  },
+
+  /** Superuser override: what erasing this user would destroy (changes nothing). */
+  async getErasePreview(id: number): Promise<UserErasePreview> {
+    const { data } = await api.get<UserErasePreview>(`/users/users/${id}/erase/`);
+    return data;
+  },
+
+  /** Superuser override: erase an inactive user together with their records. */
+  async eraseUser(
+    id: number,
+    payload: { confirm: string; reason: string; acknowledge_other_people_records: boolean }
+  ): Promise<{ erased: boolean }> {
+    const { data } = await api.post<{ erased: boolean }>(`/users/users/${id}/erase/`, payload);
+    return data;
   },
 
   /** Self-assign the clients the current user works for (Settings page). */

@@ -81,13 +81,17 @@ class NotificationPlugin(BasePlugin):
 
     def ready(self):
         # Import signal handlers only after the plugin is enabled and initialized.
-        from . import period_close_signals, signals
+        from . import account_signals, period_close_signals, signals
 
         signals.connect()
         period_close_signals.connect()
+        account_signals.connect()
 
     def disable(self):
         from django.db.models.signals import post_delete, post_save, pre_save
+
+        from . import account_signals
+        account_signals.disconnect()
 
         from apps.leave_management.models import LeaveRequest
         from apps.overtime.models import OvertimeLog

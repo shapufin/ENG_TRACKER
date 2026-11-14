@@ -36,7 +36,8 @@ checklist and the map.
 5. A past month is recomputed with that month's data (`leader_team_pairs(..., month)`), never today's.
 6. Never rewrite `approved_by`, `flagged_by`, `organizer`, `tl`, `leader` to hand records over (item 69).
 7. A new request type with approvals needs the owner rule added deliberately, or an explicit decision to follow the links (like leave).
-8. A new role or movement (PM, deputy, part-time, secondment, team merge): answer `docs/team-lifecycle.md` section 8, then run the checklist below.
+8. A person who leaves is deactivated, never deleted (item 83). A new model with a CASCADE key to `User` blocks user deletes by default; add it to `HOUSEKEEPING_MODELS` only when its rows are account-only. Evidence that must survive the superuser erase needs a `PROTECT` key to `User`.
+9. A new role or movement (PM, deputy, part-time, secondment, team merge): answer `docs/team-lifecycle.md` section 8, then run the checklist below.
 
 ## 4. Checklist before shipping a role or leader change
 Run the simulations and extend them with the new movement:

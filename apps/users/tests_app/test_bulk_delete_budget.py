@@ -51,7 +51,9 @@ class BulkDeleteQueryTests(TestCase):
         # 2026-10-26: 162/user — ClosedYear, YearSnapshot and YearSnapshotFile each
         # carry a User FK (the latter two through BaseModel.deleted_by), so the
         # collector visits three more relations per deleted user. Not a regression.
-        self.assertLessEqual((large - small) / 6, 170)
+        # 2026-11-14: 196/user — the delete-blocker check counts each business relation
+        # (one COUNT per CASCADE relation outside the housekeeping list) before deleting.
+        self.assertLessEqual((large - small) / 6, 205)
 
 
 class ProtectedUserDeleteTests(TestCase):

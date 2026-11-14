@@ -142,6 +142,7 @@ export const useUsersPage = () => {
   const [form, setForm] = useState({ ...emptyEditForm });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [confirmDelete, setConfirmDelete] = useState<UserProfile | null>(null);
+  const [eraseTarget, setEraseTarget] = useState<UserProfile | null>(null);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   // ?role= so the command palette can open the tab that contains a given person.
   const [tlFilter, setTlFilter] = useUrlParamState("role", TL_FILTERS, "employee");
@@ -228,6 +229,17 @@ export const useUsersPage = () => {
       setResetValue("");
     },
     onDeleteSuccess: () => setConfirmDelete(null),
+    // A user with records is refused (409 + blockers). A superuser is offered the
+    // erase override; everyone else sees the server's "deactivate instead" message.
+    onDeleteError: (err) => {
+      const response = err.response;
+      if (!isSuperuser || response?.status !== 409 || !response.data?.blockers || !confirmDelete) {
+        return false;
+      }
+      setEraseTarget(confirmDelete);
+      setConfirmDelete(null);
+      return true;
+    },
   });
 
   // A page past the end (the last row of the last page was just deleted, or
@@ -457,6 +469,8 @@ export const useUsersPage = () => {
     setFormErrors,
     confirmDelete,
     setConfirmDelete,
+    eraseTarget,
+    setEraseTarget,
     rowSelection,
     setRowSelection,
     handleRowSelectionChange,
