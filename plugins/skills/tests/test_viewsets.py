@@ -330,7 +330,7 @@ class UserSkillViewSetTest(ViewSetTestCase, TestCase):
         self.assertEqual(us.level, 3)
 
     def test_hr_who_is_also_tl_can_still_rate_team_member(self):
-        self.tl.profile.is_hr_user = True
+        assign_role(self.tl, 'hr')
         assign_role(self.tl, 'hr')
         self.tl.profile.save()
         us = UserSkill.objects.create(

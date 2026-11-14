@@ -145,9 +145,8 @@ class LinkRepointTests(TestCase):
         cls.factory = APIRequestFactory()
         cls.owner = User.objects.create_user(username='rp_owner', password='x')
         cls.hr = User.objects.create_user(username='rp_hr', password='x')
-        cls.hr.profile.is_hr_user = True
         assign_role(cls.hr, 'hr')
-        cls.hr.profile.save(update_fields=['is_hr_user'])
+        assign_role(cls.hr, 'hr')
         cls.client_obj = Client.objects.create(name='RP Client', code='RP')
 
         def make(user, ref):

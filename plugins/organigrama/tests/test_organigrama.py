@@ -12,7 +12,7 @@ Verifies:
 - No N+1 queries (assertNumQueries).
 - Empty/flat hierarchy (no TL assignments) returns empty or minimal tree.
 """
-from apps.permissions.services.role_service import assign_role
+from apps.permissions.services.role_service import assign_role, revoke_role
 from django.test import TestCase
 from django.contrib.auth.models import User
 from rest_framework.test import APIRequestFactory, force_authenticate
@@ -37,18 +37,17 @@ class OrganigramaTreeTestCase(TestCase):
         cls.italian_tl = User.objects.create_user(
             username="it_tl", password="test123", first_name="Italian", last_name="Leader"
         )
-        cls.italian_tl.profile.is_italian_tl_role = True
         assign_role(cls.italian_tl, 'italian_tl')
-        cls.italian_tl.profile.save(update_fields=["is_italian_tl_role"])
+        assign_role(cls.italian_tl, 'italian_tl')
 
         # Line Manager (reports to Manager)
         cls.albanian_tl = User.objects.create_user(
             username="al_tl", password="test123", first_name="Albanian", last_name="Leader"
         )
-        cls.albanian_tl.profile.is_albanian_tl_role = True
+        assign_role(cls.albanian_tl, 'albanian_tl')
         assign_role(cls.albanian_tl, 'albanian_tl')
         cls.albanian_tl.profile.italian_tl = cls.italian_tl
-        cls.albanian_tl.profile.save(update_fields=["is_albanian_tl_role", "italian_tl"])
+        cls.albanian_tl.profile.save(update_fields=["italian_tl"])
 
         # Employees (report to Line Manager)
         cls.emp1 = User.objects.create_user(
@@ -78,9 +77,8 @@ class OrganigramaTreeTestCase(TestCase):
         cls.hr = User.objects.create_user(
             username="hr_user", password="test123", first_name="HR", last_name="User"
         )
-        cls.hr.profile.is_hr_user = True
         assign_role(cls.hr, 'hr')
-        cls.hr.profile.save(update_fields=["is_hr_user"])
+        assign_role(cls.hr, 'hr')
 
         # Standalone employee (no TL assignment)
         cls.standalone_emp = User.objects.create_user(
@@ -92,19 +90,18 @@ class OrganigramaTreeTestCase(TestCase):
             username="it_tl2", password="test123",
             first_name="Italian2", last_name="Leader",
         )
-        cls.italian_tl2.profile.is_italian_tl_role = True
         assign_role(cls.italian_tl2, 'italian_tl')
-        cls.italian_tl2.profile.save(update_fields=["is_italian_tl_role"])
+        assign_role(cls.italian_tl2, 'italian_tl')
 
         cls.albanian_tl2 = User.objects.create_user(
             username="al_tl2", password="test123",
             first_name="Albanian2", last_name="Leader",
         )
-        cls.albanian_tl2.profile.is_albanian_tl_role = True
+        assign_role(cls.albanian_tl2, 'albanian_tl')
         assign_role(cls.albanian_tl2, 'albanian_tl')
         cls.albanian_tl2.profile.italian_tl = cls.italian_tl2
         cls.albanian_tl2.profile.save(
-            update_fields=["is_albanian_tl_role", "italian_tl"]
+            update_fields=["italian_tl"]
         )
 
         cls.emp3 = User.objects.create_user(
@@ -373,9 +370,8 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
             username="it_tl_team2", password="test123",
             first_name="Italian", last_name="TeamTwo",
         )
-        second_italian_tl.profile.is_italian_tl_role = True
         assign_role(second_italian_tl, 'italian_tl')
-        second_italian_tl.profile.save(update_fields=["is_italian_tl_role"])
+        assign_role(second_italian_tl, 'italian_tl')
 
         self.emp2.profile.italian_tl = second_italian_tl
         self.emp2.profile.save(update_fields=["italian_tl"])
@@ -417,9 +413,8 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
             username="it_tl_empty", password="test123",
             first_name="Italian", last_name="Empty",
         )
-        empty_it_tl.profile.is_italian_tl_role = True
         assign_role(empty_it_tl, 'italian_tl')
-        empty_it_tl.profile.save(update_fields=["is_italian_tl_role"])
+        assign_role(empty_it_tl, 'italian_tl')
 
         # Give the Line Manager an empty manager line...
         self.albanian_tl.profile.italian_tl = empty_it_tl
@@ -450,10 +445,10 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
             username="lonely_al", password="test123",
             first_name="Lonely", last_name="AlTl",
         )
-        lonely_al.profile.is_albanian_tl_role = True
+        assign_role(lonely_al, 'albanian_tl')
         assign_role(lonely_al, 'albanian_tl')
         lonely_al.profile.italian_tl = self.italian_tl
-        lonely_al.profile.save(update_fields=["is_albanian_tl_role", "italian_tl"])
+        lonely_al.profile.save(update_fields=["italian_tl"])
 
         resp = self._get_tree(lonely_al)
         self.assertEqual(resp.status_code, 200)
@@ -596,9 +591,8 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
             username="it_tl_team2", password="test123",
             first_name="Italian", last_name="TeamTwo",
         )
-        second_italian_tl.profile.is_italian_tl_role = True
         assign_role(second_italian_tl, 'italian_tl')
-        second_italian_tl.profile.save(update_fields=["is_italian_tl_role"])
+        assign_role(second_italian_tl, 'italian_tl')
 
         self.emp2.profile.italian_tl = second_italian_tl
         self.emp2.profile.save(update_fields=["italian_tl"])
@@ -725,20 +719,19 @@ class TestTreePerformanceRealistic(TestCase):
                 username=f"it_{i}", password="test123",
                 first_name=f"It{i}", last_name="TL",
             )
-            it.profile.is_italian_tl_role = True
             assign_role(it, 'italian_tl')
-            it.profile.save(update_fields=["is_italian_tl_role"])
+            assign_role(it, 'italian_tl')
             cls.italian_tls.append(it)
             for j in range(2):
                 al = User.objects.create_user(
                     username=f"al_{i}_{j}", password="test123",
                     first_name=f"Al{i}{j}", last_name="TL",
                 )
-                al.profile.is_albanian_tl_role = True
+                assign_role(al, 'albanian_tl')
                 assign_role(al, 'albanian_tl')
                 al.profile.italian_tl = it
                 al.profile.save(
-                    update_fields=["is_albanian_tl_role", "italian_tl"]
+                    update_fields=["italian_tl"]
                 )
                 cls.albanian_tls.append(al)
                 for k in range(2):
@@ -784,15 +777,14 @@ class TestTreePerformanceRealistic(TestCase):
         base = len(ctx1.captured_queries)
         # Add another full hierarchy branch
         it = User.objects.create_user(username="it_x", password="t")
-        it.profile.is_italian_tl_role = True
         assign_role(it, 'italian_tl')
-        it.profile.save(update_fields=["is_italian_tl_role"])
+        assign_role(it, 'italian_tl')
         for j in range(2):
             al = User.objects.create_user(username=f"al_x_{j}", password="t")
-            al.profile.is_albanian_tl_role = True
+            assign_role(al, 'albanian_tl')
             assign_role(al, 'albanian_tl')
             al.profile.italian_tl = it
-            al.profile.save(update_fields=["is_albanian_tl_role", "italian_tl"])
+            al.profile.save(update_fields=["italian_tl"])
             for k in range(2):
                 emp = User.objects.create_user(username=f"emp_x_{j}_{k}", password="t")
                 emp.profile.albanian_tl = al
@@ -1053,7 +1045,7 @@ class RoleBadgeTestCase(OrganigramaTreeTestCase):
         self.italian_tl.profile.role_codes = ["italian_tl"]
         self.assertEqual(role_badge(self.italian_tl.profile), "italian_tl")
         # Line Manager via role_codes only (clear the legacy flag).
-        self.albanian_tl.profile.is_albanian_tl_role = False
+        revoke_role(self.albanian_tl, 'albanian_tl')
         self.albanian_tl.profile.role_codes = ["albanian_tl"]
         self.assertEqual(role_badge(self.albanian_tl.profile), "albanian_tl")
 
@@ -1081,9 +1073,8 @@ class TestSubtreeTechLevelQueryBudget(TestCase):
             tech=cls.tech, name="L3", code="L3", rank=3
         )
         cls.albanian_tl = User.objects.create_user(username="qb_al_tl", password="t")
-        cls.albanian_tl.profile.is_albanian_tl_role = True
         assign_role(cls.albanian_tl, 'albanian_tl')
-        cls.albanian_tl.profile.save(update_fields=["is_albanian_tl_role"])
+        assign_role(cls.albanian_tl, 'albanian_tl')
 
     def _add_members(self, count, offset=0):
         for i in range(count):

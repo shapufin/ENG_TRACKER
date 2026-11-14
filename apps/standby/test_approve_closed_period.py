@@ -25,9 +25,9 @@ class ApproveInClosedPeriodTests(TestCase):
             self.addCleanup(patcher.stop)
         self.api = APIClient()
         self.tl = User.objects.create_user(username='ap-tl', password='pass')
-        self.tl.profile.is_albanian_tl_role = True
         assign_role(self.tl, 'albanian_tl')
-        self.tl.profile.save(update_fields=['is_albanian_tl_role', 'updated_at'])
+        assign_role(self.tl, 'albanian_tl')
+        self.tl.profile.save(update_fields=['updated_at'])
         self.emp = User.objects.create_user(username='ap-emp', password='pass')
         team = Team.objects.create(name='AP', code='AP', team_leader=self.tl)
         TeamMembership.objects.create(user_profile=self.emp.profile, team=team, is_primary_team=True)

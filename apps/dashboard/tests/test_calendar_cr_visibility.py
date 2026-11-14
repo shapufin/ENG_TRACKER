@@ -30,9 +30,8 @@ class CalendarControlRoomVisibilityTests(TestCase):
         self.regular_user = User.objects.create_user(username="regular", password="testpass")
         self.cr_user = User.objects.create_user(username="cr-user", password="testpass")
         self.multi_role_user = User.objects.create_user(username="cr-hr", password="testpass")
-        self.multi_role_user.profile.is_hr_user = True
         assign_role(self.multi_role_user, 'hr')
-        self.multi_role_user.profile.save(update_fields=["is_hr_user"])
+        assign_role(self.multi_role_user, 'hr')
 
         for user in (self.regular_user, self.cr_user, self.multi_role_user):
             TeamMembership.objects.create(user_profile=user.profile, team=self.team)

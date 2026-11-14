@@ -12,7 +12,7 @@ from plugins.skills.viewsets import SkillMatrixViewSet
 class MatrixHrFilterTests(TestCase):
     def setUp(self):
         self.hr = User.objects.create_user(username='mhf_hr', password='x')
-        self.hr.profile.is_hr_user = True
+        assign_role(self.hr, 'hr')
         assign_role(self.hr, 'hr')
         self.hr.profile.save()
         self.it_tl = User.objects.create_user(username='mhf_it', password='x')
@@ -44,7 +44,7 @@ class MatrixHrFilterTests(TestCase):
         self.assertEqual(self._names(self.hr, tech=self.tech.id), {'mhf_b'})
 
     def test_tl_filters_cannot_widen_a_tl_scope(self):
-        self.it_tl.profile.is_italian_tl_role = True
+        assign_role(self.it_tl, 'italian_tl')
         assign_role(self.it_tl, 'italian_tl')
         self.it_tl.profile.save()
         # al_tl's member is outside it_tl's team, so it never appears.

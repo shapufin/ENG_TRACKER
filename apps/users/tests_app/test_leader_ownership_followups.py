@@ -20,7 +20,6 @@ from apps.users.services.leader_ownership import leader_user_ids, owned_by_leade
 
 def _leader(username, *, line=True):
     user = User.objects.create_user(username=username, password='x')
-    setattr(user.profile, 'is_albanian_tl_role' if line else 'is_italian_tl_role', True)
     user.profile.save()
     assign_role(user, 'albanian_tl' if line else 'italian_tl')
     return user

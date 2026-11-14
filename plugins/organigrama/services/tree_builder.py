@@ -25,6 +25,7 @@ that branch's employees only`.
 Scoping reuses UserProfile.get_team_member_ids() for TL scope, matching
 the overtime/standby/analytics permission model.
 """
+from apps.permissions.services.role_service import users_with_role_q
 import logging
 from typing import Dict, List, Any, Set
 
@@ -103,18 +104,12 @@ def _has_role_q(role_code: str) -> Q:
     apps/permissions/services/role_service.py). Checking the boolean flag
     alone misses anyone whose role only comes from Role/UserRole.
     """
-    flag_field = f"profile__is_{role_code}_role"
-    return Q(**{flag_field: True}) | Q(
-        user_roles__role__code=role_code, user_roles__is_active=True
-    )
+    return users_with_role_q(role_code)
 
 
 def _profile_has_role_q(role_code: str) -> Q:
     """Match role check as a queryable Q on the UserProfile model."""
-    flag_field = f"is_{role_code}_role"
-    return Q(**{flag_field: True}) | Q(
-        user__user_roles__role__code=role_code, user__user_roles__is_active=True
-    )
+    return users_with_role_q(role_code, prefix="user__")
 
 
 def _get_italian_tls() -> List[User]:

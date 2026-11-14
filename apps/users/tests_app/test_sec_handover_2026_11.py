@@ -22,7 +22,7 @@ class ItalianTeamMembersScopeTests(APITestCase):
         cls.outsider = User.objects.create_user(username='itm_out', password='x')
         cls.staff = User.objects.create_user(username='itm_staff', password='x', is_staff=True)
         cls.hr = User.objects.create_user(username='itm_hr', password='x')
-        cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         assign_role(cls.hr, 'hr')
         cls.hr.profile.save()
 

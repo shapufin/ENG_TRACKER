@@ -49,7 +49,7 @@ CLOSED_YEAR_LOCKED_MODELS = ('overtime.overtimelog', 'standby.standbylog')
 PRIVILEGE_FIELDS = {
     'auth.user': ('is_superuser', 'is_staff', 'is_active', 'password'),
     'users.userprofile': (
-        'is_hr_user', 'is_italian_tl_role', 'is_albanian_tl_role', 'mfa_required',
+        'mfa_required',
         # A leader link grants approval rights and payroll scope (audit 2026-11-13).
         'italian_tl', 'albanian_tl',
     ),

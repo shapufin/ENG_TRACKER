@@ -23,7 +23,7 @@ class ChildListScopeTests(APITestCase):
         cls.mate.profile.save()
         cls.admin = User.objects.create_user(username='sc_admin', password='x', is_staff=True)
         cls.hr = User.objects.create_user(username='sc_hr', password='x')
-        cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         assign_role(cls.hr, 'hr')
         cls.hr.profile.save()
         cls.tech = Tech.objects.create(name='Scope Tech', code='SCT')

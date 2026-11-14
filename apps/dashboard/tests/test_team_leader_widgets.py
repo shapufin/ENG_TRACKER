@@ -57,7 +57,7 @@ class TeamStatsActiveOperatorCountTests(TestCase):
 
     def test_active_operator_count_is_zero_on_no_team_response(self):
         no_profile_user = User.objects.create_user(username="lonely", password="testpass")
-        no_profile_user.profile.is_italian_tl_role = True
+        assign_role(no_profile_user, 'italian_tl')
         assign_role(no_profile_user, 'italian_tl')
         no_profile_user.profile.save()
         self.client.force_authenticate(no_profile_user)

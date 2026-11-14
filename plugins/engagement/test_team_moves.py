@@ -42,7 +42,7 @@ class EngagementTeamMoveTests(TestCase):
         self.client_obj = _make_client()
         self.staff = _make_user('tm_staff', is_staff=True)
         self.hr = _make_user('tm_hr')
-        self.hr.profile.is_hr_user = True
+        assign_role(self.hr, 'hr')
         assign_role(self.hr, 'hr')
         self.hr.profile.role_codes = ['hr']
         self.hr.profile.save()

@@ -13,7 +13,7 @@ class MatrixWithoutItalianTlTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_user('nit_admin', password='x', is_staff=True)
         self.flagged_tl = User.objects.create_user('nit_flag', password='x')
-        self.flagged_tl.profile.is_italian_tl_role = True
+        assign_role(self.flagged_tl, 'italian_tl')
         assign_role(self.flagged_tl, 'italian_tl')
         self.flagged_tl.profile.save()
         self.linked_tl = User.objects.create_user('nit_linked', password='x')

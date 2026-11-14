@@ -1194,7 +1194,7 @@ class KPIEvidenceTests(TestCase):
 
     def test_tl_cannot_reach_a_managers_document(self):
         manager = User.objects.create_user(username='evidence_manager', password='testpass123')
-        manager.profile.is_italian_tl_role = True
+        assign_role(manager, 'italian_tl')
         assign_role(manager, 'italian_tl')
         manager.profile.albanian_tl = self.tl
         manager.profile.save()
@@ -1371,7 +1371,7 @@ class KPIEvidenceTests(TestCase):
     def test_pure_hr_is_refused_the_evidence_list(self):
         outsider = User.objects.create_user(username='evidence_outsider2', password='testpass123')
         hr = User.objects.create_user(username='evidence_hr', password='testpass123')
-        hr.profile.is_hr_user = True
+        assign_role(hr, 'hr')
         assign_role(hr, 'hr')
         hr.profile.save()
         for owner in (self.member, outsider):

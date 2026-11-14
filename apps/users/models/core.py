@@ -526,7 +526,6 @@ class UserProfile(BaseModel):
         related_name='italian_team_members',
         help_text='Italian Team Leader assigned to this user'
     )
-    is_hr_user = models.BooleanField(default=False)
     mfa_required = models.BooleanField(
         default=False,
         help_text='Admin-set: this person must sign in with a second factor '
@@ -540,16 +539,6 @@ class UserProfile(BaseModel):
     seniority_level = models.CharField(
         max_length=10, choices=SENIORITY_CHOICES, null=True, blank=True,
         help_text='Used for the junior/senior workforce-ratio KPI.',
-    )
-    is_italian_tl_role = models.BooleanField(
-        default=False,
-        db_index=True,
-        help_text='Explicitly marks user as an Italian Team Leader (role-based)'
-    )
-    is_albanian_tl_role = models.BooleanField(
-        default=False,
-        db_index=True,
-        help_text='Explicitly marks user as an Albanian Team Leader (role-based)'
     )
     # Denormalized role-code cache; UserRole remains authoritative.
     role_codes = models.JSONField(default=list, blank=True, editable=False)
@@ -593,7 +582,6 @@ class UserProfile(BaseModel):
         indexes = [
             models.Index(fields=['albanian_tl']),
             models.Index(fields=['italian_tl']),
-            models.Index(fields=['is_hr_user']),
             models.Index(fields=['hire_date']),
         ]
         constraints = [

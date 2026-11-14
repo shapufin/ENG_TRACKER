@@ -28,9 +28,9 @@ class DirectoryQueryBudgetTests(APITestCase):
     def _add_tl(self):
         self.n += 1
         tl = User.objects.create_user(username=f'qb-tl{self.n}', password='x')
-        tl.profile.is_italian_tl_role = True
         assign_role(tl, 'italian_tl')
-        tl.profile.is_albanian_tl_role = True
+        assign_role(tl, 'italian_tl')
+        assign_role(tl, 'albanian_tl')
         assign_role(tl, 'albanian_tl')
         tl.profile.save()
         team = Team.objects.create(name=f'QB TL team {self.n}', code=f'QT{self.n}')

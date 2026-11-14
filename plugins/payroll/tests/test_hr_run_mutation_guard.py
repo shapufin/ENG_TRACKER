@@ -34,9 +34,8 @@ class HrRunMutationGuardTests(TestCase):
             perm, _ = PluginPermission.objects.get_or_create(plugin_name='payroll', action=action)
             perm.allowed_roles.add(hr_role)
         cls.hr = User.objects.create_user('hr_guard', password='x')
-        cls.hr.profile.is_hr_user = True
         assign_role(cls.hr, 'hr')
-        cls.hr.profile.save(update_fields=['is_hr_user'])
+        assign_role(cls.hr, 'hr')
         assign_role(cls.hr, 'hr')
         cls.admin = User.objects.create_user('admin_guard', password='x', is_staff=True)
         cls.employee = User.objects.create_user('emp_guard', password='x')

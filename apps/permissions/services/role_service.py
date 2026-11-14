@@ -124,9 +124,8 @@ def find_blocked_tl_revocations(user, new_state: dict) -> list[dict]:
     from ``new_state`` is treated as "not touched by this request" and is
     never checked. Compares against the user's CURRENT effective status via
     the ``is_italian_tl``/``is_albanian_tl`` properties (apps/users/models/
-    core.py), which already account for role_codes as well as the legacy
-    is_italian_tl_role/is_albanian_tl_role flags — a role granted via
-    assign_role() directly (bypassing the legacy flag) is caught too.
+    core.py), which read the role grants (the role_codes cache), so a role
+    granted via assign_role() directly is caught too.
 
     Every caller that can revoke a TL role — apps/users/viewsets.py's
     bulk_update and update_user, and apps/users/services/user_creation.py's

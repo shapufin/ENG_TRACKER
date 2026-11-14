@@ -276,16 +276,12 @@ class UserSerializer(serializers.ModelSerializer):
         roles = getattr(getattr(obj, 'profile', None), 'role_codes', []) or []
         if 'italian_tl' in roles:
             return True
-        if hasattr(obj, 'profile') and obj.profile.is_italian_tl_role:
-            return True
         return _user_has_related(obj, 'italian_team_members')
 
     def get_is_albanian_tl_role(self, obj) -> bool:
         """Check if user has the Line Manager role or assigned reports."""
         roles = getattr(getattr(obj, 'profile', None), 'role_codes', []) or []
         if 'albanian_tl' in roles:
-            return True
-        if hasattr(obj, 'profile') and obj.profile.is_albanian_tl_role:
             return True
         return _user_has_related(obj, 'albanian_team_members')
 
@@ -306,8 +302,6 @@ class UserSerializer(serializers.ModelSerializer):
         roles = getattr(getattr(obj, 'profile', None), 'role_codes', []) or []
         if 'hr' in roles:
             return True
-        if hasattr(obj, 'profile'):
-            return obj.profile.is_hr_user
         return False
 
     def get_is_cr_admin(self, obj) -> bool:
@@ -601,9 +595,22 @@ class UserProfileSerializer(serializers.ModelSerializer):
     Includes nested user data and team information.
     """
     user = UserSerializer(read_only=True)
+    # Derived from the UserRole grants (the cache role_codes); the legacy columns are gone.
+    is_hr_user = serializers.SerializerMethodField()
+    is_italian_tl_role = serializers.SerializerMethodField()
+    is_albanian_tl_role = serializers.SerializerMethodField()
     team = serializers.SerializerMethodField()
     team_name = serializers.SerializerMethodField()
     team_code = serializers.SerializerMethodField()
+
+    def get_is_hr_user(self, obj) -> bool:
+        return 'hr' in (obj.role_codes or [])
+
+    def get_is_italian_tl_role(self, obj) -> bool:
+        return 'italian_tl' in (obj.role_codes or [])
+
+    def get_is_albanian_tl_role(self, obj) -> bool:
+        return 'albanian_tl' in (obj.role_codes or [])
     teams = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     def validate_teams(self, teams):
@@ -684,7 +691,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         # skip the leader, HBPR-revoke and audit checks (audit 2026-11-13).
         read_only_fields = [
             'id', 'mfa_required', 'employment_type', 'weekly_contract_hours',
-            'albanian_tl', 'italian_tl', 'is_hr_user', 'is_italian_tl_role', 'is_albanian_tl_role',
+            'albanian_tl', 'italian_tl',
             'teams', 'created_at', 'updated_at',
         ]
 

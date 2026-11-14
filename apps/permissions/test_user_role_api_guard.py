@@ -22,9 +22,8 @@ class UserRoleApiGuardTests(APITestCase):
         self.victim = User.objects.create_user(username='m3_victim', password='x')
         self.leader = User.objects.create_user(username='m3_leader', password='x')
         assign_role(self.leader, 'italian_tl')
-        self.leader.profile.is_italian_tl_role = True
         assign_role(self.leader, 'italian_tl')
-        self.leader.profile.save(update_fields=['is_italian_tl_role'])
+        assign_role(self.leader, 'italian_tl')
         self.member = User.objects.create_user(username='m3_member', password='x')
         self.member.profile.italian_tl = self.leader
         self.member.profile.save(update_fields=['italian_tl'])
@@ -50,20 +49,19 @@ class UserRoleApiGuardTests(APITestCase):
         self.assertTrue(UserRole.objects.filter(
             user=self.victim, role=self.hr_role, team__isnull=True, is_active=True).exists())
         self.victim.profile.refresh_from_db()
-        self.assertTrue(self.victim.profile.is_hr_user)
+        self.assertTrue(self.victim.profile.is_hr)
 
     def test_revoke_keeps_the_row_and_clears_the_flag(self):
         assign_role(self.victim, 'hr')
-        self.victim.profile.is_hr_user = True
         assign_role(self.victim, 'hr')
-        self.victim.profile.save(update_fields=['is_hr_user'])
+        assign_role(self.victim, 'hr')
         row = UserRole.objects.get(user=self.victim, role=self.hr_role, team__isnull=True)
         resp = self.api.delete(self._url(row.id))
         self.assertIn(resp.status_code, (200, 204), getattr(resp, 'data', None))
         row.refresh_from_db()
         self.assertFalse(row.is_active)
         self.victim.profile.refresh_from_db()
-        self.assertFalse(self.victim.profile.is_hr_user)
+        self.assertFalse(self.victim.profile.is_hr)
 
     def test_revoke_refused_while_members_still_point_at_the_leader(self):
         row = UserRole.objects.get(user=self.leader, role=self.tl_role, team__isnull=True)
@@ -72,4 +70,4 @@ class UserRoleApiGuardTests(APITestCase):
         row.refresh_from_db()
         self.assertTrue(row.is_active)
         self.leader.profile.refresh_from_db()
-        self.assertTrue(self.leader.profile.is_italian_tl_role)
+        self.assertTrue(self.leader.profile.is_italian_tl)

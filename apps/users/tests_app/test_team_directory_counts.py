@@ -15,7 +15,7 @@ class TeamDirectoryCountTests(APITestCase):
         cls.employee = User.objects.create_user(username='tdc_emp', password='x')
         cls.staff = User.objects.create_user(username='tdc_staff', password='x', is_staff=True)
         cls.hr = User.objects.create_user(username='tdc_hr', password='x')
-        cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         assign_role(cls.hr, 'hr')
         cls.hr.profile.save()
         cls.tl = User.objects.create_user(username='tdc_tl', password='x')
@@ -76,19 +76,19 @@ class TlPickerExcludesAdminsTests(APITestCase):
         from rest_framework.test import APIClient
 
         hr = User.objects.create_user(username='pick_hr', password='x')
-        hr.profile.is_hr_user = True
+        assign_role(hr, 'hr')
         assign_role(hr, 'hr')
         hr.profile.save()
         real = User.objects.create_user(username='pick_tl', password='x')
-        real.profile.is_italian_tl_role = True
         assign_role(real, 'italian_tl')
-        real.profile.is_albanian_tl_role = True
+        assign_role(real, 'italian_tl')
+        assign_role(real, 'albanian_tl')
         assign_role(real, 'albanian_tl')
         real.profile.save()
         boss = User.objects.create_superuser(username='pick_root', password='x')
-        boss.profile.is_italian_tl_role = True
         assign_role(boss, 'italian_tl')
-        boss.profile.is_albanian_tl_role = True
+        assign_role(boss, 'italian_tl')
+        assign_role(boss, 'albanian_tl')
         assign_role(boss, 'albanian_tl')
         boss.profile.save()
         client = APIClient()

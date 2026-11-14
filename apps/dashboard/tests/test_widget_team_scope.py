@@ -24,7 +24,7 @@ class DashboardWidgetTeamScopeTests(APITestCase):
         cls.employee.save()
         cls.admin = User.objects.create_user(username='dw_admin', password='x', is_staff=True)
         cls.hr = User.objects.create_user(username='dw_hr', password='x')
-        cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         assign_role(cls.hr, 'hr')
         cls.hr.profile.save()
 
@@ -136,7 +136,6 @@ class LedTeamOnlyLeaderTests(APITestCase):
         # No TL role code or legacy flag: authority comes from ``led_teams`` via
         # ``profile.is_team_leader``, which ``has_team_leader_role`` reads.
         profile = self.lead.profile
-        self.assertFalse(profile.is_italian_tl_role or profile.is_albanian_tl_role)
         self.assertFalse(set(profile.role_codes or []) & {'italian_tl', 'albanian_tl'})
 
     def test_gets_own_team_data(self):

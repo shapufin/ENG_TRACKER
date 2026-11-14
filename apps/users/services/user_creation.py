@@ -143,9 +143,6 @@ def create_user_with_profile(
         profile.albanian_tl_id = albanian_tl_id
     if italian_tl_id:
         profile.italian_tl_id = italian_tl_id
-    profile.is_hr_user = bool(is_hr)
-    profile.is_italian_tl_role = bool(is_italian_tl_role)
-    profile.is_albanian_tl_role = bool(is_albanian_tl_role)
     profile.save()
 
     if teams:
@@ -253,12 +250,6 @@ def update_user_profile(
     if italian_tl_id is not None:
         record_leader_link_change(None, profile, 'italian_tl', profile.italian_tl_id, italian_tl_id, source='import')
         profile.italian_tl_id = italian_tl_id
-    if is_hr is not None:
-        profile.is_hr_user = bool(is_hr)
-    if is_italian_tl_role is not None:
-        profile.is_italian_tl_role = bool(is_italian_tl_role)
-    if is_albanian_tl_role is not None:
-        profile.is_albanian_tl_role = bool(is_albanian_tl_role)
     if becomes_lm:
         clear_lm_link_on_promotion(profile)
     profile.save()
@@ -410,12 +401,6 @@ def _sync_roles(user: User, roles: list[str]) -> None:
         # before any write so a refusal leaves the profile untouched.
         raise ValueError('The hbpr role is not seeded; run migrations first.')
 
-    profile = user.profile
-    profile.is_hr_user = 'hr' in requested
-    profile.is_italian_tl_role = 'italian_tl' in requested
-    profile.is_albanian_tl_role = 'albanian_tl' in requested
-    profile.save(update_fields=['is_hr_user', 'is_italian_tl_role', 'is_albanian_tl_role'])
-
     for role_code in MANAGED_ROLE_CODES:
         if not Role.objects.filter(code=role_code).exists():
             continue
@@ -439,9 +424,8 @@ def _sync_legacy_roles(
     ``Role.objects.get(code=...)`` which raises ``DoesNotExist`` if the role
     is absent — e.g. when a test run orders modules so that role-seeding
     migrations are not applied before user creation runs. Skipping is safe:
-    the legacy profile flags (``is_hr_user`` etc.) are already set on the
-    profile above, so the user's effective role is still correct; only the
-    redundant ``UserRole`` row is omitted.
+    the ``UserRole`` row is the only record of a role, so a skipped role is
+    not granted anywhere. Callers that need to know check the Role table first.
     """
     from apps.permissions.models import Role
     from apps.permissions.services.role_service import assign_role, revoke_role

@@ -33,9 +33,8 @@ def _weekday(d):
 
 def make_hr(username="hr"):
     user = User.objects.create_user(username, password="x")
-    user.profile.is_hr_user = True
     assign_role(user, 'hr')
-    user.profile.save(update_fields=["is_hr_user"])
+    assign_role(user, 'hr')
     return user
 
 

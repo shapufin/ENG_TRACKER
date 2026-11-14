@@ -99,9 +99,8 @@ class OrganigramaPerformanceTest(TestCase):
 
         # Build a user with a role and a group membership.
         viewer = User.objects.create_user(username="viewer", password="x")
-        viewer.profile.is_hr_user = True
         assign_role(viewer, 'hr')
-        viewer.profile.save(update_fields=["is_hr_user"])
+        assign_role(viewer, 'hr')
         group = Group.objects.create(name="Viewers")
         UserGroup.objects.create(user=viewer, group=group, is_deleted=False)
 
@@ -153,9 +152,8 @@ class OrganigramaPerformanceTest(TestCase):
         from apps.permissions.models import UserGroup, Group
 
         viewer = User.objects.create_user(username="parity_viewer", password="x")
-        viewer.profile.is_hr_user = True
         assign_role(viewer, 'hr')
-        viewer.profile.save(update_fields=["is_hr_user"])
+        assign_role(viewer, 'hr')
         group = Group.objects.create(name="ParityViewers")
         UserGroup.objects.create(user=viewer, group=group, is_deleted=False)
 

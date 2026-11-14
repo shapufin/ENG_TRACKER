@@ -39,12 +39,12 @@ class TemplateRoundTripTests(TestCase):
         # Create real test entities
         Team.objects.create(code="ALPHA", name="Alpha Team")
         mgr = User.objects.create(username="it_manager", first_name="Mario", last_name="Rossi")
-        mgr.profile.is_italian_tl_role = True
+        assign_role(mgr, 'italian_tl')
         assign_role(mgr, 'italian_tl')
         mgr.profile.save()
 
         line_mgr = User.objects.create(username="al_leader", first_name="Arben", last_name="Hoxha")
-        line_mgr.profile.is_albanian_tl_role = True
+        assign_role(line_mgr, 'albanian_tl')
         assign_role(line_mgr, 'albanian_tl')
         line_mgr.profile.save()
 

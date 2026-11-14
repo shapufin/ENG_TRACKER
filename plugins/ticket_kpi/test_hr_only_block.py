@@ -22,7 +22,7 @@ VIEWSETS = [
 class HrOnlyBlockTests(TestCase):
     def _hr(self, username, **extra):
         user = User.objects.create_user(username=username, password='x', **extra)
-        user.profile.is_hr_user = True
+        assign_role(user, 'hr')
         assign_role(user, 'hr')
         user.profile.save()
         return user

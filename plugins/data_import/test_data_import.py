@@ -356,9 +356,9 @@ class UserImporterTests(TestCase):
         leader = User.objects.create_user(
             username=username, email=f"{username}@example.com", password="password"
         )
-        leader.profile.is_italian_tl_role = True
         assign_role(leader, 'italian_tl')
-        leader.profile.is_albanian_tl_role = True
+        assign_role(leader, 'italian_tl')
+        assign_role(leader, 'albanian_tl')
         assign_role(leader, 'albanian_tl')
         leader.profile.save()
         return leader
@@ -556,8 +556,8 @@ class UserImporterTests(TestCase):
         )
         self.assertEqual(result.status, "updated", result.errors)
         user.profile.refresh_from_db()
-        self.assertTrue(user.profile.is_italian_tl_role)
-        self.assertTrue(user.profile.is_hr_user)
+        self.assertTrue(user.profile.is_italian_tl)
+        self.assertTrue(user.profile.is_hr)
 
     def test_revoking_tl_role_via_import_blocked_while_dependent_fk_remains(self):
         """Regression: importing a row that flips is_italian_tl off for an
@@ -567,7 +567,7 @@ class UserImporterTests(TestCase):
         tl = User.objects.create_user(
             username="import.tl", email="import.tl@example.com", password="password"
         )
-        tl.profile.is_italian_tl_role = True
+        assign_role(tl, 'italian_tl')
         assign_role(tl, 'italian_tl')
         tl.profile.save()
         dependent = User.objects.create_user(
@@ -589,7 +589,7 @@ class UserImporterTests(TestCase):
         self.assertEqual(result.status, "error")
         self.assertIn("still assigned", result.errors[0])
         tl.profile.refresh_from_db()
-        self.assertTrue(tl.profile.is_italian_tl_role)
+        self.assertTrue(tl.profile.is_italian_tl)
 
     def test_alias_suggestions_support_both_manager_and_legacy_tl_headers(self):
         """User import aliases must accept both new display names (Manager / Line Manager)
@@ -1069,8 +1069,8 @@ class UserCreationServiceTests(TestCase):
         self.assertEqual(user.username, "serviceuser")
         self.assertEqual(user.email, "service@example.com")
         self.assertEqual(user.first_name, "Service")
-        self.assertTrue(user.profile.is_hr_user)
-        self.assertTrue(user.profile.is_italian_tl_role)
+        self.assertTrue(user.profile.is_hr)
+        self.assertTrue(user.profile.is_italian_tl)
         self.assertTrue(user.profile.team_memberships.filter(team=self.team).exists())
 
     def test_create_user_with_profile_rejects_duplicate_username(self):

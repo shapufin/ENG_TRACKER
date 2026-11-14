@@ -23,9 +23,9 @@ class MyTeamMembersTests(APITestCase):
 
     def setUp(self):
         self.tl = User.objects.create_user(username='p5-tl', password='x')
-        self.tl.profile.is_albanian_tl_role = True
         assign_role(self.tl, 'albanian_tl')
-        self.tl.profile.save(update_fields=['is_albanian_tl_role', 'updated_at'])
+        assign_role(self.tl, 'albanian_tl')
+        self.tl.profile.save(update_fields=['updated_at'])
         self.al_tl = User.objects.create_user(username='p5-altl', password='x', first_name='Al', last_name='Tl')
         self.team = Team.objects.create(name='P5 Team', code='P5T', team_leader=self.tl)
         self.client_obj = Client.objects.create(name='P5 Client', code='P5C')

@@ -162,9 +162,9 @@ class WorkDateCutoffUpdateTests(TestCase):
 class TeamLeaderEditGuardTests(TestCase):
     def setUp(self):
         self.tl = User.objects.create_user(username='guard-tl', password='pass')
-        self.tl.profile.is_albanian_tl_role = True
         assign_role(self.tl, 'albanian_tl')
-        self.tl.profile.save(update_fields=['is_albanian_tl_role', 'updated_at'])
+        assign_role(self.tl, 'albanian_tl')
+        self.tl.profile.save(update_fields=['updated_at'])
         self.employee = User.objects.create_user(username='guard-employee', password='pass')
         self.team = Team.objects.create(name='Guard Team', code='GUARD', team_leader=self.tl)
         TeamMembership.objects.create(user_profile=self.employee.profile, team=self.team, is_primary_team=True)
@@ -221,9 +221,9 @@ class ApprovalPeriodWorkflowTests(TestCase):
         self.client = APIClient()
         NotificationPlugin().ready()
         self.tl = User.objects.create_user(username='period-tl', password='pass')
-        self.tl.profile.is_albanian_tl_role = True
         assign_role(self.tl, 'albanian_tl')
-        self.tl.profile.save(update_fields=['is_albanian_tl_role', 'updated_at'])
+        assign_role(self.tl, 'albanian_tl')
+        self.tl.profile.save(update_fields=['updated_at'])
         self.employee = User.objects.create_user(username='period-employee', password='pass')
         self.team = Team.objects.create(
             name='Period Team', code='PERIOD', team_leader=self.tl,

@@ -248,7 +248,7 @@ class PublicHolidayHRPermissionTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.hr_user = User.objects.create_user(username='hr-cal', password='testpass')
-        self.hr_user.profile.is_hr_user = True
+        assign_role(self.hr_user, 'hr')
         assign_role(self.hr_user, 'hr')
         self.hr_user.profile.save()
         self.plain_user = User.objects.create_user(username='plain-cal', password='testpass')

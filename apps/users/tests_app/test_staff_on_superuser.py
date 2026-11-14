@@ -34,7 +34,7 @@ class StaffOnSuperuserTests(APITestCase):
             '/api/users/users/bulk_update/',
             {'user_ids': [self.superuser.pk], 'is_hr': True}, format='json')
         self.assertEqual(response.status_code, 403)
-        self.assertFalse(self.superuser.profile.__class__.objects.get(pk=self.superuser.profile.pk).is_hr_user)
+        self.assertFalse(self.superuser.profile.__class__.objects.get(pk=self.superuser.profile.pk).is_hr)
 
     def test_staff_still_edits_an_ordinary_user_and_themselves(self):
         self.assertEqual(self._update(self.staff, self.employee, first_name='Ok').status_code, 200)

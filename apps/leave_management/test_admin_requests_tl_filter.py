@@ -14,7 +14,7 @@ class AdminRequestsTlFilterTests(APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.hr = User.objects.create_user(username='tlf_hr', password='x')
-        cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         assign_role(cls.hr, 'hr')
         cls.hr.profile.save()
         cls.it_tl = User.objects.create_user(username='tlf_it', password='x')

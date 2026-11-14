@@ -18,7 +18,7 @@ from plugins.engagement.services import compute_tl_metric
 
 def _lm(username):
     user = User.objects.create_user(username=username, password='x')
-    user.profile.is_albanian_tl_role = True
+    assign_role(user, 'albanian_tl')
     assign_role(user, 'albanian_tl')
     user.profile.save()
     role, _ = Role.objects.get_or_create(code='albanian_tl', defaults={'name': 'albanian_tl'})
