@@ -103,7 +103,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         # listed here: this method overrides the per-@action permission_classes,
         # so an action missing from this list is open to any authenticated user.
         if self.action in [
-            'destroy', 'bulk_delete', 'bulk_update',
+            'destroy', 'bulk_delete', 'bulk_update', 'erase',
             'create_user', 'update_user', 'reset_password', 'reset_mfa', 'mfa_status',
             # Company-wide headcount and TL counts: TL management data, not for employees.
             'stats',
@@ -865,12 +865,60 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         self._forbid_non_superuser_on_superuser(self.request, serializer.instance)
         super().perform_update(serializer)
 
+    def destroy(self, request, *args, **kwargs):
+        """A user with business records is deactivated, never deleted (409 with the counts)."""
+        from .services.user_deletion import delete_blocked_detail, user_delete_blockers
+
+        instance = self.get_object()
+        self._forbid_non_superuser_on_superuser(request, instance)
+        blockers = user_delete_blockers(instance)
+        if blockers:
+            return Response(
+                {'detail': delete_blocked_detail(blockers), 'blockers': blockers},
+                status=status.HTTP_409_CONFLICT,
+            )
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     def perform_destroy(self, instance):
         self._forbid_non_superuser_on_superuser(self.request, instance)
         try:
             instance.delete()
         except models.ProtectedError:
             raise ProtectedRecordConflict()
+
+    @action(detail=True, methods=['get', 'post'], permission_classes=[IsAdminUser()])
+    def erase(self, request, pk=None):
+        """Superuser override for a user the ordinary delete refuses (item 83).
+
+        GET previews what would be destroyed and changes nothing. POST erases an inactive
+        user: {confirm: "ERASE <username>", reason, acknowledge_other_people_records?}.
+        Payroll and evidence rows and closed years are never erased.
+        """
+        from .services.user_deletion import (
+            EraseNotConfirmed, EraseRefused, erase_preview, erase_user,
+        )
+
+        if not request.user.is_superuser:
+            raise PermissionDenied('Only a superuser can erase a user.')
+        target = self.get_object()
+        if request.method == 'GET':
+            return Response(erase_preview(target, request.user))
+        try:
+            result = erase_user(
+                target,
+                actor=request.user,
+                confirm=request.data.get('confirm'),
+                reason=request.data.get('reason'),
+                acknowledge_other_people_records=request.data.get('acknowledge_other_people_records') is True,
+                request=request,
+            )
+        except EraseRefused as exc:
+            return Response(
+                {'detail': str(exc), 'reasons': exc.reasons}, status=status.HTTP_409_CONFLICT)
+        except EraseNotConfirmed as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result)
 
     @action(detail=False, methods=['post'], permission_classes=[IsAdminUser()])
     def bulk_delete(self, request):
@@ -918,28 +966,26 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                     })
                     continue
 
+                # A user with business records is deactivated, never deleted: the delete
+                # would cascade over their requests and the records they wrote as a leader.
+                from .services.user_deletion import delete_blocked_detail, user_delete_blockers
+
+                blockers = user_delete_blockers(user)
+                if blockers:
+                    failed_users.append({
+                        'id': user.id,
+                        'reason': delete_blocked_detail(blockers),
+                        'blockers': blockers,
+                    })
+                    continue
+
                 # Clear TL references and delete in one savepoint: a PROTECTed
                 # row (e.g. payroll lines) must not leave the references cleared.
-                # PERF-14: the update row counts are logged; the old per-user COUNT
-                # queries existed only to write log lines.
                 with transaction.atomic():
-                    orphaned_ids = list(
-                        UserProfile.objects.filter(Q(italian_tl=user) | Q(albanian_tl=user))
-                        .values_list('user_id', flat=True)
-                    )
-                    if orphaned_ids:
-                        from core.services.lifecycle import record_lifecycle_event
-                        record_lifecycle_event(
-                            request, user, 'user', 'DELETE', 'leader_links_cleared',
-                            extra={'cleared_for_user_ids': orphaned_ids}, actor=request.user,
-                        )
-                    italian_cleared = UserProfile.objects.filter(italian_tl=user).update(italian_tl=None)
-                    albanian_cleared = UserProfile.objects.filter(albanian_tl=user).update(albanian_tl=None)
-                    led_cleared = Team.objects.filter(team_leader=user).update(team_leader=None)
-                    logger.info(
-                        f"User {user.id} references cleared: {italian_cleared} Manager, "
-                        f"{albanian_cleared} Line Manager, {led_cleared} led teams"
-                    )
+                    from .services.user_deletion import clear_leader_references
+
+                    cleared = clear_leader_references(request, user, request.user)
+                    logger.info(f"User {user.id} references cleared: {cleared}")
                     user.delete()
                 deleted_count += 1
                 logger.info(f"User {user.id} deleted successfully")

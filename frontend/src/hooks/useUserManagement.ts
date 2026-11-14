@@ -31,6 +31,8 @@ interface UseUserManagementOptions {
   onCreateError?: (errors: Record<string, string>) => void;
   onResetSuccess?: () => void;
   onDeleteSuccess?: () => void;
+  /** Return true when the caller handled the failure (no error toast). */
+  onDeleteError?: (err: ApiError) => boolean;
   /** Server-side role tab + tech chip selection. Must be included in every
    * result-changing React Query key so filtered results/counts never go stale. */
   role?: TLFilter;
@@ -226,7 +228,10 @@ export const useUserManagement = (options?: UseUserManagementOptions) => {
       toast.success("User deleted");
       options?.onDeleteSuccess?.();
     },
-    onError: (err) => handleApiError(err),
+    onError: (err: ApiError) => {
+      if (options?.onDeleteError?.(err)) return;
+      handleApiError(err);
+    },
   });
 
   return {
