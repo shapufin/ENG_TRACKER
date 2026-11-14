@@ -117,6 +117,7 @@ class TestUserTechAndRoleFacets(APITestCase):
 
         self.tl_user = User.objects.create_user(username='facet-tl', password='testpass123')
         self.tl_user.profile.is_italian_tl_role = True
+        assign_role(self.tl_user, 'italian_tl')
         self.tl_user.profile.save()
         self.tl_user.profile.techs.add(self.k8s)
 
@@ -188,6 +189,7 @@ class TestUserTechAndRoleFacets(APITestCase):
             Role.objects.get_or_create(code=code, defaults={'name': code})
         hr_flag = User.objects.create_user(username='facet-hr-flag', password='x')
         hr_flag.profile.is_hr_user = True
+        assign_role(hr_flag, 'hr')
         hr_flag.profile.save()
         hr_role = User.objects.create_user(username='facet-hr-role', password='x')
         assign_role(hr_role, 'hr')
@@ -272,6 +274,7 @@ class TestUserTechAndRoleFacets(APITestCase):
         Role.objects.get_or_create(code='hr', defaults={'name': 'hr'})
         hr_flag = User.objects.create_user(username='facet-hr-flag', password='x')
         hr_flag.profile.is_hr_user = True
+        assign_role(hr_flag, 'hr')
         hr_flag.profile.save()
         hr_role = User.objects.create_user(username='facet-hr-role', password='x')
         assign_role(hr_role, 'hr')
@@ -439,6 +442,7 @@ class TestBulkUpdateUsers(APITestCase):
     def test_omitted_fields_remain_unchanged(self):
         self.first.profile.teams.set([self.team_a])
         self.first.profile.is_hr_user = True
+        assign_role(self.first, 'hr')
         self.first.profile.save()
 
         response = self.client.post(
@@ -494,6 +498,7 @@ class TestBulkUpdateUsers(APITestCase):
         silently applied — otherwise the revoked user keeps functioning as
         TL for that dependent via the dangling FK."""
         self.first.profile.is_italian_tl_role = True
+        assign_role(self.first, 'italian_tl')
         self.first.profile.save()
         self.second.profile.italian_tl = self.first
         self.second.profile.save()
@@ -514,6 +519,7 @@ class TestBulkUpdateUsers(APITestCase):
         a formatted error string) to list dependents and let the admin
         reassign/clear them inline."""
         self.first.profile.is_italian_tl_role = True
+        assign_role(self.first, 'italian_tl')
         self.first.profile.save()
         self.second.profile.italian_tl = self.first
         self.second.profile.save()
@@ -543,6 +549,7 @@ class TestBulkUpdateUsers(APITestCase):
 
     def test_revoking_albanian_tl_role_blocked_while_dependent_fk_remains(self):
         self.first.profile.is_albanian_tl_role = True
+        assign_role(self.first, 'albanian_tl')
         self.first.profile.save()
         self.second.profile.albanian_tl = self.first
         self.second.profile.save()
@@ -559,6 +566,7 @@ class TestBulkUpdateUsers(APITestCase):
 
     def test_revoking_tl_role_succeeds_once_no_dependents_remain(self):
         self.first.profile.is_italian_tl_role = True
+        assign_role(self.first, 'italian_tl')
         self.first.profile.save()
         # second's FK points elsewhere, not at first — no dependent.
 
@@ -671,6 +679,7 @@ class TestBulkUpdateUsers(APITestCase):
         it must be a structured 400 with blocked_revocations, like the
         single-user update path."""
         self.first.profile.is_albanian_tl_role = True
+        assign_role(self.first, 'albanian_tl')
         self.first.profile.save()
         self._open_hbpr_assignment(self.second, self.first)
 
@@ -757,6 +766,7 @@ class TestUpdateUserTlRevokeCascadeBlock(APITestCase):
 
     def test_revoking_italian_tl_role_blocked_while_dependent_fk_remains(self):
         self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
         self.dependent.profile.italian_tl = self.tl
         self.dependent.profile.save()
@@ -773,6 +783,7 @@ class TestUpdateUserTlRevokeCascadeBlock(APITestCase):
 
     def test_revoke_block_response_includes_structured_dependents(self):
         self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
         self.dependent.profile.italian_tl = self.tl
         self.dependent.profile.save()
@@ -799,6 +810,7 @@ class TestUpdateUserTlRevokeCascadeBlock(APITestCase):
 
     def test_revoking_tl_role_succeeds_once_no_dependents_remain(self):
         self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
 
         response = self.client.patch(
@@ -817,6 +829,7 @@ class TestUpdateUserTlRevokeCascadeBlock(APITestCase):
         every save — `roles` drives the actual outcome via _sync_roles, so
         the block must key off it too, not just the legacy flags."""
         self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         self.tl.profile.role_codes = ['italian_tl']
         self.tl.profile.save()
         self.dependent.profile.italian_tl = self.tl
@@ -836,6 +849,7 @@ class TestUpdateUserTlRevokeCascadeBlock(APITestCase):
 
     def test_revoking_via_roles_array_succeeds_once_no_dependents_remain(self):
         self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         self.tl.profile.role_codes = ['italian_tl']
         self.tl.profile.save()
 
@@ -956,6 +970,7 @@ class TestAssignMemberClients(APITestCase):
         self.outsider = User.objects.create_user(username='out', password='testpass123')
         self.hr = User.objects.create_user(username='hr', password='testpass123')
         self.hr.profile.is_hr_user = True
+        assign_role(self.hr, 'hr')
         self.hr.profile.save()
         self.admin = User.objects.create_superuser(
             username='admin', password='testpass123', email='admin@example.com'
@@ -1008,6 +1023,7 @@ class TestAssignMemberClients(APITestCase):
     def test_tl_hr_multi_role_allowed(self):
         # is_hr_only exempts TL+HR: elevated role keeps write privileges.
         self.tl.profile.is_hr_user = True
+        assign_role(self.tl, 'hr')
         self.tl.profile.save()
         self.client.force_authenticate(user=self.tl)
         response = self.client.post(
@@ -1271,6 +1287,7 @@ class TestTeamCreateUpdateAdminOnly(APITestCase):
     def setUp(self):
         self.hr = User.objects.create_user(username='team-hr', password='testpass123')
         self.hr.profile.is_hr_user = True
+        assign_role(self.hr, 'hr')
         self.hr.profile.save()
         self.employee = User.objects.create_user(username='team-emp', password='testpass123')
         self.team = Team.objects.create(name='HR Team', code='HRT')
@@ -1359,12 +1376,14 @@ class TestSetTeamLeaderHRAssignment(APITestCase):
     def setUp(self):
         self.hr = User.objects.create_user(username='setup-hr', password='testpass123')
         self.hr.profile.is_hr_user = True
+        assign_role(self.hr, 'hr')
         self.hr.profile.save()
 
         self.employee = User.objects.create_user(username='setup-emp', password='testpass123')
 
         self.tl = User.objects.create_user(username='setup-tl', password='testpass123')
         self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
 
         self.non_tl = User.objects.create_user(username='setup-nontl', password='testpass123')
@@ -1473,6 +1492,7 @@ class TestClientAssignmentExcludesManagers(APITestCase):
         self.member.profile.save()
         self.manager.profile.albanian_tl = self.lm
         self.manager.profile.is_italian_tl_role = True
+        assign_role(self.manager, 'italian_tl')
         self.manager.profile.save()
         self.client_a = Client.objects.create(name='Client A', code='A', is_active=True)
         self.client.force_authenticate(user=self.lm)

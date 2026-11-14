@@ -13,6 +13,7 @@ from apps.users.models import Team
 def _lm(username):
     user = User.objects.create_user(username=username, password='x')
     user.profile.is_albanian_tl_role = True
+    assign_role(user, 'albanian_tl')
     user.profile.save()
     assign_role(user, 'albanian_tl')
     return user
@@ -21,6 +22,7 @@ def _lm(username):
 def _manager(username):
     user = User.objects.create_user(username=username, password='x')
     user.profile.is_italian_tl_role = True
+    assign_role(user, 'italian_tl')
     user.profile.save()
     assign_role(user, 'italian_tl')
     return user

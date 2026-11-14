@@ -62,8 +62,7 @@ def italian_tl_user_ids(among=None):
         users = users.filter(id__in=among)
     return set(
         users.filter(
-            Q(profile__is_italian_tl_role=True)
-            | Q(user_roles__role__code='italian_tl', user_roles__is_active=True)
+            Q(user_roles__role__code='italian_tl', user_roles__is_active=True)
             | Q(italian_team_members__isnull=False)
         ).values_list('id', flat=True)
     )

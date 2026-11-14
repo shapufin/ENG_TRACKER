@@ -3,6 +3,7 @@
 Team confidentiality (2026-10-20): a TL's name is not confidential, per-team
 member counts are management data.
 """
+from apps.permissions.services.role_service import assign_role
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 
@@ -18,10 +19,13 @@ class TeamLeaderDirectoryScopeTests(APITestCase):
         cls.staff = User.objects.create_user(username='dir_staff', password='x', is_staff=True)
         cls.hr = User.objects.create_user(username='dir_hr', password='x')
         cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         cls.hr.profile.save()
         cls.tl = User.objects.create_user(username='dir_tl', password='x')
         cls.tl.profile.is_italian_tl_role = True
+        assign_role(cls.tl, 'italian_tl')
         cls.tl.profile.is_albanian_tl_role = True
+        assign_role(cls.tl, 'albanian_tl')
         cls.tl.profile.save()
         cls.employee.profile.italian_tl = cls.tl
         cls.employee.profile.albanian_tl = cls.tl

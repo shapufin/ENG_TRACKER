@@ -59,8 +59,6 @@ def employees_without_tl():
     return (
         _plain_employees()
         .filter(
-            profile__is_italian_tl_role=False,
-            profile__is_albanian_tl_role=False,
             profile__italian_tl__isnull=True,
             profile__albanian_tl__isnull=True,
         )
@@ -73,7 +71,7 @@ def employees_without_tl():
 def coverage_gaps(today):
     employees = _plain_employees()
     al_tls = employees.filter(
-        Q(profile__is_albanian_tl_role=True) | users_with_role_q('albanian_tl')
+        users_with_role_q('albanian_tl')
     )
     covered = HbprAlbanianTlAssignment.objects.filter(in_effect_q(today)).values("albanian_tl_id")
     return {

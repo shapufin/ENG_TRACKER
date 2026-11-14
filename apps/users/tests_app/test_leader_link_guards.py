@@ -4,6 +4,7 @@ A leader link grants approval rights, payroll scope and queue access, so a write
 skips the checks (own-leader, circular, inactive or non-leader target, Line Manager above a
 Line Manager) is a privilege hole. Each change is also audited.
 """
+from apps.permissions.services.role_service import assign_role
 from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIClient
@@ -15,6 +16,7 @@ from apps.users.services.user_creation import UserValidationError, update_user_p
 def _lm(username):
     user = User.objects.create_user(username=username, password='x')
     user.profile.is_albanian_tl_role = True
+    assign_role(user, 'albanian_tl')
     user.profile.save()
     return user
 
@@ -22,6 +24,7 @@ def _lm(username):
 def _manager(username):
     user = User.objects.create_user(username=username, password='x')
     user.profile.is_italian_tl_role = True
+    assign_role(user, 'italian_tl')
     user.profile.save()
     return user
 

@@ -138,7 +138,7 @@ class PermissionService:
             profile = user.profile
             # HR can approve anything. Database roles are authoritative with
             # the legacy profile flag retained during migration.
-            if has_role(user, 'hr') or getattr(profile, 'is_hr_user', False):
+            if has_role(user, 'hr'):
                 return True
 
             # Team leaders can approve managed users' entries (all TL sources).

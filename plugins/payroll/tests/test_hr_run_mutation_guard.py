@@ -35,6 +35,7 @@ class HrRunMutationGuardTests(TestCase):
             perm.allowed_roles.add(hr_role)
         cls.hr = User.objects.create_user('hr_guard', password='x')
         cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         cls.hr.profile.save(update_fields=['is_hr_user'])
         assign_role(cls.hr, 'hr')
         cls.admin = User.objects.create_user('admin_guard', password='x', is_staff=True)

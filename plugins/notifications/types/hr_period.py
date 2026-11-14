@@ -12,8 +12,8 @@ from .base import NotificationType
 LINK = '/hr/payroll/runs'
 
 
-# HR membership lives in two places (the role row and the legacy profile flag).
-_IS_HR = Q(profile__is_hr_user=True) | Q(user_roles__role__code='hr', user_roles__is_active=True)
+# HR membership is the active UserRole grant.
+_IS_HR = Q(user_roles__role__code='hr', user_roles__is_active=True)
 
 
 def _hr_users():

@@ -7,6 +7,7 @@ leader granted ``manage`` could create, change or delete any employee's wage.
 Team leaders may read the wage of their own scoreable team (TL scorecard);
 they may never write one. The wage importer applies the same rule.
 """
+from apps.permissions.services.role_service import assign_role
 from datetime import date
 from decimal import Decimal
 
@@ -198,6 +199,7 @@ class WageWritePermissionTests(TestCase):
     def test_eligible_users_excludes_italian_tls_for_hr(self):
         it_tl = User.objects.create_user(username='wage_it_tl', email='ittl@test.com', password='pass')
         it_tl.profile.is_italian_tl_role = True
+        assign_role(it_tl, 'italian_tl')
         it_tl.profile.save(update_fields=['is_italian_tl_role'])
 
         request = self.factory.get('/api/plugins/payroll/wages/eligible_users/')
@@ -211,6 +213,7 @@ class WageWritePermissionTests(TestCase):
     def test_wage_create_rejects_italian_tl(self):
         it_tl = User.objects.create_user(username='wage_it_tl2', email='ittl2@test.com', password='pass')
         it_tl.profile.is_italian_tl_role = True
+        assign_role(it_tl, 'italian_tl')
         it_tl.profile.save(update_fields=['is_italian_tl_role'])
 
         body = {
@@ -228,6 +231,7 @@ class WageWritePermissionTests(TestCase):
     def test_wage_list_excludes_italian_tls_for_hr(self):
         it_tl = User.objects.create_user(username='wage_it_tl3', email='ittl3@test.com', password='pass')
         it_tl.profile.is_italian_tl_role = True
+        assign_role(it_tl, 'italian_tl')
         it_tl.profile.save(update_fields=['is_italian_tl_role'])
 
         # Create via objects.create bypassing model clean to simulate legacy/direct row

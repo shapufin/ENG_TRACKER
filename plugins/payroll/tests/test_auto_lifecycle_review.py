@@ -1,4 +1,5 @@
 """Review follow-ups: failure alerting, hook isolation, draft user set, HR importer lock."""
+from apps.permissions.services.role_service import assign_role
 from datetime import date, datetime
 from decimal import Decimal
 from unittest import mock
@@ -43,6 +44,7 @@ class LifecycleReviewTests(TestCase):
         cls.admin = User.objects.create_user('adm', password='x', is_staff=True)
         cls.hr = User.objects.create_user('hr1', password='x')
         cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         cls.hr.profile.save(update_fields=['is_hr_user'])
         _wage(cls.staffer)
 

@@ -1,4 +1,5 @@
 """Report insights must not invent numbers: no range means no comparison."""
+from apps.permissions.services.role_service import assign_role
 from decimal import Decimal
 
 from django.contrib.auth.models import User
@@ -24,6 +25,7 @@ class InsightsTests(APITestCase):
     def setUp(self):
         self.hr = make_user('ins_hr')
         self.hr.profile.is_hr_user = True
+        assign_role(self.hr, 'hr')
         self.hr.profile.save(update_fields=['is_hr_user'])
         self.client.force_authenticate(self.hr)
         self.emp = make_user('ins_emp')

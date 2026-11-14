@@ -685,8 +685,6 @@ class UserProfile(BaseModel):
         role_codes = self.role_codes or []
         if 'italian_tl' in role_codes or 'albanian_tl' in role_codes:
             return True
-        if self.is_italian_tl_role or self.is_albanian_tl_role:
-            return True
         if _leads_active_team(self.user):
             return True
         return (
@@ -697,9 +695,7 @@ class UserProfile(BaseModel):
     @property
     def is_hr(self):
         """Check if user has the HR role (database role or legacy flag)."""
-        if 'hr' in (self.role_codes or []):
-            return True
-        return self.is_hr_user
+        return 'hr' in (self.role_codes or [])
 
     @property
     def is_hbpr(self):
@@ -711,14 +707,14 @@ class UserProfile(BaseModel):
         """Check if user is a Line Manager (database role or legacy flag)."""
         if 'albanian_tl' in (self.role_codes or []):
             return True
-        return self.is_albanian_tl_role or _user_has_related(self.user, 'albanian_team_members')
+        return _user_has_related(self.user, 'albanian_team_members')
 
     @property
     def is_italian_tl(self):
         """Check if user is a Manager (database role or legacy flag)."""
         if 'italian_tl' in (self.role_codes or []):
             return True
-        return self.is_italian_tl_role or _user_has_related(self.user, 'italian_team_members')
+        return _user_has_related(self.user, 'italian_team_members')
 
 
 @receiver(post_save, sender=User)

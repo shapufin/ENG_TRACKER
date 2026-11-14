@@ -1,7 +1,6 @@
 """Who legitimately sits outside every team: HR, HBPR, Control Room and admin roles.
 
-Read from the legacy ``is_hr_user`` flag and active ``UserRole`` rows, the same
-sources the Admin Users role tabs use. The ``role_codes`` cache is not read: it
+Read from active ``UserRole`` rows, the same source the Admin Users role tabs use. The ``role_codes`` cache is not read: it
 is a derived copy that can lag behind a grant, and a substring match on it can
 see ``xhr`` as ``hr`` (audithandover.md S2).
 """
@@ -18,7 +17,7 @@ def non_team_user_q(prefix=''):
     ``prefix=''`` is a ``User`` queryset; ``prefix='userprofile__user__'``
     reaches the same users from a ``UserProfile``-rooted queryset.
     """
-    q = Q(**{f'{prefix}profile__is_hr_user': True})
+    q = Q()
     for role in NON_TEAM_ROLES:
         q |= users_with_role_q(role, prefix=prefix)
     return q

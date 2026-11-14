@@ -14,6 +14,7 @@ Prints one ``SIM|`` line per observation; a failing expectation that is a confir
 is marked ``expectedFailure`` and named ``test_BUG_*`` so the suite stays green.
 """
 
+from apps.permissions.services.role_service import assign_role
 import io
 import unittest
 from datetime import date, datetime, time
@@ -85,6 +86,7 @@ def _role(user, code):
 def _lm(username):
     user = User.objects.create_user(username=username, password='x')
     user.profile.is_albanian_tl_role = True
+    assign_role(user, 'albanian_tl')
     user.profile.save()
     _role(user, 'albanian_tl')
     return user
@@ -93,6 +95,7 @@ def _lm(username):
 def _manager(username):
     user = User.objects.create_user(username=username, password='x')
     user.profile.is_italian_tl_role = True
+    assign_role(user, 'italian_tl')
     user.profile.save()
     _role(user, 'italian_tl')
     return user
@@ -101,6 +104,7 @@ def _manager(username):
 def _hr(username):
     user = User.objects.create_user(username=username, password='x')
     user.profile.is_hr_user = True
+    assign_role(user, 'hr')
     user.profile.save()
     _role(user, 'hr')
     return user

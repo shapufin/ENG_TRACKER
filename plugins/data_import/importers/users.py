@@ -10,7 +10,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db.models.functions import Lower
 
-from apps.permissions.services.role_service import TeamLeaderRevokeBlockedError
+from apps.permissions.services.role_service import TeamLeaderRevokeBlockedError, users_with_role_q
 from apps.users.models import Team, Tech, TechLevel
 from apps.users.services.user_deactivation import deactivation_warnings
 from apps.users.services.user_creation import (
@@ -268,10 +268,10 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
         """Query real database models for valid entity codes and usernames."""
         teams = list(Team.objects.all().order_by("code")[:2])
         italian_tls = list(
-            User.objects.filter(profile__is_italian_tl_role=True, is_active=True).order_by("username")[:2]
+            User.objects.filter(users_with_role_q('italian_tl'), is_active=True).order_by("username")[:2]
         )
         albanian_tls = list(
-            User.objects.filter(profile__is_albanian_tl_role=True, is_active=True).order_by("username")[:2]
+            User.objects.filter(users_with_role_q('albanian_tl'), is_active=True).order_by("username")[:2]
         )
         techs = list(Tech.objects.filter(is_active=True).order_by("code")[:2])
 
@@ -336,12 +336,12 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
         dropdowns = super().get_field_dropdowns()
         team_codes = list(Team.objects.values_list("code", flat=True).order_by("code"))
         it_tls = list(
-            User.objects.filter(profile__is_italian_tl_role=True, is_active=True)
+            User.objects.filter(users_with_role_q('italian_tl'), is_active=True)
             .values_list("username", flat=True)
             .order_by("username")
         )
         al_tls = list(
-            User.objects.filter(profile__is_albanian_tl_role=True, is_active=True)
+            User.objects.filter(users_with_role_q('albanian_tl'), is_active=True)
             .values_list("username", flat=True)
             .order_by("username")
         )
@@ -364,14 +364,14 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
 
         managers = [
             {"Username": u.username, "Full Name": u.get_full_name() or u.username}
-            for u in User.objects.filter(profile__is_italian_tl_role=True, is_active=True).order_by("username")
+            for u in User.objects.filter(users_with_role_q('italian_tl'), is_active=True).order_by("username")
         ]
         if managers:
             ref["Managers"] = managers
 
         line_managers = [
             {"Username": u.username, "Full Name": u.get_full_name() or u.username}
-            for u in User.objects.filter(profile__is_albanian_tl_role=True, is_active=True).order_by("username")
+            for u in User.objects.filter(users_with_role_q('albanian_tl'), is_active=True).order_by("username")
         ]
         if line_managers:
             ref["Line Managers"] = line_managers

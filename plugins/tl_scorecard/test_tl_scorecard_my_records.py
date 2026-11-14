@@ -1,5 +1,6 @@
 """The employee's read-only view of records about them: PIP, EPR, 1-on-1s only,
 whitelisted fields, never another person's data, never TL-private text."""
+from apps.permissions.services.role_service import assign_role
 from datetime import date
 
 from django.test import TestCase
@@ -148,6 +149,7 @@ class MyRecordsPureHrTests(TestCase):
     def test_pure_hr_is_denied(self):
         hr = _make_user('hr_mr')
         hr.profile.is_hr_user = True
+        assign_role(hr, 'hr')
         hr.profile.save()
         request = APIRequestFactory().get('/x/')
         force_authenticate(request, user=hr)

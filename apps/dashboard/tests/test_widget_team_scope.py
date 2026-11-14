@@ -1,4 +1,5 @@
 """SEC-05: dashboard widget actions must not accept a foreign ``team_id``."""
+from apps.permissions.services.role_service import assign_role
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from rest_framework.test import APITestCase
@@ -24,6 +25,7 @@ class DashboardWidgetTeamScopeTests(APITestCase):
         cls.admin = User.objects.create_user(username='dw_admin', password='x', is_staff=True)
         cls.hr = User.objects.create_user(username='dw_hr', password='x')
         cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         cls.hr.profile.save()
 
         cls.own_team = Team.objects.create(name='DW Own', code='DWO', team_leader=cls.tl)

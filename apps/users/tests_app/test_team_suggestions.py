@@ -1,4 +1,5 @@
 """Suggested team moves: someone works a client that nobody on their own team works."""
+from apps.permissions.services.role_service import assign_role
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 
@@ -265,6 +266,7 @@ class OvertimeAndManagerTests(APITestCase):
         from apps.users.services.orphan_check import find_orphans
         boss = make_user('boss')
         boss.profile.is_italian_tl_role = True
+        assign_role(boss, 'italian_tl')
         boss.profile.save()
         boss.profile.clients.add(self.acme)
         boss.profile.teams.add(self.delta)
@@ -272,6 +274,7 @@ class OvertimeAndManagerTests(APITestCase):
         # ...and the manager is not reported as "without a team" either.
         loner = make_user('loner2')
         loner.profile.is_italian_tl_role = True
+        assign_role(loner, 'italian_tl')
         loner.profile.save()
         self.assertNotIn(loner.id, [u['id'] for u in find_orphans()['users_without_team']])
         # A TL on Delta/Acme must not make Delta look like it works Acme.

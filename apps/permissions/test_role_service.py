@@ -1,10 +1,10 @@
+from apps.permissions.services.role_service import assign_role
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase
 
 from apps.permissions.models import Role, UserRole
 from apps.permissions.services.role_service import (
-    assign_role,
     find_blocked_tl_revocations,
     find_blocked_tl_revocations_bulk,
     get_tl_dependents,
@@ -99,6 +99,7 @@ class FindBlockedTlRevocationsTests(TestCase):
 
     def test_blocks_when_legacy_flag_true_and_dependent_exists(self):
         self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
         self.dependent.profile.italian_tl = self.tl
         self.dependent.profile.save()
@@ -130,6 +131,7 @@ class FindBlockedTlRevocationsTests(TestCase):
 
     def test_no_block_when_no_dependents(self):
         self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
 
         blocked = find_blocked_tl_revocations(self.tl, {'italian_tl': False})
@@ -138,6 +140,7 @@ class FindBlockedTlRevocationsTests(TestCase):
 
     def test_no_block_when_role_unchanged(self):
         self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
         self.dependent.profile.italian_tl = self.tl
         self.dependent.profile.save()
@@ -150,6 +153,7 @@ class FindBlockedTlRevocationsTests(TestCase):
         """A role_code not present in new_state means 'not being touched by
         this request' — must never be treated as a revoke."""
         self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
         self.dependent.profile.italian_tl = self.tl
         self.dependent.profile.save()
@@ -174,6 +178,7 @@ class FindBlockedTlRevocationsBulkTests(TestCase):
 
         for tl in (self.tl1, self.tl2, self.no_dep_tl):
             tl.profile.is_italian_tl_role = True
+            assign_role(tl, 'italian_tl')
             tl.profile.save()
 
         self.dep1.profile.italian_tl = self.tl1

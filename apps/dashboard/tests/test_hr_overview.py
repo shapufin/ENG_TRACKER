@@ -5,6 +5,7 @@ self-service endpoints: pure HR got 403 (empty widgets) and multi-role HR saw
 only their own logs. The endpoint must return org data to ANY HR viewer while
 staying closed to plain employees, and must exclude soft-deleted rows.
 """
+from apps.permissions.services.role_service import assign_role
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -33,6 +34,7 @@ def _weekday(d):
 def make_hr(username="hr"):
     user = User.objects.create_user(username, password="x")
     user.profile.is_hr_user = True
+    assign_role(user, 'hr')
     user.profile.save(update_fields=["is_hr_user"])
     return user
 

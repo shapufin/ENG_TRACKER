@@ -36,13 +36,13 @@ def _roles():
     return active.aggregate(
         italian_tl=Count(
             "id",
-            filter=Q(profile__is_italian_tl_role=True) | users_with_role_q('italian_tl'),
+            filter=users_with_role_q('italian_tl'),
         ),
         albanian_tl=Count(
             "id",
-            filter=Q(profile__is_albanian_tl_role=True) | users_with_role_q('albanian_tl'),
+            filter=users_with_role_q('albanian_tl'),
         ),
-        hr=Count("id", filter=Q(profile__is_hr_user=True)),
+        hr=Count("id", filter=users_with_role_q('hr')),
         hbpr=Count("id", filter=users_with_role_q('hbpr')),
         staff=Count("id", filter=Q(is_staff=True)),
         employees=Count("id", filter=Q(is_staff=False, is_superuser=False)),

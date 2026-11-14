@@ -1,3 +1,4 @@
+from apps.permissions.services.role_service import assign_role
 from datetime import date
 from unittest.mock import patch
 
@@ -35,6 +36,7 @@ class TicketOvertimeLinkTests(TestCase):
         cls.member.profile.albanian_tl = cls.tl  # link-only scope (item 64)
         cls.member.profile.save(update_fields=['albanian_tl'])
         cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         cls.hr.profile.save(update_fields=['is_hr_user'])
 
         cls.link_client = Client.objects.create(name='Link Client', code='LINK-CLIENT')

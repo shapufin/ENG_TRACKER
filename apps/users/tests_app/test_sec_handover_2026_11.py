@@ -1,4 +1,5 @@
 """Handover SEC-01 (reset_all_passwords guard) and SEC-02 (italian_team_members IDOR)."""
+from apps.permissions.services.role_service import assign_role
 from io import StringIO
 
 from django.contrib.auth.models import User
@@ -22,6 +23,7 @@ class ItalianTeamMembersScopeTests(APITestCase):
         cls.staff = User.objects.create_user(username='itm_staff', password='x', is_staff=True)
         cls.hr = User.objects.create_user(username='itm_hr', password='x')
         cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         cls.hr.profile.save()
 
     def _get(self, user, tl_id):

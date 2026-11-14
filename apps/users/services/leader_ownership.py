@@ -26,9 +26,7 @@ def leader_user_ids() -> set[int]:
 
     return set(
         User.objects.filter(is_active=True).filter(
-            Q(profile__is_italian_tl_role=True)
-            | Q(profile__is_albanian_tl_role=True)
-            | Q(
+            Q(
                 user_roles__is_active=True,
                 user_roles__is_deleted=False,
                 user_roles__role__code__in=TL_ROLE_CODES,

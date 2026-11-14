@@ -1,5 +1,6 @@
 """M-3: a team leader listing generated reports got a 500 (the TL filter looked up a
 ``user`` column that GeneratedReport does not have). Reports are personal."""
+from apps.permissions.services.role_service import assign_role
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 
@@ -12,6 +13,7 @@ class GeneratedReportListScopeTests(APITestCase):
     def setUpTestData(cls):
         cls.tl = User.objects.create_user('gr_tl', password='x')
         cls.tl.profile.is_italian_tl_role = True
+        assign_role(cls.tl, 'italian_tl')
         cls.tl.profile.save()
         cls.member = User.objects.create_user('gr_member', password='x')
         cls.member.profile.italian_tl = cls.tl

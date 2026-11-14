@@ -51,11 +51,11 @@ def role_badge(profile: UserProfile) -> str:
     Manager/Line Manager detection logic cannot drift between call sites.
     """
     role_codes = profile.role_codes or []
-    if profile.is_italian_tl_role or "italian_tl" in role_codes:
+    if "italian_tl" in role_codes:
         return "italian_tl"
-    if profile.is_albanian_tl_role or "albanian_tl" in role_codes:
+    if "albanian_tl" in role_codes:
         return "albanian_tl"
-    if profile.is_hr_user or "hr" in role_codes:
+    if "hr" in role_codes:
         return "hr"
     if profile.user.is_superuser or profile.user.is_staff:
         return "admin"

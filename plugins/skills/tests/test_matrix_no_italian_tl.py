@@ -1,4 +1,5 @@
 """Managers never appear on the team skill matrix pages."""
+from apps.permissions.services.role_service import assign_role
 from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
@@ -13,6 +14,7 @@ class MatrixWithoutItalianTlTests(TestCase):
         self.admin = User.objects.create_user('nit_admin', password='x', is_staff=True)
         self.flagged_tl = User.objects.create_user('nit_flag', password='x')
         self.flagged_tl.profile.is_italian_tl_role = True
+        assign_role(self.flagged_tl, 'italian_tl')
         self.flagged_tl.profile.save()
         self.linked_tl = User.objects.create_user('nit_linked', password='x')
         self.member = User.objects.create_user('nit_member', password='x')

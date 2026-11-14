@@ -10,6 +10,7 @@ from django.test import TestCase
 
 from apps.overtime.models import Client, OvertimeLog
 from apps.standby.models import StandbyLog
+from apps.permissions.services.role_service import assign_role
 from apps.users.services.leader_ownership import leader_user_ids, owned_by_leader_q
 
 
@@ -18,6 +19,7 @@ def _leader(username, *, line=True):
     flag = 'is_albanian_tl_role' if line else 'is_italian_tl_role'
     setattr(user.profile, flag, True)
     user.profile.save()
+    assign_role(user, 'albanian_tl' if line else 'italian_tl')
     return user
 
 

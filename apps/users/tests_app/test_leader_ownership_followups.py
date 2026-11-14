@@ -5,6 +5,7 @@ link target or an ACTIVE team they lead. A demoted, deactivated or archived-team
 approver is not one, so their decisions follow the employee's current leader instead of
 being owned by someone who cannot read them.
 """
+from apps.permissions.services.role_service import assign_role
 from datetime import date
 
 from django.contrib.auth.models import User
@@ -12,6 +13,7 @@ from django.test import TestCase
 
 from apps.overtime.models import Client, OvertimeLog
 from apps.permissions.services.permission_service import permission_service
+from apps.permissions.services.role_service import revoke_role
 from apps.users.models import Team
 from apps.users.services.leader_ownership import leader_user_ids, owned_by_leader_q
 
@@ -20,6 +22,7 @@ def _leader(username, *, line=True):
     user = User.objects.create_user(username=username, password='x')
     setattr(user.profile, 'is_albanian_tl_role' if line else 'is_italian_tl_role', True)
     user.profile.save()
+    assign_role(user, 'albanian_tl' if line else 'italian_tl')
     return user
 
 
@@ -48,7 +51,7 @@ class LeaderDefinitionTests(TestCase):
 
     def test_demoted_approver_who_only_leads_an_archived_team_is_not_a_leader(self):
         team = Team.objects.create(name='Fu Old', code='FUO', team_leader=self.approver, is_active=False)
-        self.approver.profile.is_albanian_tl_role = False
+        revoke_role(self.approver, 'albanian_tl')
         self.approver.profile.save()
         self.assertNotIn(self.approver.id, leader_user_ids())
         self.assertEqual(self._owner_ids(), [self.current.id])
@@ -61,7 +64,7 @@ class LeaderDefinitionTests(TestCase):
         self.assertEqual(self._owner_ids(), [self.current.id])
 
     def test_approver_leading_an_active_team_is_still_a_leader(self):
-        self.approver.profile.is_albanian_tl_role = False
+        revoke_role(self.approver, 'albanian_tl')
         self.approver.profile.save()
         Team.objects.create(name='Fu Live', code='FUL', team_leader=self.approver, is_active=True)
         self.assertIn(self.approver.id, leader_user_ids())

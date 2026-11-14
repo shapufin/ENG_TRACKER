@@ -316,22 +316,18 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         if tl_type == 'italian':
             queryset = queryset.filter(
                 models.Q(italian_team_members__isnull=False) |
-                models.Q(profile__is_italian_tl_role=True) |
                 users_with_role_q('italian_tl')
             ).distinct()
         elif tl_type == 'albanian':
             queryset = queryset.filter(
                 models.Q(albanian_team_members__isnull=False) |
-                models.Q(profile__is_albanian_tl_role=True) |
                 users_with_role_q('albanian_tl')
             ).distinct()
         else:
             queryset = queryset.filter(
                 models.Q(italian_team_members__isnull=False) |
-                models.Q(profile__is_italian_tl_role=True) |
                 users_with_role_q('italian_tl') |
                 models.Q(albanian_team_members__isnull=False) |
-                models.Q(profile__is_albanian_tl_role=True) |
                 users_with_role_q('albanian_tl')
             ).distinct()
 
@@ -358,10 +354,8 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         Includes users with the role flag OR users with team members assigned.
         Staff and HR only get member counts; team leaders get names; others are refused.
         """
-        from django.db.models import Q
         show_counts = self._tl_directory_access(request)
         queryset = User.objects.filter(
-            Q(profile__is_italian_tl_role=True) |
             users_with_role_q('italian_tl')
         ).filter(is_staff=False, is_superuser=False).distinct().annotate(
             member_count=Count('italian_team_members', distinct=True)
@@ -389,10 +383,8 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         Includes users with the role flag OR users with team members assigned.
         Staff and HR only get member counts; team leaders get names; others are refused.
         """
-        from django.db.models import Q
         show_counts = self._tl_directory_access(request)
         queryset = User.objects.filter(
-            Q(profile__is_albanian_tl_role=True) |
             users_with_role_q('albanian_tl')
         ).filter(is_staff=False, is_superuser=False).distinct().annotate(
             member_count=Count('albanian_team_members', distinct=True)
@@ -1458,22 +1450,18 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         
         # Manager count (role flag OR has assigned members OR database role)
         italian_tl_count = User.objects.filter(
-            Q(profile__is_italian_tl_role=True) |
             users_with_role_q('italian_tl') |
             Q(italian_team_members__isnull=False)
         ).distinct().count()
         
         # Line Manager count (role flag OR has assigned members OR database role)
         albanian_tl_count = User.objects.filter(
-            Q(profile__is_albanian_tl_role=True) |
             users_with_role_q('albanian_tl') |
             Q(albanian_team_members__isnull=False)
         ).distinct().count()
         
         # No TL count (neither role flag, database role, nor assigned TLs)
         no_tl_count = User.objects.filter(
-            Q(profile__is_italian_tl_role=False) &
-            Q(profile__is_albanian_tl_role=False) &
             ~users_with_role_q('italian_tl') &
             ~users_with_role_q('albanian_tl') &
             Q(profile__italian_tl__isnull=True) &
@@ -1614,14 +1602,12 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
             )
         if role == 'italian_tl':
             return queryset.filter(
-                Q(is_italian_tl_role=True)
-                | users_with_role_q('italian_tl', prefix='user__')
+                users_with_role_q('italian_tl', prefix='user__')
                 | Q(user__italian_team_members__isnull=False)
             ).distinct()
         if role == 'albanian_tl':
             return queryset.filter(
-                Q(is_albanian_tl_role=True)
-                | users_with_role_q('albanian_tl', prefix='user__')
+                users_with_role_q('albanian_tl', prefix='user__')
                 | Q(user__albanian_team_members__isnull=False)
             ).distinct()
         if role == 'hbpr':
@@ -1629,16 +1615,14 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
             return queryset.filter(users_with_role_q('hbpr', prefix='user__')).distinct()
         if role == 'hr':
             return queryset.filter(
-                Q(is_hr_user=True) | users_with_role_q('hr', prefix='user__')
+                users_with_role_q('hr', prefix='user__')
             ).distinct()
         if role == 'cr_admin':
             # flagless like hbpr: the UserRole grant is the only source.
             return queryset.filter(users_with_role_q('cr_admin', prefix='user__')).distinct()
         if role == 'no_tl':
             return queryset.filter(
-                Q(is_italian_tl_role=False)
-                & Q(is_albanian_tl_role=False)
-                & ~users_with_role_q('italian_tl', prefix='user__')
+                ~users_with_role_q('italian_tl', prefix='user__')
                 & ~users_with_role_q('albanian_tl', prefix='user__')
                 & Q(italian_tl__isnull=True)
                 & Q(albanian_tl__isnull=True)
@@ -1655,10 +1639,7 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
             # them here would leave them unreachable. Documented in
             # docs/hbpr-and-scorecard.md.
             return queryset.filter(
-                Q(is_italian_tl_role=False)
-                & Q(is_albanian_tl_role=False)
-                & Q(is_hr_user=False)
-                & Q(user__italian_team_members__isnull=True)
+                Q(user__italian_team_members__isnull=True)
                 & Q(user__albanian_team_members__isnull=True)
                 & ~users_with_role_q('italian_tl', prefix='user__')
                 & ~users_with_role_q('albanian_tl', prefix='user__')
