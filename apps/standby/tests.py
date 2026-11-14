@@ -118,7 +118,7 @@ class StandbyLogViewSetTests(TestCase):
         """
         hr_user = User.objects.create_user(username='sb-hr', password='testpass')
         profile = hr_user.profile
-        profile.is_hr_user = True
+        assign_role(hr_user, 'hr')
         assign_role(hr_user, 'hr')
         profile.save()
         self.client.force_authenticate(user=hr_user)
@@ -130,7 +130,7 @@ class StandbyLogViewSetTests(TestCase):
     def test_hr_who_is_also_staff_keeps_standby_access(self):
         hr_staff = User.objects.create_user(username='sb-hr-staff', password='testpass', is_staff=True)
         profile = hr_staff.profile
-        profile.is_hr_user = True
+        assign_role(hr_staff, 'hr')
         assign_role(hr_staff, 'hr')
         profile.save()
         self.client.force_authenticate(user=hr_staff)
@@ -782,9 +782,9 @@ class StandbyLogExportTests(TestCase):
 class StandbyTLEditBlockTests(TestCase):
     def setUp(self):
         self.tl = User.objects.create_user(username='sb-guard-tl', password='pass')
-        self.tl.profile.is_albanian_tl_role = True
         assign_role(self.tl, 'albanian_tl')
-        self.tl.profile.save(update_fields=['is_albanian_tl_role', 'updated_at'])
+        assign_role(self.tl, 'albanian_tl')
+        self.tl.profile.save(update_fields=['updated_at'])
         self.employee = User.objects.create_user(username='sb-guard-employee', password='pass')
         self.team = Team.objects.create(name='SB Guard Team', code='SBGUARD', team_leader=self.tl)
         TeamMembership.objects.create(user_profile=self.employee.profile, team=self.team, is_primary_team=True)

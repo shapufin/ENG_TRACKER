@@ -107,7 +107,7 @@ class OvertimeLogViewSetTests(TestCase):
         """
         hr_user = User.objects.create_user(username='ot-hr', password='testpass')
         profile = hr_user.profile
-        profile.is_hr_user = True
+        assign_role(hr_user, 'hr')
         assign_role(hr_user, 'hr')
         profile.save()
         self.client.force_authenticate(user=hr_user)
@@ -119,7 +119,7 @@ class OvertimeLogViewSetTests(TestCase):
     def test_hr_who_is_also_staff_keeps_overtime_access(self):
         hr_staff = User.objects.create_user(username='ot-hr-staff', password='testpass', is_staff=True)
         profile = hr_staff.profile
-        profile.is_hr_user = True
+        assign_role(hr_staff, 'hr')
         assign_role(hr_staff, 'hr')
         profile.save()
         self.client.force_authenticate(user=hr_staff)

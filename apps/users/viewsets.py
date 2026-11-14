@@ -821,12 +821,6 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
                         warning = no_manager_warning(profile)
                         if warning:
                             bulk_warnings.append(warning)
-                if 'is_hr' in data:
-                    profile.is_hr_user = data['is_hr']
-                if 'is_italian_tl_role' in data:
-                    profile.is_italian_tl_role = data['is_italian_tl_role']
-                if 'is_albanian_tl_role' in data:
-                    profile.is_albanian_tl_role = data['is_albanian_tl_role']
                 if team_change:
                     warned, _ = tl_link_followup(
                         profile, team_change, unassign=bool(data.get('unassign_removed_tl')), request=request,
@@ -1260,16 +1254,6 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             tl_warnings, removed_leaders = tl_link_followup(
                 profile, team_change, unassign=bool(data.get('unassign_removed_tl')), request=request,
             )
-        # When 'roles' is provided, _sync_roles overwrites the legacy flags
-        # below — skip the redundant direct set. Only set flags directly for
-        # the legacy path (no 'roles' key in payload).
-        if 'roles' not in data:
-            if 'is_hr' in data:
-                profile.is_hr_user = bool(data['is_hr'])
-            if 'is_italian_tl_role' in data:
-                profile.is_italian_tl_role = bool(data['is_italian_tl_role'])
-            if 'is_albanian_tl_role' in data:
-                profile.is_albanian_tl_role = bool(data['is_albanian_tl_role'])
         profile.save()
         if 'roles' in data:
             try:
@@ -1508,7 +1492,7 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
     serializer_class = UserProfileSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['user__username', 'user__email', 'user__first_name', 'user__last_name', 'code']
-    filterset_fields = ['albanian_tl', 'italian_tl', 'is_hr_user']
+    filterset_fields = ['albanian_tl', 'italian_tl']
     pagination_class = UserProfilePagination
 
     def get_queryset(self):

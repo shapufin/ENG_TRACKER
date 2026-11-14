@@ -46,9 +46,8 @@ class PermissionTests(TrendsBase):
 
     def test_hr_without_staff_forbidden(self):
         hr = User.objects.create_user("hr", password="x")
-        hr.profile.is_hr_user = True
         assign_role(hr, 'hr')
-        hr.profile.save(update_fields=["is_hr_user"])
+        assign_role(hr, 'hr')
         self.assertEqual(self.get(hr).status_code, status.HTTP_403_FORBIDDEN)
 
     def test_staff_ok(self):

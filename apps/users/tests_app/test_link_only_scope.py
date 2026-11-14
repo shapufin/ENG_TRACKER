@@ -17,7 +17,7 @@ from apps.users.models import Team
 class LinkOnlyScopeTests(APITestCase):
     def setUp(self):
         self.x = User.objects.create_user(username='x_lm', password='x')
-        self.x.profile.is_albanian_tl_role = True
+        assign_role(self.x, 'albanian_tl')
         assign_role(self.x, 'albanian_tl')
         self.x.profile.save()
         self.a = User.objects.create_user(username='a_emp', password='x')

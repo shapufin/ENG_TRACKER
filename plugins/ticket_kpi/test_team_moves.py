@@ -53,7 +53,7 @@ class TeamMoveTests(TestCase):
         cls.mgr1 = _leader('mgr1', 'M1')
         cls.mgr2 = _leader('mgr2', 'M2')
         for mgr in (cls.mgr1, cls.mgr2):
-            mgr.profile.is_italian_tl_role = True
+            assign_role(mgr, 'italian_tl')
             assign_role(mgr, 'italian_tl')
             mgr.profile.save()
 

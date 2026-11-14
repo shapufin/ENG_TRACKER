@@ -50,8 +50,8 @@ class OrganigramaPlugin(BasePlugin):
                 # ALL authenticated users, including those without UserRole rows.
                 # The org chart is read-only and scoped by get_team_member_ids(),
                 # so there is no security risk. Without this, users with only
-                # legacy role flags (is_hr_user, is_italian_tl_role, etc.) but
-                # no UserRole rows would not see the link.
+                # role grants or leader links but no UserRole rows would not
+                # see the link.
                 "public": True,
             },
             "manage": {

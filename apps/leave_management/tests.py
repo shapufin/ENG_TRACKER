@@ -204,7 +204,7 @@ class LeaveRequestViewSetTests(TestCase):
         """HR users must be denied create even though they pass IsAuthenticated."""
         hr_user = User.objects.create_user(username='hruser', password='testpass')
         profile = hr_user.profile
-        profile.is_hr_user = True
+        assign_role(hr_user, 'hr')
         assign_role(hr_user, 'hr')
         profile.save()
 

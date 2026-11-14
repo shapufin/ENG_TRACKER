@@ -81,7 +81,7 @@ class ArchiveBlockersBulkTests(APITestCase):
     def test_only_admins_get_blockers_they_carry_pending_counts_and_hbpr_status(self):
         # Pending counts are confidential (team confidentiality ruling): only the people who can archive see them.
         hr = make_user('hrviewer')
-        hr.profile.is_hr_user = True
+        assign_role(hr, 'hr')
         assign_role(hr, 'hr')
         hr.profile.save()
         for viewer in (make_user('plain'), self.leader, self.hbpr_leader, hr):

@@ -1,4 +1,5 @@
 """Integration tests for the Payroll plugin service and ViewSets."""
+from apps.permissions.services.role_service import assign_role
 from datetime import date, datetime, time
 from decimal import Decimal
 from unittest import mock
@@ -562,11 +563,10 @@ class PayrollHRScopeTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         from apps.permissions.models import Role
-        from apps.permissions.services.role_service import assign_role
         from apps.plugins.models import PluginPermission
 
         cls.hr_user = User.objects.create_user(username='hr_payroll', password='pass')
-        cls.hr_user.profile.is_hr_user = True
+        assign_role(cls.hr_user, 'hr')
         assign_role(cls.hr_user, 'hr')
         cls.hr_user.profile.save()
         hr_role, _ = Role.objects.get_or_create(code='hr', defaults={'name': 'HR'})

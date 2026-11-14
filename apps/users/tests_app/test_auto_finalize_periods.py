@@ -24,9 +24,8 @@ class AutoFinalizeApprovalPeriodsTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.lead = User.objects.create_user('lead', password='x')
-        cls.lead.profile.is_albanian_tl_role = True
         assign_role(cls.lead, 'albanian_tl')
-        cls.lead.profile.save(update_fields=['is_albanian_tl_role'])
+        assign_role(cls.lead, 'albanian_tl')
         cls.closed = User.objects.create_user('closed', password='x')
         cls.open_a = User.objects.create_user('open_a', password='x')
         cls.open_b = User.objects.create_user('open_b', password='x')

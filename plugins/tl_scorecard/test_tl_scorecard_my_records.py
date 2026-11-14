@@ -148,7 +148,7 @@ class MyRecordsTests(TestCase):
 class MyRecordsPureHrTests(TestCase):
     def test_pure_hr_is_denied(self):
         hr = _make_user('hr_mr')
-        hr.profile.is_hr_user = True
+        assign_role(hr, 'hr')
         assign_role(hr, 'hr')
         hr.profile.save()
         request = APIRequestFactory().get('/x/')

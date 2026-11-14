@@ -156,9 +156,8 @@ class AutoLifecycleTests(TestCase):
 
     def test_hr_hears_about_the_automatic_finalize(self):
         hr = User.objects.create_user('hr1', password='x')
-        hr.profile.is_hr_user = True
         assign_role(hr, 'hr')
-        hr.profile.save(update_fields=['is_hr_user'])
+        assign_role(hr, 'hr')
         payroll_lifecycle_tick(MONTH_END)
         payroll_lifecycle_tick(AT_CUTOFF)
         self.assertTrue(

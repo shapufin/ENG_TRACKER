@@ -44,9 +44,9 @@ class UserProfileTeamMemberTests(TestCase):
 
     def test_get_team_member_ids_includes_direct_tl_assignments(self):
         profile = self.tl.profile
-        profile.is_italian_tl_role = True
         assign_role(self.tl, 'italian_tl')
-        profile.is_albanian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
+        assign_role(self.tl, 'albanian_tl')
         assign_role(self.tl, 'albanian_tl')
         profile.save()
 
@@ -195,14 +195,14 @@ class MultiRoleHRPermissionTests(TestCase):
         self.client_obj = Client.objects.create(name='Acme', code='ACME')
 
         self.pure_hr = User.objects.create_user(username='pure-hr', password='testpass')
-        self.pure_hr.profile.is_hr_user = True
+        assign_role(self.pure_hr, 'hr')
         assign_role(self.pure_hr, 'hr')
         self.pure_hr.profile.save()
 
         self.tl_hr = User.objects.create_user(username='tl-hr', password='testpass')
-        self.tl_hr.profile.is_hr_user = True
         assign_role(self.tl_hr, 'hr')
-        self.tl_hr.profile.is_italian_tl_role = True
+        assign_role(self.tl_hr, 'hr')
+        assign_role(self.tl_hr, 'italian_tl')
         assign_role(self.tl_hr, 'italian_tl')
         self.tl_hr.profile.save()
 
@@ -293,7 +293,7 @@ class LedTeamApprovePermissionTests(TestCase):
 
     def test_fk_tl_can_still_approve(self):
         fk_tl = User.objects.create_user(username='fk-tl', password='testpass')
-        fk_tl.profile.is_italian_tl_role = True
+        assign_role(fk_tl, 'italian_tl')
         assign_role(fk_tl, 'italian_tl')
         fk_tl.profile.save()
         self.member.profile.italian_tl = fk_tl

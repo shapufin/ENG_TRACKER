@@ -6,7 +6,7 @@ approvers, Manager plus Line Manager links, a move with no replacement, a team-o
 a leader's own rows, and one employee in two teams under the same leader.
 """
 
-from apps.permissions.services.role_service import assign_role
+from apps.permissions.services.role_service import assign_role, revoke_role
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.utils import timezone
@@ -35,7 +35,7 @@ def _role(user, code):
 
 def _lm(username):
     user = User.objects.create_user(username=username, password='x')
-    user.profile.is_albanian_tl_role = True
+    assign_role(user, 'albanian_tl')
     assign_role(user, 'albanian_tl')
     user.profile.save()
     _role(user, 'albanian_tl')
@@ -44,7 +44,7 @@ def _lm(username):
 
 def _manager(username):
     user = User.objects.create_user(username=username, password='x')
-    user.profile.is_italian_tl_role = True
+    assign_role(user, 'italian_tl')
     assign_role(user, 'italian_tl')
     user.profile.save()
     _role(user, 'italian_tl')
@@ -137,7 +137,7 @@ class OwnerSimulationTests(TestCase):
     def test_s4_demoted_approver_loses_history_to_current_leader(self):
         pk = self._ot(status='approved', approved_by=self.old_lm)
         self.old_lm.user_roles.update(is_active=False)
-        self.old_lm.profile.is_albanian_tl_role = False
+        revoke_role(self.old_lm, 'albanian_tl')
         self.old_lm.profile.save()
         self._move(self.new_lm)
         _sim('S4 demoted approver: row owner', 'new_lm' if pk in self._ids('/api/overtime/logs/team_logs/', self.new_lm) else 'nobody')

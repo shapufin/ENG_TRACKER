@@ -12,7 +12,7 @@ class GeneratedReportListScopeTests(APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.tl = User.objects.create_user('gr_tl', password='x')
-        cls.tl.profile.is_italian_tl_role = True
+        assign_role(cls.tl, 'italian_tl')
         assign_role(cls.tl, 'italian_tl')
         cls.tl.profile.save()
         cls.member = User.objects.create_user('gr_member', password='x')

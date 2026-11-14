@@ -1,4 +1,4 @@
-from apps.permissions.services.role_service import assign_role
+from apps.permissions.services.role_service import assign_role, revoke_role
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase
@@ -10,7 +10,6 @@ from apps.permissions.services.role_service import (
     get_tl_dependents,
     get_user_roles,
     has_role,
-    revoke_role,
 )
 
 
@@ -98,7 +97,7 @@ class FindBlockedTlRevocationsTests(TestCase):
         self.dependent = User.objects.create_user(username='blk-dep', password='x')
 
     def test_blocks_when_legacy_flag_true_and_dependent_exists(self):
-        self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
         self.dependent.profile.italian_tl = self.tl
@@ -114,14 +113,11 @@ class FindBlockedTlRevocationsTests(TestCase):
         )
 
     def test_blocks_when_role_granted_via_role_codes_not_legacy_flag(self):
-        """Regression: a TL role granted via assign_role() directly (as
-        apps/users/management/commands/seed_e2e_data.py does) sets
-        role_codes but leaves is_italian_tl_role False. The block must
-        still fire — is_italian_tl (the property) checks role_codes too,
-        unlike a raw is_italian_tl_role read."""
+        """Regression: a TL role granted via the role cache (role_codes) must still
+        block a revoke while a dependent points at the leader."""
         self.tl.profile.role_codes = ['italian_tl']
         self.tl.profile.save()
-        self.assertFalse(self.tl.profile.is_italian_tl_role)
+        self.assertTrue(self.tl.profile.is_italian_tl)
         self.dependent.profile.italian_tl = self.tl
         self.dependent.profile.save()
 
@@ -130,7 +126,7 @@ class FindBlockedTlRevocationsTests(TestCase):
         self.assertEqual(len(blocked), 1)
 
     def test_no_block_when_no_dependents(self):
-        self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
 
@@ -139,7 +135,7 @@ class FindBlockedTlRevocationsTests(TestCase):
         self.assertEqual(blocked, [])
 
     def test_no_block_when_role_unchanged(self):
-        self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
         self.dependent.profile.italian_tl = self.tl
@@ -152,7 +148,7 @@ class FindBlockedTlRevocationsTests(TestCase):
     def test_no_block_when_role_code_absent_from_new_state(self):
         """A role_code not present in new_state means 'not being touched by
         this request' — must never be treated as a revoke."""
-        self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
         self.dependent.profile.italian_tl = self.tl
@@ -177,7 +173,7 @@ class FindBlockedTlRevocationsBulkTests(TestCase):
         self.dep2 = User.objects.create_user(username='bulk-dep2', password='x')
 
         for tl in (self.tl1, self.tl2, self.no_dep_tl):
-            tl.profile.is_italian_tl_role = True
+            assign_role(tl, 'italian_tl')
             assign_role(tl, 'italian_tl')
             tl.profile.save()
 

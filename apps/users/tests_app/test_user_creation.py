@@ -20,7 +20,7 @@ class UpdateUserProfileTlRevokeBlockTests(TestCase):
         self.dependent = User.objects.create_user(username='ucp-dep', password='x')
 
     def test_raises_when_revoking_italian_tl_role_with_dependent_fk_remaining(self):
-        self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
         self.dependent.profile.italian_tl = self.tl
@@ -31,20 +31,20 @@ class UpdateUserProfileTlRevokeBlockTests(TestCase):
 
         self.assertEqual(ctx.exception.blocked_revocations[0]['role'], 'italian_tl')
         self.tl.profile.refresh_from_db()
-        self.assertTrue(self.tl.profile.is_italian_tl_role)
+        self.assertTrue(self.tl.profile.is_italian_tl)
 
     def test_succeeds_when_no_dependents_remain(self):
-        self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
 
         update_user_profile(self.tl, is_italian_tl_role=False)
 
         self.tl.profile.refresh_from_db()
-        self.assertFalse(self.tl.profile.is_italian_tl_role)
+        self.assertFalse(self.tl.profile.is_italian_tl)
 
     def test_does_not_check_when_role_field_not_supplied(self):
-        self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
         self.dependent.profile.italian_tl = self.tl

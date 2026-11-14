@@ -24,9 +24,8 @@ def make_user(name, **kwargs):
 class InsightsTests(APITestCase):
     def setUp(self):
         self.hr = make_user('ins_hr')
-        self.hr.profile.is_hr_user = True
         assign_role(self.hr, 'hr')
-        self.hr.profile.save(update_fields=['is_hr_user'])
+        assign_role(self.hr, 'hr')
         self.client.force_authenticate(self.hr)
         self.emp = make_user('ins_emp')
         LeaveBalance.objects.create(

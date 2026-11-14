@@ -148,15 +148,7 @@ class Command(BaseCommand):
             user.set_password(E2E_PASSWORD)
             user.save()
 
-            profile, _ = UserProfile.objects.get_or_create(user=user)
-            profile.is_hr_user = cfg.get("is_hr_user", False)
-            profile.is_italian_tl_role = cfg.get("is_italian_tl_role", False)
-            profile.is_albanian_tl_role = cfg.get("is_albanian_tl_role", False)
-            profile.save(update_fields=[
-                "is_hr_user",
-                "is_italian_tl_role",
-                "is_albanian_tl_role",
-            ])
+            UserProfile.objects.get_or_create(user=user)
             assign_role(user, "employee")
             for extra_role in cfg.get("extra_roles", []):
                 assign_role(user, extra_role)

@@ -265,7 +265,7 @@ class OvertimeAndManagerTests(APITestCase):
     def test_an_italian_tl_is_never_suggested_a_team_nor_counted_as_a_teammate(self):
         from apps.users.services.orphan_check import find_orphans
         boss = make_user('boss')
-        boss.profile.is_italian_tl_role = True
+        assign_role(boss, 'italian_tl')
         assign_role(boss, 'italian_tl')
         boss.profile.save()
         boss.profile.clients.add(self.acme)
@@ -273,7 +273,7 @@ class OvertimeAndManagerTests(APITestCase):
         self.assertIsNone(mine(suggest_team_moves(), boss))
         # ...and the manager is not reported as "without a team" either.
         loner = make_user('loner2')
-        loner.profile.is_italian_tl_role = True
+        assign_role(loner, 'italian_tl')
         assign_role(loner, 'italian_tl')
         loner.profile.save()
         self.assertNotIn(loner.id, [u['id'] for u in find_orphans()['users_without_team']])

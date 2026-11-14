@@ -10,9 +10,8 @@ class GlobalDashboardStatsPermissionTests(TestCase):
         self.client = APIClient()
         self.employee = User.objects.create_user(username="employee", password="testpass")
         self.hr_user = User.objects.create_user(username="hr", password="testpass")
-        self.hr_user.profile.is_hr_user = True
         assign_role(self.hr_user, 'hr')
-        self.hr_user.profile.save(update_fields=["is_hr_user"])
+        assign_role(self.hr_user, 'hr')
         self.staff_user = User.objects.create_user(
             username="staff", password="testpass", is_staff=True
         )

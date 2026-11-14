@@ -433,11 +433,11 @@ FOREIGN_TEAM = 0
 def _make_user(username, role=None, **profile_flags):
     user = User.objects.create_user(
         username, f'{username}@example.com', 'pw-matrix-1', first_name=username, last_name='Matrix')
-    profile, _ = UserProfile.objects.get_or_create(user=user)
+    UserProfile.objects.get_or_create(user=user)
+    flag_roles = {'is_hr_user': 'hr', 'is_italian_tl_role': 'italian_tl', 'is_albanian_tl_role': 'albanian_tl'}
     for name, value in profile_flags.items():
-        setattr(profile, name, value)
-    if profile_flags:
-        profile.save()
+        if value:
+            assign_role(user, flag_roles[name])
     assign_role(user, 'employee')
     if role:
         assign_role(user, role)

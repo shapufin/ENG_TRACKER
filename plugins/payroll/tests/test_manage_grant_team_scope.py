@@ -7,6 +7,7 @@ team (``profile.get_team_member_ids()``). Whole-run actions (create, update,
 destroy, finalize, cancel, consolidated exports, closure status) act on every
 team's lines at once, so a scoped user is refused them (fail closed).
 """
+from apps.permissions.services.role_service import assign_role
 from datetime import date
 from decimal import Decimal
 
@@ -29,7 +30,6 @@ class ManageGrantTeamScopeTests(TestCase):
     def setUpTestData(cls):
         PayrollConfiguration.objects.update_or_create(pk=1, defaults={'require_tl_closed_before_finalize': False})
         from apps.permissions.models import Role
-        from apps.permissions.services.role_service import assign_role
         from apps.plugins.models import PluginPermission
 
         role_names = {
@@ -73,7 +73,7 @@ class ManageGrantTeamScopeTests(TestCase):
 
         # HR: holds the same grants but is unrestricted by is_hr.
         cls.hr = User.objects.create_user(username='ms_hr', password='pass')
-        cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         assign_role(cls.hr, 'hr')
         cls.hr.profile.save()
         assign_role(cls.hr, 'hr')

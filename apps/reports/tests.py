@@ -732,8 +732,6 @@ class ExportVisibilityTests(TestCase):
         )
         # Profile auto-created via signal; update it.
         self.tl_profile = UserProfile.objects.get(user=self.tl)
-        self.tl_profile.is_italian_tl_role = True
-        self.tl_profile.save(update_fields=['is_italian_tl_role'])
         self.emp_a = User.objects.create_user(
             username='vis-emp-a', password='testpass',
             first_name='EmpA', last_name='User',
@@ -1037,7 +1035,6 @@ class PayrollSettlementColumnTests(TestCase):
         )
         tl_profile = UserProfile.objects.get(user=tl)
         tl_profile.is_italian_tl_role = True
-        tl_profile.save(update_fields=['is_italian_tl_role'])
         member = User.objects.create_user(
             username='settle-member', password='testpass', first_name='Member',
         )
@@ -1196,7 +1193,6 @@ class ExportLinkRemovalAndConsistencyTests(TestCase):
         )
         lm_profile = UserProfile.objects.get(user=self.lm)
         lm_profile.is_albanian_tl_role = True
-        lm_profile.save(update_fields=['is_albanian_tl_role'])
 
         self.emp = User.objects.create_user(
             username='cons-emp', password='testpass', first_name='Linked', last_name='Worker',

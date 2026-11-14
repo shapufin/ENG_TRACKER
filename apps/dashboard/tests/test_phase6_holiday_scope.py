@@ -84,7 +84,7 @@ class HolidayDetachScopeTests(TestCase):
             name='Priv Holiday', date='2026-04-01', calendar=self.private_ws,
         )
         self.hr = User.objects.create_user(username='d2-hr', password='x')
-        self.hr.profile.is_hr_user = True
+        assign_role(self.hr, 'hr')
         assign_role(self.hr, 'hr')
         self.hr.profile.save()
         self.client = APIClient()

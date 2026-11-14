@@ -198,9 +198,8 @@ class WageWritePermissionTests(TestCase):
 
     def test_eligible_users_excludes_italian_tls_for_hr(self):
         it_tl = User.objects.create_user(username='wage_it_tl', email='ittl@test.com', password='pass')
-        it_tl.profile.is_italian_tl_role = True
         assign_role(it_tl, 'italian_tl')
-        it_tl.profile.save(update_fields=['is_italian_tl_role'])
+        assign_role(it_tl, 'italian_tl')
 
         request = self.factory.get('/api/plugins/payroll/wages/eligible_users/')
         force_authenticate(request, user=self.hr_user)
@@ -212,9 +211,8 @@ class WageWritePermissionTests(TestCase):
 
     def test_wage_create_rejects_italian_tl(self):
         it_tl = User.objects.create_user(username='wage_it_tl2', email='ittl2@test.com', password='pass')
-        it_tl.profile.is_italian_tl_role = True
         assign_role(it_tl, 'italian_tl')
-        it_tl.profile.save(update_fields=['is_italian_tl_role'])
+        assign_role(it_tl, 'italian_tl')
 
         body = {
             'user': it_tl.id,
@@ -230,9 +228,8 @@ class WageWritePermissionTests(TestCase):
 
     def test_wage_list_excludes_italian_tls_for_hr(self):
         it_tl = User.objects.create_user(username='wage_it_tl3', email='ittl3@test.com', password='pass')
-        it_tl.profile.is_italian_tl_role = True
         assign_role(it_tl, 'italian_tl')
-        it_tl.profile.save(update_fields=['is_italian_tl_role'])
+        assign_role(it_tl, 'italian_tl')
 
         # Create via objects.create bypassing model clean to simulate legacy/direct row
         WageAssignment.objects.create(

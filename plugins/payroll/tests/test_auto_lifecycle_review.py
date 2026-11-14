@@ -43,9 +43,8 @@ class LifecycleReviewTests(TestCase):
         cls.staffer.profile.save(update_fields=['albanian_tl'])
         cls.admin = User.objects.create_user('adm', password='x', is_staff=True)
         cls.hr = User.objects.create_user('hr1', password='x')
-        cls.hr.profile.is_hr_user = True
         assign_role(cls.hr, 'hr')
-        cls.hr.profile.save(update_fields=['is_hr_user'])
+        assign_role(cls.hr, 'hr')
         _wage(cls.staffer)
 
     def test_failed_finalize_alerts_hr_and_administrators_once(self):

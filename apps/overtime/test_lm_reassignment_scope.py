@@ -15,7 +15,7 @@ from apps.standby.models import StandbyLog
 
 def _line_manager(username):
     user = User.objects.create_user(username=username, password='x')
-    user.profile.is_albanian_tl_role = True
+    assign_role(user, 'albanian_tl')
     assign_role(user, 'albanian_tl')
     user.profile.save()
     return user

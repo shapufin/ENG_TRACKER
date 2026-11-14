@@ -85,7 +85,7 @@ def _role(user, code):
 
 def _lm(username):
     user = User.objects.create_user(username=username, password='x')
-    user.profile.is_albanian_tl_role = True
+    assign_role(user, 'albanian_tl')
     assign_role(user, 'albanian_tl')
     user.profile.save()
     _role(user, 'albanian_tl')
@@ -94,7 +94,7 @@ def _lm(username):
 
 def _manager(username):
     user = User.objects.create_user(username=username, password='x')
-    user.profile.is_italian_tl_role = True
+    assign_role(user, 'italian_tl')
     assign_role(user, 'italian_tl')
     user.profile.save()
     _role(user, 'italian_tl')
@@ -103,7 +103,7 @@ def _manager(username):
 
 def _hr(username):
     user = User.objects.create_user(username=username, password='x')
-    user.profile.is_hr_user = True
+    assign_role(user, 'hr')
     assign_role(user, 'hr')
     user.profile.save()
     _role(user, 'hr')
