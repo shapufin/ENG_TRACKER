@@ -18,7 +18,7 @@ const LEADER_SCOPED_QUERY_ROOTS = [
   "organigrama",
 ] as const;
 
-export const invalidateLeaderScopedQueries = (qc: ReturnType<typeof useQueryClient>) => {
+const invalidateLeaderScopedQueries = (qc: ReturnType<typeof useQueryClient>) => {
   for (const root of LEADER_SCOPED_QUERY_ROOTS) {
     qc.invalidateQueries({ queryKey: [root] });
   }
