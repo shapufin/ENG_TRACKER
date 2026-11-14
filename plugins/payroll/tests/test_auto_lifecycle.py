@@ -1,4 +1,5 @@
 """Automatic payroll lifecycle: month-end draft, urgent reminders, early and cutoff finalize."""
+from apps.permissions.services.role_service import assign_role
 from datetime import date, datetime
 from decimal import Decimal
 from unittest import mock
@@ -156,6 +157,7 @@ class AutoLifecycleTests(TestCase):
     def test_hr_hears_about_the_automatic_finalize(self):
         hr = User.objects.create_user('hr1', password='x')
         hr.profile.is_hr_user = True
+        assign_role(hr, 'hr')
         hr.profile.save(update_fields=['is_hr_user'])
         payroll_lifecycle_tick(MONTH_END)
         payroll_lifecycle_tick(AT_CUTOFF)

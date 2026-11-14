@@ -40,14 +40,6 @@ def get_user_role_codes(user: User) -> Set[str]:
     if not user or not getattr(user, "is_authenticated", True):
         return set()
     codes = set(get_user_roles(user))
-    profile = getattr(user, "profile", None)
-    if profile is not None:
-        if getattr(profile, "is_italian_tl_role", False):
-            codes.add("italian_tl")
-        if getattr(profile, "is_albanian_tl_role", False):
-            codes.add("albanian_tl")
-        if getattr(profile, "is_hr_user", False):
-            codes.add("hr")
     # cr_admin uses the same helper that the permission system uses; it is
     # also a canonical role code.
     if is_cr_admin(user):

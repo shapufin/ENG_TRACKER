@@ -1,3 +1,4 @@
+from apps.permissions.services.role_service import assign_role
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
@@ -20,6 +21,7 @@ class UpdateUserProfileTlRevokeBlockTests(TestCase):
 
     def test_raises_when_revoking_italian_tl_role_with_dependent_fk_remaining(self):
         self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
         self.dependent.profile.italian_tl = self.tl
         self.dependent.profile.save()
@@ -33,6 +35,7 @@ class UpdateUserProfileTlRevokeBlockTests(TestCase):
 
     def test_succeeds_when_no_dependents_remain(self):
         self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
 
         update_user_profile(self.tl, is_italian_tl_role=False)
@@ -42,6 +45,7 @@ class UpdateUserProfileTlRevokeBlockTests(TestCase):
 
     def test_does_not_check_when_role_field_not_supplied(self):
         self.tl.profile.is_italian_tl_role = True
+        assign_role(self.tl, 'italian_tl')
         self.tl.profile.save()
         self.dependent.profile.italian_tl = self.tl
         self.dependent.profile.save()

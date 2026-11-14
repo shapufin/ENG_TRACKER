@@ -1,3 +1,4 @@
+from apps.permissions.services.role_service import assign_role
 from datetime import date, time
 
 from django.contrib.auth.models import User
@@ -33,6 +34,7 @@ class BulkActionQueryBudgetTests(TestCase):
     def setUp(self):
         self.tl = User.objects.create_user(username='bq-tl', password='pass')
         self.tl.profile.is_albanian_tl_role = True
+        assign_role(self.tl, 'albanian_tl')
         self.tl.profile.save(update_fields=['is_albanian_tl_role', 'updated_at'])
         self.emp = User.objects.create_user(username='bq-emp', password='pass')
         team = Team.objects.create(name='BQ Team', code='BQ', team_leader=self.tl)

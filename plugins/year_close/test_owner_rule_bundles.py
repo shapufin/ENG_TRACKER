@@ -3,6 +3,7 @@
 Each overtime or standby row lands in exactly one bundle: the one of the leader who owns
 it. User-level files (leave, payslips) keep their existing one-bundle-per-user placement.
 """
+from apps.permissions.services.role_service import assign_role
 from datetime import date
 
 from django.contrib.auth.models import User
@@ -22,6 +23,7 @@ def _lm(username):
 
     user = User.objects.create_user(username=username, password='x')
     user.profile.is_albanian_tl_role = True
+    assign_role(user, 'albanian_tl')
     user.profile.save()
     role, _ = Role.objects.get_or_create(code='albanian_tl', defaults={'name': 'albanian_tl'})
     UserRole.objects.get_or_create(user=user, role=role, defaults={'is_active': True})

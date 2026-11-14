@@ -2,6 +2,7 @@
 
 HR who is also a TL or staff is not `is_hr_only` and keeps access.
 """
+from apps.permissions.services.role_service import assign_role
 from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
@@ -22,6 +23,7 @@ class HrOnlyBlockTests(TestCase):
     def _hr(self, username, **extra):
         user = User.objects.create_user(username=username, password='x', **extra)
         user.profile.is_hr_user = True
+        assign_role(user, 'hr')
         user.profile.save()
         return user
 

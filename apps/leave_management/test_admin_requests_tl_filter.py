@@ -1,4 +1,5 @@
 """HR narrows the admin leave list by the employee's assigned TL."""
+from apps.permissions.services.role_service import assign_role
 from datetime import date
 
 from django.contrib.auth.models import User
@@ -14,6 +15,7 @@ class AdminRequestsTlFilterTests(APITestCase):
     def setUpTestData(cls):
         cls.hr = User.objects.create_user(username='tlf_hr', password='x')
         cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         cls.hr.profile.save()
         cls.it_tl = User.objects.create_user(username='tlf_it', password='x')
         cls.al_tl = User.objects.create_user(username='tlf_al', password='x')

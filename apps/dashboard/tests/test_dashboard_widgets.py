@@ -1,3 +1,4 @@
+from apps.permissions.services.role_service import assign_role
 from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework import status
@@ -10,6 +11,7 @@ class GlobalDashboardStatsPermissionTests(TestCase):
         self.employee = User.objects.create_user(username="employee", password="testpass")
         self.hr_user = User.objects.create_user(username="hr", password="testpass")
         self.hr_user.profile.is_hr_user = True
+        assign_role(self.hr_user, 'hr')
         self.hr_user.profile.save(update_fields=["is_hr_user"])
         self.staff_user = User.objects.create_user(
             username="staff", password="testpass", is_staff=True

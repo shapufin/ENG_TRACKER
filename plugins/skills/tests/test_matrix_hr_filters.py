@@ -1,4 +1,5 @@
 """HR (and admin) can narrow the team matrix by TL and Tech; a TL cannot widen scope."""
+from apps.permissions.services.role_service import assign_role
 from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework.test import APIRequestFactory, force_authenticate
@@ -12,6 +13,7 @@ class MatrixHrFilterTests(TestCase):
     def setUp(self):
         self.hr = User.objects.create_user(username='mhf_hr', password='x')
         self.hr.profile.is_hr_user = True
+        assign_role(self.hr, 'hr')
         self.hr.profile.save()
         self.it_tl = User.objects.create_user(username='mhf_it', password='x')
         self.al_tl = User.objects.create_user(username='mhf_al', password='x')
@@ -43,6 +45,7 @@ class MatrixHrFilterTests(TestCase):
 
     def test_tl_filters_cannot_widen_a_tl_scope(self):
         self.it_tl.profile.is_italian_tl_role = True
+        assign_role(self.it_tl, 'italian_tl')
         self.it_tl.profile.save()
         # al_tl's member is outside it_tl's team, so it never appears.
         self.assertEqual(self._names(self.it_tl, albanian_tl=self.al_tl.id), set())

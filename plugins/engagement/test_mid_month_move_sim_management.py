@@ -51,8 +51,10 @@ def mk(username, *roles, **kwargs):
     for role in roles:
         if role == 'italian_tl':
             user.profile.is_italian_tl_role = True
+            assign_role(user, 'italian_tl')
         if role == 'albanian_tl':
             user.profile.is_albanian_tl_role = True
+            assign_role(user, 'albanian_tl')
         user.profile.save()
         assign_role(user, role)
     return user

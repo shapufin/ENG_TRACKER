@@ -216,8 +216,6 @@ def candidate_leader_ids():
         User.objects.filter(
             Q(italian_team_members__isnull=False)
             | Q(albanian_team_members__isnull=False)
-            | Q(profile__is_italian_tl_role=True)
-            | Q(profile__is_albanian_tl_role=True)
             | Q(user_roles__is_active=True, user_roles__is_deleted=False, user_roles__role__code__in=TL_ROLE_CODES)
         ).values_list('id', flat=True).distinct()
     )

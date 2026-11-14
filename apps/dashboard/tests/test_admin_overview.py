@@ -1,3 +1,4 @@
+from apps.permissions.services.role_service import assign_role
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -42,6 +43,7 @@ class PermissionTests(AdminOverviewBase):
     def test_hr_forbidden(self):
         hr = User.objects.create_user("hr", password="x")
         hr.profile.is_hr_user = True
+        assign_role(hr, 'hr')
         hr.profile.save(update_fields=["is_hr_user"])
         self.assertEqual(self.get(hr).status_code, status.HTTP_403_FORBIDDEN)
 
@@ -95,6 +97,7 @@ class CoverageGapTests(AdminOverviewBase):
     def test_albanian_tl_without_open_hbpr_assignment(self):
         al = User.objects.create_user("al", password="x")
         al.profile.is_albanian_tl_role = True
+        assign_role(al, 'albanian_tl')
         al.profile.save(update_fields=["is_albanian_tl_role"])
         self.assertEqual(self.get().data["coverage_gaps"]["al_tls_without_hbpr_assignment"], 1)
         hbpr = User.objects.create_user("hb", password="x")

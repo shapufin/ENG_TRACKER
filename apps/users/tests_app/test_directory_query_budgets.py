@@ -1,5 +1,6 @@
 """P-pass: the admin users list (search + paging) and the TL directories
 must not issue more queries as the number of rows grows."""
+from apps.permissions.services.role_service import assign_role
 from django.contrib.auth.models import User
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
@@ -28,7 +29,9 @@ class DirectoryQueryBudgetTests(APITestCase):
         self.n += 1
         tl = User.objects.create_user(username=f'qb-tl{self.n}', password='x')
         tl.profile.is_italian_tl_role = True
+        assign_role(tl, 'italian_tl')
         tl.profile.is_albanian_tl_role = True
+        assign_role(tl, 'albanian_tl')
         tl.profile.save()
         team = Team.objects.create(name=f'QB TL team {self.n}', code=f'QT{self.n}')
         TeamMembership.objects.create(user_profile=tl.profile, team=team, is_primary_team=True)

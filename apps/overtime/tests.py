@@ -2,6 +2,7 @@
 Tests for overtime app.
 """
 
+from apps.permissions.services.role_service import assign_role
 from datetime import date, time
 from uuid import uuid4
 from unittest.mock import MagicMock, patch
@@ -107,6 +108,7 @@ class OvertimeLogViewSetTests(TestCase):
         hr_user = User.objects.create_user(username='ot-hr', password='testpass')
         profile = hr_user.profile
         profile.is_hr_user = True
+        assign_role(hr_user, 'hr')
         profile.save()
         self.client.force_authenticate(user=hr_user)
         response = self.client.get('/api/overtime/logs/')
@@ -118,6 +120,7 @@ class OvertimeLogViewSetTests(TestCase):
         hr_staff = User.objects.create_user(username='ot-hr-staff', password='testpass', is_staff=True)
         profile = hr_staff.profile
         profile.is_hr_user = True
+        assign_role(hr_staff, 'hr')
         profile.save()
         self.client.force_authenticate(user=hr_staff)
         response = self.client.get('/api/overtime/logs/admin_logs/')

@@ -28,6 +28,7 @@ class HrPeriodNotificationTests(TestCase):
         assign_role(self.hr, 'hr')
         self.flag_hr = User.objects.create_user('hr2', 'hr2@test.com', 'x')
         self.flag_hr.profile.is_hr_user = True
+        assign_role(self.flag_hr, 'hr')
         self.flag_hr.profile.save(update_fields=['is_hr_user'])
         self.employee = User.objects.create_user('emp', 'emp@test.com', 'x')
         self.lm = User.objects.create_user('lm', 'lm@test.com', 'x')

@@ -1,4 +1,5 @@
 """SEC-06: child lists of a visible parent must be scoped like UserViewSet."""
+from apps.permissions.services.role_service import assign_role
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 
@@ -23,6 +24,7 @@ class ChildListScopeTests(APITestCase):
         cls.admin = User.objects.create_user(username='sc_admin', password='x', is_staff=True)
         cls.hr = User.objects.create_user(username='sc_hr', password='x')
         cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         cls.hr.profile.save()
         cls.tech = Tech.objects.create(name='Scope Tech', code='SCT')
         for u in (cls.mate, cls.other):

@@ -6,6 +6,7 @@ action ran, so the documented contract was unreachable. ``hr_read_actions``
 opens exactly that action, on SAFE_METHODS only: the personal list, writes and
 approvals stay refused.
 """
+from apps.permissions.services.role_service import assign_role
 from datetime import date
 from decimal import Decimal
 
@@ -26,6 +27,7 @@ SB_LIST = "/api/standby/logs/"
 def make_hr(username="hr"):
     user = User.objects.create_user(username, password="x")
     user.profile.is_hr_user = True
+    assign_role(user, 'hr')
     user.profile.save(update_fields=["is_hr_user"])
     return user
 

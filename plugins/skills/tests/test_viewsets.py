@@ -331,6 +331,7 @@ class UserSkillViewSetTest(ViewSetTestCase, TestCase):
 
     def test_hr_who_is_also_tl_can_still_rate_team_member(self):
         self.tl.profile.is_hr_user = True
+        assign_role(self.tl, 'hr')
         self.tl.profile.save()
         us = UserSkill.objects.create(
             user=self.employee, skill=self.skill1, level=3,

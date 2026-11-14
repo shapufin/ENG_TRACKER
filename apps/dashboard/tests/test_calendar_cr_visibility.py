@@ -1,3 +1,4 @@
+from apps.permissions.services.role_service import assign_role
 from datetime import date
 
 from django.contrib.auth.models import User
@@ -30,6 +31,7 @@ class CalendarControlRoomVisibilityTests(TestCase):
         self.cr_user = User.objects.create_user(username="cr-user", password="testpass")
         self.multi_role_user = User.objects.create_user(username="cr-hr", password="testpass")
         self.multi_role_user.profile.is_hr_user = True
+        assign_role(self.multi_role_user, 'hr')
         self.multi_role_user.profile.save(update_fields=["is_hr_user"])
 
         for user in (self.regular_user, self.cr_user, self.multi_role_user):

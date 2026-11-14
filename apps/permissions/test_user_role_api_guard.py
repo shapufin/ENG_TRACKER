@@ -23,6 +23,7 @@ class UserRoleApiGuardTests(APITestCase):
         self.leader = User.objects.create_user(username='m3_leader', password='x')
         assign_role(self.leader, 'italian_tl')
         self.leader.profile.is_italian_tl_role = True
+        assign_role(self.leader, 'italian_tl')
         self.leader.profile.save(update_fields=['is_italian_tl_role'])
         self.member = User.objects.create_user(username='m3_member', password='x')
         self.member.profile.italian_tl = self.leader
@@ -54,6 +55,7 @@ class UserRoleApiGuardTests(APITestCase):
     def test_revoke_keeps_the_row_and_clears_the_flag(self):
         assign_role(self.victim, 'hr')
         self.victim.profile.is_hr_user = True
+        assign_role(self.victim, 'hr')
         self.victim.profile.save(update_fields=['is_hr_user'])
         row = UserRole.objects.get(user=self.victim, role=self.hr_role, team__isnull=True)
         resp = self.api.delete(self._url(row.id))

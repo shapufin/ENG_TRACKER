@@ -2,6 +2,7 @@
 Tests for the Universal Data Import plugin.
 """
 
+from apps.permissions.services.role_service import assign_role
 import io
 import json
 from decimal import Decimal
@@ -356,7 +357,9 @@ class UserImporterTests(TestCase):
             username=username, email=f"{username}@example.com", password="password"
         )
         leader.profile.is_italian_tl_role = True
+        assign_role(leader, 'italian_tl')
         leader.profile.is_albanian_tl_role = True
+        assign_role(leader, 'albanian_tl')
         leader.profile.save()
         return leader
 
@@ -565,6 +568,7 @@ class UserImporterTests(TestCase):
             username="import.tl", email="import.tl@example.com", password="password"
         )
         tl.profile.is_italian_tl_role = True
+        assign_role(tl, 'italian_tl')
         tl.profile.save()
         dependent = User.objects.create_user(
             username="import.dep", email="import.dep@example.com", password="password"

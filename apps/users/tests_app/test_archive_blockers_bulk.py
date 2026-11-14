@@ -1,4 +1,5 @@
 """The Teams table shows archive blockers per row: one batched pass that must match the dialog's."""
+from apps.permissions.services.role_service import assign_role
 from datetime import date
 
 from django.contrib.auth.models import User
@@ -81,6 +82,7 @@ class ArchiveBlockersBulkTests(APITestCase):
         # Pending counts are confidential (team confidentiality ruling): only the people who can archive see them.
         hr = make_user('hrviewer')
         hr.profile.is_hr_user = True
+        assign_role(hr, 'hr')
         hr.profile.save()
         for viewer in (make_user('plain'), self.leader, self.hbpr_leader, hr):
             self.client.force_authenticate(viewer)

@@ -2,6 +2,7 @@
 Tests for leave_management app.
 """
 
+from apps.permissions.services.role_service import assign_role
 from datetime import date, timedelta
 from unittest.mock import patch
 from uuid import uuid4
@@ -204,6 +205,7 @@ class LeaveRequestViewSetTests(TestCase):
         hr_user = User.objects.create_user(username='hruser', password='testpass')
         profile = hr_user.profile
         profile.is_hr_user = True
+        assign_role(hr_user, 'hr')
         profile.save()
 
         self.client.force_authenticate(user=hr_user)

@@ -9,6 +9,7 @@ Covers:
 - Users endpoint filtering: CR admin sees only users with ControlRoomAccess
 - UserSerializer is_cr_admin field
 """
+from apps.permissions.services.role_service import assign_role
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -433,6 +434,7 @@ class CRAdminUsersFilterTests(TestCase):
     def test_cr_admin_with_hr_role_remains_cr_scoped(self):
         """A second non-staff role must not broaden CR-admin visibility."""
         self.cr_admin.profile.is_hr_user = True
+        assign_role(self.cr_admin, 'hr')
         self.cr_admin.profile.save(update_fields=['is_hr_user'])
 
         resp = self._list(self.cr_admin)

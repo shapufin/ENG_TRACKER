@@ -3,6 +3,7 @@
 Each test pins one place where KPI used to drift from, or hard-depend on, core.
 """
 
+from apps.permissions.services.role_service import assign_role
 from datetime import date
 from pathlib import Path
 
@@ -101,6 +102,9 @@ class ItalianTlScopeTests(TestCase):
             for field, value in profile.items():
                 setattr(user.profile, field, value)
             user.profile.save()
+            for field, code in (('is_albanian_tl_role', 'albanian_tl'), ('is_italian_tl_role', 'italian_tl')):
+                if profile.get(field):
+                    assign_role(user, code)
             return user
 
         cls.al_tl = make('it_al_tl', is_albanian_tl_role=True)
@@ -142,6 +146,7 @@ class LinkRepointTests(TestCase):
         cls.owner = User.objects.create_user(username='rp_owner', password='x')
         cls.hr = User.objects.create_user(username='rp_hr', password='x')
         cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         cls.hr.profile.save(update_fields=['is_hr_user'])
         cls.client_obj = Client.objects.create(name='RP Client', code='RP')
 

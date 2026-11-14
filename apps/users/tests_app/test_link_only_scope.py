@@ -5,6 +5,7 @@ only through the employee's ``albanian_tl`` / ``italian_tl`` link. Shared team m
 ``Team.team_leader`` are calendar concepts: they must not widen data scope, and the calendar
 workspace access they give must stay exactly as it was.
 """
+from apps.permissions.services.role_service import assign_role
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 
@@ -17,6 +18,7 @@ class LinkOnlyScopeTests(APITestCase):
     def setUp(self):
         self.x = User.objects.create_user(username='x_lm', password='x')
         self.x.profile.is_albanian_tl_role = True
+        assign_role(self.x, 'albanian_tl')
         self.x.profile.save()
         self.a = User.objects.create_user(username='a_emp', password='x')
         self.team = Team.objects.create(name='T', code='T1')

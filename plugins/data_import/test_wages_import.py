@@ -5,6 +5,7 @@ blank-leave-alone / overlap / month warning), its per-target authority, the
 viewset gates, and the HR role grant introduced by the data_import migration.
 """
 
+from apps.permissions.services.role_service import assign_role
 import io
 import sys
 from datetime import date
@@ -130,6 +131,7 @@ class WageImporterCommitTests(TestCase):
     def test_italian_tl_is_rejected(self):
         it_tl = User.objects.create_user(username="import_it_tl", email="ittl@test.com", password="x")
         it_tl.profile.is_italian_tl_role = True
+        assign_role(it_tl, 'italian_tl')
         it_tl.profile.save(update_fields=["is_italian_tl_role"])
         result = self.importer.commit_row(
             row(username="import_it_tl", gross_monthly_wage=Decimal("100000"), effective_from=date(2026, 1, 1)),

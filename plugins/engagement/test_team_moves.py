@@ -1,4 +1,5 @@
 """Leader move, partial-team isolation, swap staleness, and frozen manager-change tests."""
+from apps.permissions.services.role_service import assign_role
 from datetime import date, datetime
 from io import StringIO
 from unittest.mock import patch
@@ -42,6 +43,7 @@ class EngagementTeamMoveTests(TestCase):
         self.staff = _make_user('tm_staff', is_staff=True)
         self.hr = _make_user('tm_hr')
         self.hr.profile.is_hr_user = True
+        assign_role(self.hr, 'hr')
         self.hr.profile.role_codes = ['hr']
         self.hr.profile.save()
 

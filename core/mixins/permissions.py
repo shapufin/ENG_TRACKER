@@ -123,25 +123,19 @@ def is_hr_only(user) -> bool:
     Multi-role users (TL+HR, Admin+HR) are common and must keep the
     elevated role's write/delete privileges. View-only applies to pure HR.
     """
-    profile = getattr(user, 'profile', None)
-    is_hr = has_role(user, 'hr') or bool(getattr(profile, 'is_hr_user', False))
-    if not is_hr or user.is_staff or user.is_superuser:
+    if not has_role(user, 'hr') or user.is_staff or user.is_superuser:
         return False
-    is_tl = has_role(user, 'italian_tl') or has_role(user, 'albanian_tl')
-    if is_tl or (profile is not None and profile.is_team_leader):
-        return False
-    return True
+    return not has_team_leader_role(user)
 
 
 def has_hr_role(user) -> bool:
-    """Return whether the user has the HR role during migration."""
-    return has_role(user, 'hr') or bool(
-        getattr(getattr(user, 'profile', None), 'is_hr_user', False)
-    )
+    """Return whether the user holds an active HR grant (never the legacy flag)."""
+    return has_role(user, 'hr')
 
 
 def has_team_leader_role(user) -> bool:
-    """Return whether the user has TL capability during migration."""
+    """Return whether the user has TL capability: a Manager or Line Manager grant,
+    or a live leader link (someone's team points at them). Never the legacy flag."""
     profile = getattr(user, 'profile', None)
     return (
         has_role(user, 'italian_tl')
@@ -169,14 +163,8 @@ def is_hbpr_only(user) -> bool:
         return False
     if not has_role(user, 'hbpr'):
         return False
-    # Role codes and legacy role flags only. `profile.is_team_leader` is derived
-    # from FKs / led teams, so being named someone's TL must not lift the block.
-    profile = getattr(user, 'profile', None)
-    has_tl_role = (
-        has_role(user, 'italian_tl') or has_role(user, 'albanian_tl')
-        or bool(getattr(profile, 'is_italian_tl_role', False))
-        or bool(getattr(profile, 'is_albanian_tl_role', False))
-    )
+    # Grants only. Being named someone's TL (a link) must not lift the block.
+    has_tl_role = has_role(user, 'italian_tl') or has_role(user, 'albanian_tl')
     return not (has_hr_role(user) or has_tl_role or has_role(user, 'cr_admin'))
 
 

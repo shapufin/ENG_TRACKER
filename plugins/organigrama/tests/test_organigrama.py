@@ -12,6 +12,7 @@ Verifies:
 - No N+1 queries (assertNumQueries).
 - Empty/flat hierarchy (no TL assignments) returns empty or minimal tree.
 """
+from apps.permissions.services.role_service import assign_role
 from django.test import TestCase
 from django.contrib.auth.models import User
 from rest_framework.test import APIRequestFactory, force_authenticate
@@ -37,6 +38,7 @@ class OrganigramaTreeTestCase(TestCase):
             username="it_tl", password="test123", first_name="Italian", last_name="Leader"
         )
         cls.italian_tl.profile.is_italian_tl_role = True
+        assign_role(cls.italian_tl, 'italian_tl')
         cls.italian_tl.profile.save(update_fields=["is_italian_tl_role"])
 
         # Line Manager (reports to Manager)
@@ -44,6 +46,7 @@ class OrganigramaTreeTestCase(TestCase):
             username="al_tl", password="test123", first_name="Albanian", last_name="Leader"
         )
         cls.albanian_tl.profile.is_albanian_tl_role = True
+        assign_role(cls.albanian_tl, 'albanian_tl')
         cls.albanian_tl.profile.italian_tl = cls.italian_tl
         cls.albanian_tl.profile.save(update_fields=["is_albanian_tl_role", "italian_tl"])
 
@@ -76,6 +79,7 @@ class OrganigramaTreeTestCase(TestCase):
             username="hr_user", password="test123", first_name="HR", last_name="User"
         )
         cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         cls.hr.profile.save(update_fields=["is_hr_user"])
 
         # Standalone employee (no TL assignment)
@@ -89,6 +93,7 @@ class OrganigramaTreeTestCase(TestCase):
             first_name="Italian2", last_name="Leader",
         )
         cls.italian_tl2.profile.is_italian_tl_role = True
+        assign_role(cls.italian_tl2, 'italian_tl')
         cls.italian_tl2.profile.save(update_fields=["is_italian_tl_role"])
 
         cls.albanian_tl2 = User.objects.create_user(
@@ -96,6 +101,7 @@ class OrganigramaTreeTestCase(TestCase):
             first_name="Albanian2", last_name="Leader",
         )
         cls.albanian_tl2.profile.is_albanian_tl_role = True
+        assign_role(cls.albanian_tl2, 'albanian_tl')
         cls.albanian_tl2.profile.italian_tl = cls.italian_tl2
         cls.albanian_tl2.profile.save(
             update_fields=["is_albanian_tl_role", "italian_tl"]
@@ -368,6 +374,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
             first_name="Italian", last_name="TeamTwo",
         )
         second_italian_tl.profile.is_italian_tl_role = True
+        assign_role(second_italian_tl, 'italian_tl')
         second_italian_tl.profile.save(update_fields=["is_italian_tl_role"])
 
         self.emp2.profile.italian_tl = second_italian_tl
@@ -411,6 +418,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
             first_name="Italian", last_name="Empty",
         )
         empty_it_tl.profile.is_italian_tl_role = True
+        assign_role(empty_it_tl, 'italian_tl')
         empty_it_tl.profile.save(update_fields=["is_italian_tl_role"])
 
         # Give the Line Manager an empty manager line...
@@ -443,6 +451,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
             first_name="Lonely", last_name="AlTl",
         )
         lonely_al.profile.is_albanian_tl_role = True
+        assign_role(lonely_al, 'albanian_tl')
         lonely_al.profile.italian_tl = self.italian_tl
         lonely_al.profile.save(update_fields=["is_albanian_tl_role", "italian_tl"])
 
@@ -588,6 +597,7 @@ class TestTreeEndpoint(OrganigramaTreeTestCase):
             first_name="Italian", last_name="TeamTwo",
         )
         second_italian_tl.profile.is_italian_tl_role = True
+        assign_role(second_italian_tl, 'italian_tl')
         second_italian_tl.profile.save(update_fields=["is_italian_tl_role"])
 
         self.emp2.profile.italian_tl = second_italian_tl
@@ -716,6 +726,7 @@ class TestTreePerformanceRealistic(TestCase):
                 first_name=f"It{i}", last_name="TL",
             )
             it.profile.is_italian_tl_role = True
+            assign_role(it, 'italian_tl')
             it.profile.save(update_fields=["is_italian_tl_role"])
             cls.italian_tls.append(it)
             for j in range(2):
@@ -724,6 +735,7 @@ class TestTreePerformanceRealistic(TestCase):
                     first_name=f"Al{i}{j}", last_name="TL",
                 )
                 al.profile.is_albanian_tl_role = True
+                assign_role(al, 'albanian_tl')
                 al.profile.italian_tl = it
                 al.profile.save(
                     update_fields=["is_albanian_tl_role", "italian_tl"]
@@ -773,10 +785,12 @@ class TestTreePerformanceRealistic(TestCase):
         # Add another full hierarchy branch
         it = User.objects.create_user(username="it_x", password="t")
         it.profile.is_italian_tl_role = True
+        assign_role(it, 'italian_tl')
         it.profile.save(update_fields=["is_italian_tl_role"])
         for j in range(2):
             al = User.objects.create_user(username=f"al_x_{j}", password="t")
             al.profile.is_albanian_tl_role = True
+            assign_role(al, 'albanian_tl')
             al.profile.italian_tl = it
             al.profile.save(update_fields=["is_albanian_tl_role", "italian_tl"])
             for k in range(2):
@@ -1068,6 +1082,7 @@ class TestSubtreeTechLevelQueryBudget(TestCase):
         )
         cls.albanian_tl = User.objects.create_user(username="qb_al_tl", password="t")
         cls.albanian_tl.profile.is_albanian_tl_role = True
+        assign_role(cls.albanian_tl, 'albanian_tl')
         cls.albanian_tl.profile.save(update_fields=["is_albanian_tl_role"])
 
     def _add_members(self, count, offset=0):

@@ -3,6 +3,7 @@
 Option A (2026-11-13): a decided row stays with the leader who decided it; a pending row
 goes to the current leader. No row appears in two leaders' views.
 """
+from apps.permissions.services.role_service import assign_role
 from datetime import date
 
 from django.contrib.auth.models import User
@@ -15,6 +16,7 @@ from apps.standby.models import StandbyLog
 def _line_manager(username):
     user = User.objects.create_user(username=username, password='x')
     user.profile.is_albanian_tl_role = True
+    assign_role(user, 'albanian_tl')
     user.profile.save()
     return user
 

@@ -1,5 +1,6 @@
 """Tests for downloadable templates, dynamic real-data samples, and multi-sheet Excel generation."""
 
+from apps.permissions.services.role_service import assign_role
 import io
 import openpyxl
 from django.contrib.auth.models import User
@@ -39,10 +40,12 @@ class TemplateRoundTripTests(TestCase):
         Team.objects.create(code="ALPHA", name="Alpha Team")
         mgr = User.objects.create(username="it_manager", first_name="Mario", last_name="Rossi")
         mgr.profile.is_italian_tl_role = True
+        assign_role(mgr, 'italian_tl')
         mgr.profile.save()
 
         line_mgr = User.objects.create(username="al_leader", first_name="Arben", last_name="Hoxha")
         line_mgr.profile.is_albanian_tl_role = True
+        assign_role(line_mgr, 'albanian_tl')
         line_mgr.profile.save()
 
         Client.objects.create(code="TESTCLIENT", name="Test Client Corp")

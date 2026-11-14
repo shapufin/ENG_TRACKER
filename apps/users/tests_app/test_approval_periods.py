@@ -1,3 +1,4 @@
+from apps.permissions.services.role_service import assign_role
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
@@ -162,6 +163,7 @@ class TeamLeaderEditGuardTests(TestCase):
     def setUp(self):
         self.tl = User.objects.create_user(username='guard-tl', password='pass')
         self.tl.profile.is_albanian_tl_role = True
+        assign_role(self.tl, 'albanian_tl')
         self.tl.profile.save(update_fields=['is_albanian_tl_role', 'updated_at'])
         self.employee = User.objects.create_user(username='guard-employee', password='pass')
         self.team = Team.objects.create(name='Guard Team', code='GUARD', team_leader=self.tl)
@@ -220,6 +222,7 @@ class ApprovalPeriodWorkflowTests(TestCase):
         NotificationPlugin().ready()
         self.tl = User.objects.create_user(username='period-tl', password='pass')
         self.tl.profile.is_albanian_tl_role = True
+        assign_role(self.tl, 'albanian_tl')
         self.tl.profile.save(update_fields=['is_albanian_tl_role', 'updated_at'])
         self.employee = User.objects.create_user(username='period-employee', password='pass')
         self.team = Team.objects.create(

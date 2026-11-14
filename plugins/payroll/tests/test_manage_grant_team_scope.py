@@ -74,6 +74,7 @@ class ManageGrantTeamScopeTests(TestCase):
         # HR: holds the same grants but is unrestricted by is_hr.
         cls.hr = User.objects.create_user(username='ms_hr', password='pass')
         cls.hr.profile.is_hr_user = True
+        assign_role(cls.hr, 'hr')
         cls.hr.profile.save()
         assign_role(cls.hr, 'hr')
 

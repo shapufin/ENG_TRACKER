@@ -1,3 +1,4 @@
+from apps.permissions.services.role_service import assign_role
 from datetime import date, datetime
 from io import StringIO
 from zoneinfo import ZoneInfo
@@ -24,6 +25,7 @@ class AutoFinalizeApprovalPeriodsTests(TestCase):
     def setUpTestData(cls):
         cls.lead = User.objects.create_user('lead', password='x')
         cls.lead.profile.is_albanian_tl_role = True
+        assign_role(cls.lead, 'albanian_tl')
         cls.lead.profile.save(update_fields=['is_albanian_tl_role'])
         cls.closed = User.objects.create_user('closed', password='x')
         cls.open_a = User.objects.create_user('open_a', password='x')

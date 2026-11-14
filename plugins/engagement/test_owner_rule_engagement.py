@@ -4,6 +4,7 @@ A decision is credited to the leader who made it, even after the employee moves.
 overtime or standby row is counted in exactly one of the leader's team snapshots, so a
 leader's totals never double count an employee who sits in two teams.
 """
+from apps.permissions.services.role_service import assign_role
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.utils import timezone
@@ -18,6 +19,7 @@ from plugins.engagement.services import compute_tl_metric
 def _lm(username):
     user = User.objects.create_user(username=username, password='x')
     user.profile.is_albanian_tl_role = True
+    assign_role(user, 'albanian_tl')
     user.profile.save()
     role, _ = Role.objects.get_or_create(code='albanian_tl', defaults={'name': 'albanian_tl'})
     UserRole.objects.get_or_create(user=user, role=role, defaults={'is_active': True})

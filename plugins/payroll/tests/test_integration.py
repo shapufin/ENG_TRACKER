@@ -567,6 +567,7 @@ class PayrollHRScopeTests(TestCase):
 
         cls.hr_user = User.objects.create_user(username='hr_payroll', password='pass')
         cls.hr_user.profile.is_hr_user = True
+        assign_role(cls.hr_user, 'hr')
         cls.hr_user.profile.save()
         hr_role, _ = Role.objects.get_or_create(code='hr', defaults={'name': 'HR'})
         assign_role(cls.hr_user, 'hr')

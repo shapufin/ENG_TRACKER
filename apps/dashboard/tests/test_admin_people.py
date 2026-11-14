@@ -67,6 +67,7 @@ class PermissionTests(PeopleBase):
     def test_hr_only_forbidden(self):
         hr = User.objects.create_user("hr", password="x")
         hr.profile.is_hr_user = True
+        assign_role(hr, 'hr')
         hr.profile.save(update_fields=["is_hr_user"])
         self.assertEqual(self.get(hr).status_code, status.HTTP_403_FORBIDDEN)
 
@@ -90,6 +91,7 @@ class RoleTests(PeopleBase):
 
         tl = User.objects.create_user("tl", password="x")
         tl.profile.is_italian_tl_role = True
+        assign_role(tl, 'italian_tl')
         tl.profile.save(update_fields=["is_italian_tl_role"])
         self.assertEqual(
             self.build()["roles"]["employees_without_tl"], coverage_gaps(TODAY)["employees_without_tl"]
@@ -98,7 +100,9 @@ class RoleTests(PeopleBase):
     def test_user_with_two_roles_counted_in_each(self):
         u = User.objects.create_user("multi", password="x")
         u.profile.is_italian_tl_role = True
+        assign_role(u, 'italian_tl')
         u.profile.is_hr_user = True
+        assign_role(u, 'hr')
         u.profile.save(update_fields=["is_italian_tl_role", "is_hr_user"])
         Role.objects.get_or_create(code="hbpr", defaults={"name": "HBPR"})
         assign_role(u, "hbpr")
@@ -110,6 +114,7 @@ class RoleTests(PeopleBase):
     def test_inactive_users_are_not_counted(self):
         u = User.objects.create_user("gone", password="x", is_active=False)
         u.profile.is_hr_user = True
+        assign_role(u, 'hr')
         u.profile.save(update_fields=["is_hr_user"])
         self.assertEqual(self.build()["roles"]["hr"], 0)
 

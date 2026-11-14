@@ -2,6 +2,7 @@
 Tests for standby app.
 """
 
+from apps.permissions.services.role_service import assign_role
 from datetime import time, date, timedelta
 from uuid import uuid4
 from unittest.mock import MagicMock, patch
@@ -118,6 +119,7 @@ class StandbyLogViewSetTests(TestCase):
         hr_user = User.objects.create_user(username='sb-hr', password='testpass')
         profile = hr_user.profile
         profile.is_hr_user = True
+        assign_role(hr_user, 'hr')
         profile.save()
         self.client.force_authenticate(user=hr_user)
         response = self.client.get('/api/standby/logs/')
@@ -129,6 +131,7 @@ class StandbyLogViewSetTests(TestCase):
         hr_staff = User.objects.create_user(username='sb-hr-staff', password='testpass', is_staff=True)
         profile = hr_staff.profile
         profile.is_hr_user = True
+        assign_role(hr_staff, 'hr')
         profile.save()
         self.client.force_authenticate(user=hr_staff)
         response = self.client.get('/api/standby/logs/admin_logs/')
@@ -780,6 +783,7 @@ class StandbyTLEditBlockTests(TestCase):
     def setUp(self):
         self.tl = User.objects.create_user(username='sb-guard-tl', password='pass')
         self.tl.profile.is_albanian_tl_role = True
+        assign_role(self.tl, 'albanian_tl')
         self.tl.profile.save(update_fields=['is_albanian_tl_role', 'updated_at'])
         self.employee = User.objects.create_user(username='sb-guard-employee', password='pass')
         self.team = Team.objects.create(name='SB Guard Team', code='SBGUARD', team_leader=self.tl)

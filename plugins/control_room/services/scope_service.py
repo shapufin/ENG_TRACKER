@@ -161,9 +161,9 @@ def get_calendar_excluded_user_ids() -> Set[int]:
     elevated_user_ids = set(
         UserProfile.objects.filter(user_id__in=access_user_ids)
         .filter(
-            Q(is_hr_user=True) | users_with_role_q('hr', prefix='user__')
-            | Q(is_italian_tl_role=True) | users_with_role_q('italian_tl', prefix='user__')
-            | Q(is_albanian_tl_role=True) | users_with_role_q('albanian_tl', prefix='user__')
+            users_with_role_q('hr', prefix='user__')
+            | users_with_role_q('italian_tl', prefix='user__')
+            | users_with_role_q('albanian_tl', prefix='user__')
         )
         .values_list('user_id', flat=True)
     )

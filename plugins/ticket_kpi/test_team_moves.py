@@ -5,6 +5,7 @@ and never changes. Who may read or review it is recomputed on every request from
 the member's current ``italian_tl`` / ``albanian_tl`` links, so a move hands the
 whole squad view to the new leader and removes it from the old one.
 """
+from apps.permissions.services.role_service import assign_role
 from datetime import date, datetime, timezone as dt_tz
 
 from django.contrib.auth import get_user_model
@@ -53,6 +54,7 @@ class TeamMoveTests(TestCase):
         cls.mgr2 = _leader('mgr2', 'M2')
         for mgr in (cls.mgr1, cls.mgr2):
             mgr.profile.is_italian_tl_role = True
+            assign_role(mgr, 'italian_tl')
             mgr.profile.save()
 
         cls.member = User.objects.create_user(username='mover', password='testpass123')

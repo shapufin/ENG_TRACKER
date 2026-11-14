@@ -2,6 +2,7 @@
 Tests for the Ticket KPI plugin.
 """
 
+from apps.permissions.services.role_service import assign_role
 import io
 from datetime import date, datetime, timedelta
 
@@ -1194,6 +1195,7 @@ class KPIEvidenceTests(TestCase):
     def test_tl_cannot_reach_a_managers_document(self):
         manager = User.objects.create_user(username='evidence_manager', password='testpass123')
         manager.profile.is_italian_tl_role = True
+        assign_role(manager, 'italian_tl')
         manager.profile.albanian_tl = self.tl
         manager.profile.save()
         evidence_id = self._create_evidence(manager).data['id']
@@ -1370,6 +1372,7 @@ class KPIEvidenceTests(TestCase):
         outsider = User.objects.create_user(username='evidence_outsider2', password='testpass123')
         hr = User.objects.create_user(username='evidence_hr', password='testpass123')
         hr.profile.is_hr_user = True
+        assign_role(hr, 'hr')
         hr.profile.save()
         for owner in (self.member, outsider):
             KPIEvidence.objects.create(
