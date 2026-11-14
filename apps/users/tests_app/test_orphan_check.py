@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 
 from apps.overtime.models import Client
+from apps.permissions.models import Role
+from apps.permissions.services.role_service import assign_role
 from apps.users.models import Team, UserProfile
 from apps.users.services.orphan_check import find_orphans
 
@@ -56,8 +58,8 @@ class FindOrphansTests(OrphanBase):
         gone.is_active = False
         gone.save()
         hr = make_user('hrperson')
-        hr.profile.role_codes = ['hr']
-        hr.profile.save()
+        Role.objects.get_or_create(code='hr', defaults={'name': 'HR'})
+        assign_role(hr, 'hr')
         self.assertEqual(self.found('users_without_team'), set())
 
     def test_hr_through_the_legacy_flag_or_a_user_role_row_is_not_an_orphan(self):

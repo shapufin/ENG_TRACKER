@@ -21,6 +21,7 @@ from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
 from apps.users.models import ApprovalPeriodClose, Team
 from apps.users.models.hbpr import HbprAlbanianTlAssignment
+from apps.permissions.services.role_service import users_with_role_q
 from apps.users.services.hbpr_assignments import in_effect_q
 from core.utils.timezone_local import business_today
 
@@ -63,8 +64,8 @@ def employees_without_tl():
             profile__italian_tl__isnull=True,
             profile__albanian_tl__isnull=True,
         )
-        .exclude(profile__role_codes__icontains="italian_tl")
-        .exclude(profile__role_codes__icontains="albanian_tl")
+        .exclude(users_with_role_q('italian_tl'))
+        .exclude(users_with_role_q('albanian_tl'))
         .count()
     )
 
@@ -72,7 +73,7 @@ def employees_without_tl():
 def coverage_gaps(today):
     employees = _plain_employees()
     al_tls = employees.filter(
-        Q(profile__is_albanian_tl_role=True) | Q(profile__role_codes__icontains="albanian_tl")
+        Q(profile__is_albanian_tl_role=True) | users_with_role_q('albanian_tl')
     )
     covered = HbprAlbanianTlAssignment.objects.filter(in_effect_q(today)).values("albanian_tl_id")
     return {

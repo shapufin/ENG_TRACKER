@@ -37,6 +37,7 @@ from .serializers import (
     ApprovalPeriodSerializer,
     HbprAlbanianTlAssignmentSerializer,
 )
+from apps.permissions.services.role_service import users_with_role_q
 from .services.hbpr_scope import get_hbpr_scope
 from .services.profile_loading import with_profile_list_loading
 from .services import team_lifecycle
@@ -311,30 +312,27 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         tl_type = request.query_params.get('type', 'all')
         queryset = self.get_queryset()
 
-        # role_codes__icontains is SQLite-compatible (no JSON __contains).
-        # Safe for current role codes: 'italian_tl', 'albanian_tl', 'hr' are
-        # not substrings of each other or of 'cr_admin'/'admin'/'employee'.
-        # Do NOT use __icontains='admin' — it would match 'cr_admin'.
+        # users_with_role_q matches exact active grants (no substring match).
         if tl_type == 'italian':
             queryset = queryset.filter(
                 models.Q(italian_team_members__isnull=False) |
                 models.Q(profile__is_italian_tl_role=True) |
-                models.Q(profile__role_codes__icontains='italian_tl')
+                users_with_role_q('italian_tl')
             ).distinct()
         elif tl_type == 'albanian':
             queryset = queryset.filter(
                 models.Q(albanian_team_members__isnull=False) |
                 models.Q(profile__is_albanian_tl_role=True) |
-                models.Q(profile__role_codes__icontains='albanian_tl')
+                users_with_role_q('albanian_tl')
             ).distinct()
         else:
             queryset = queryset.filter(
                 models.Q(italian_team_members__isnull=False) |
                 models.Q(profile__is_italian_tl_role=True) |
-                models.Q(profile__role_codes__icontains='italian_tl') |
+                users_with_role_q('italian_tl') |
                 models.Q(albanian_team_members__isnull=False) |
                 models.Q(profile__is_albanian_tl_role=True) |
-                models.Q(profile__role_codes__icontains='albanian_tl')
+                users_with_role_q('albanian_tl')
             ).distinct()
 
         serializer = self.get_serializer(queryset, many=True)
@@ -364,7 +362,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         show_counts = self._tl_directory_access(request)
         queryset = User.objects.filter(
             Q(profile__is_italian_tl_role=True) |
-            Q(profile__role_codes__icontains='italian_tl')
+            users_with_role_q('italian_tl')
         ).filter(is_staff=False, is_superuser=False).distinct().annotate(
             member_count=Count('italian_team_members', distinct=True)
         ).select_related('profile').prefetch_related('profile__team_memberships__team')
@@ -395,7 +393,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         show_counts = self._tl_directory_access(request)
         queryset = User.objects.filter(
             Q(profile__is_albanian_tl_role=True) |
-            Q(profile__role_codes__icontains='albanian_tl')
+            users_with_role_q('albanian_tl')
         ).filter(is_staff=False, is_superuser=False).distinct().annotate(
             member_count=Count('albanian_team_members', distinct=True)
         ).select_related('profile').prefetch_related('profile__team_memberships__team')
@@ -1461,14 +1459,14 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         # Manager count (role flag OR has assigned members OR database role)
         italian_tl_count = User.objects.filter(
             Q(profile__is_italian_tl_role=True) |
-            Q(profile__role_codes__icontains='italian_tl') |
+            users_with_role_q('italian_tl') |
             Q(italian_team_members__isnull=False)
         ).distinct().count()
         
         # Line Manager count (role flag OR has assigned members OR database role)
         albanian_tl_count = User.objects.filter(
             Q(profile__is_albanian_tl_role=True) |
-            Q(profile__role_codes__icontains='albanian_tl') |
+            users_with_role_q('albanian_tl') |
             Q(albanian_team_members__isnull=False)
         ).distinct().count()
         
@@ -1476,8 +1474,8 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         no_tl_count = User.objects.filter(
             Q(profile__is_italian_tl_role=False) &
             Q(profile__is_albanian_tl_role=False) &
-            ~Q(profile__role_codes__icontains='italian_tl') &
-            ~Q(profile__role_codes__icontains='albanian_tl') &
+            ~users_with_role_q('italian_tl') &
+            ~users_with_role_q('albanian_tl') &
             Q(profile__italian_tl__isnull=True) &
             Q(profile__albanian_tl__isnull=True)
         ).count()
@@ -1611,47 +1609,37 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
             return (
                 self._apply_role_filter(queryset, 'employee')
                 .filter(user__is_staff=False, user__is_superuser=False)
-                .exclude(role_codes__icontains='admin')
+                .exclude(users_with_role_q('admin', prefix='user__'))
                 .exclude(user__led_teams__is_active=True)
             )
         if role == 'italian_tl':
             return queryset.filter(
                 Q(is_italian_tl_role=True)
-                | Q(role_codes__icontains='italian_tl')
+                | users_with_role_q('italian_tl', prefix='user__')
                 | Q(user__italian_team_members__isnull=False)
             ).distinct()
         if role == 'albanian_tl':
             return queryset.filter(
                 Q(is_albanian_tl_role=True)
-                | Q(role_codes__icontains='albanian_tl')
+                | users_with_role_q('albanian_tl', prefix='user__')
                 | Q(user__albanian_team_members__isnull=False)
             ).distinct()
         if role == 'hbpr':
-            # 'hbpr' is flagless — it lives only in the role_codes JSON cache
-            # and the authoritative UserRole rows (mirrors the TL filters,
-            # which check flag OR cache OR relation).
-            return queryset.filter(
-                Q(role_codes__icontains='hbpr')
-                | Q(user__user_roles__role__code='hbpr', user__user_roles__is_active=True)
-            ).distinct()
+            # 'hbpr' is flagless: the UserRole grant is the only source.
+            return queryset.filter(users_with_role_q('hbpr', prefix='user__')).distinct()
         if role == 'hr':
             return queryset.filter(
-                Q(is_hr_user=True)
-                | Q(role_codes__icontains='hr')
-                | Q(user__user_roles__role__code='hr', user__user_roles__is_active=True)
+                Q(is_hr_user=True) | users_with_role_q('hr', prefix='user__')
             ).distinct()
         if role == 'cr_admin':
-            # flagless like hbpr — lives in the role_codes cache + UserRole.
-            return queryset.filter(
-                Q(role_codes__icontains='cr_admin')
-                | Q(user__user_roles__role__code='cr_admin', user__user_roles__is_active=True)
-            ).distinct()
+            # flagless like hbpr: the UserRole grant is the only source.
+            return queryset.filter(users_with_role_q('cr_admin', prefix='user__')).distinct()
         if role == 'no_tl':
             return queryset.filter(
                 Q(is_italian_tl_role=False)
                 & Q(is_albanian_tl_role=False)
-                & ~Q(role_codes__icontains='italian_tl')
-                & ~Q(role_codes__icontains='albanian_tl')
+                & ~users_with_role_q('italian_tl', prefix='user__')
+                & ~users_with_role_q('albanian_tl', prefix='user__')
                 & Q(italian_tl__isnull=True)
                 & Q(albanian_tl__isnull=True)
             )
@@ -1672,11 +1660,11 @@ class UserProfileViewSet(SuperuserPermissionMixin, StaffFilterMixin, viewsets.Mo
                 & Q(is_hr_user=False)
                 & Q(user__italian_team_members__isnull=True)
                 & Q(user__albanian_team_members__isnull=True)
-                & ~Q(role_codes__icontains='italian_tl')
-                & ~Q(role_codes__icontains='albanian_tl')
-                & ~Q(role_codes__icontains='hbpr')
-                & ~Q(role_codes__icontains='hr')
-                & ~Q(role_codes__icontains='cr_admin')
+                & ~users_with_role_q('italian_tl', prefix='user__')
+                & ~users_with_role_q('albanian_tl', prefix='user__')
+                & ~users_with_role_q('hbpr', prefix='user__')
+                & ~users_with_role_q('hr', prefix='user__')
+                & ~users_with_role_q('cr_admin', prefix='user__')
             ).distinct()
         return queryset
 
