@@ -6,6 +6,7 @@ UserRole is the authoritative source for role membership. The profile
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Q
 
 from apps.permissions.models import Role, UserRole
 from apps.users.services.leader_ownership import TL_ROLE_CODES
@@ -29,6 +30,21 @@ def get_user_roles(user) -> set[str]:
 def has_role(user, role_code: str) -> bool:
     """Return whether the user has an active role code."""
     return role_code in get_user_roles(user)
+
+
+def users_with_role_q(role_code: str, prefix: str = '') -> Q:
+    """``Q`` matching users holding an active ``role_code`` grant.
+
+    ``prefix=''`` is a ``User`` queryset; ``prefix='user__'`` reaches the same
+    users from a ``UserProfile`` queryset. Matches on the exact role code
+    through ``UserRole`` rows, never a substring of the ``role_codes`` cache
+    (``'hr'`` must not match ``'xhr'``).
+    """
+    return Q(**{
+        f'{prefix}pk__in': UserRole.objects.filter(
+            is_active=True, role__code=role_code
+        ).values('user_id'),
+    })
 
 
 def _refresh_role_cache(user) -> None:

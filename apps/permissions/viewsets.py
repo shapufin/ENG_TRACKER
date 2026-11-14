@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, permissions, status, viewsets
+from rest_framework import filters, mixins, permissions, status, viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
@@ -178,7 +178,38 @@ class PermissionViewSet(SuperuserPermissionMixin, viewsets.ReadOnlyModelViewSet)
     filterset_fields = ['module', 'action']
 
 
-class UserRoleViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
+# Legacy profile flags kept in step with the team-less UserRole grant (audithandover.md S1).
+LEGACY_ROLE_FLAGS = {
+    'hr': 'is_hr_user',
+    'italian_tl': 'is_italian_tl_role',
+    'albanian_tl': 'is_albanian_tl_role',
+}
+
+
+def _sync_legacy_role_flag(user, role_code, *, active):
+    flag = LEGACY_ROLE_FLAGS.get(role_code)
+    if flag is None:
+        return
+    profile = user.profile
+    if getattr(profile, flag) != active:
+        setattr(profile, flag, active)
+        profile.save(update_fields=[flag])
+
+
+class UserRoleViewSet(
+    SuperuserPermissionMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Grant and revoke database roles through the role service (audithandover.md M3).
+
+    No PUT/PATCH: a row is never edited in place. A grant calls ``assign_role``; a
+    revoke runs the TL-dependent and HBPR-assignment checks, then ``revoke_role``,
+    which keeps the row as history. Both keep the legacy profile flag in step.
+    """
     queryset = UserRole.objects.all().select_related('user', 'role', 'team').order_by('-id')
     serializer_class = UserRoleSerializer
     pagination_class = StandardResultsPagination
@@ -190,6 +221,56 @@ class UserRoleViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
         if self.action in ('list', 'retrieve'):
             return [permissions.IsAdminUser()]
         return [IsSuperuser()]
+
+    def perform_create(self, serializer):
+        from apps.permissions.services.role_service import assign_role
+
+        data = serializer.validated_data
+        assignment = assign_role(data['user'], data['role'].code, data.get('team'))
+        if data.get('team') is None:
+            _sync_legacy_role_flag(data['user'], data['role'].code, active=True)
+        serializer.instance = assignment
+
+    def perform_destroy(self, instance):
+        from rest_framework.exceptions import ValidationError
+
+        from apps.permissions.services.role_service import (
+            HbprAssignmentRevokeBlockedError,
+            find_blocked_hbpr_revocations,
+            find_blocked_tl_revocations,
+            revoke_role,
+        )
+
+        user, code = instance.user, instance.role.code
+        still_held = (
+            UserRole.objects.filter(user=user, role=instance.role, is_active=True)
+            .exclude(pk=instance.pk)
+            .exists()
+        )
+        if instance.is_active and not still_held:
+            # Same checks as the user edit form: a leader's members and an open
+            # HBPR assignment both depend on the role staying granted.
+            new_state = {code: False}
+            blocked = (
+                find_blocked_tl_revocations(user, new_state)
+                + find_blocked_hbpr_revocations(user, new_state)
+            )
+            if blocked:
+                summary = '; '.join(
+                    f"{b['role']}: still assigned to "
+                    f"{', '.join(d['username'] for d in b['dependents']) or 'open HBPR assignments'}"
+                    for b in blocked
+                )
+                raise ValidationError({
+                    'error': 'Cannot revoke this role while it is still depended on: ' + summary,
+                    'blocked_revocations': blocked,
+                })
+        try:
+            revoke_role(user, code, team=instance.team)
+        except HbprAssignmentRevokeBlockedError as exc:
+            raise ValidationError({'detail': str(exc)})
+        if instance.team_id is None and not still_held:
+            _sync_legacy_role_flag(user, code, active=False)
 
 
 class UserGroupViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):

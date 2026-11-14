@@ -12,6 +12,7 @@ from typing import Optional, Set
 from django.contrib.auth.models import User
 from django.db.models import Q
 
+from apps.permissions.services.role_service import users_with_role_q
 from plugins.control_room.models import ControlRoomAccess, ControlRoomTeamScope
 
 
@@ -160,9 +161,9 @@ def get_calendar_excluded_user_ids() -> Set[int]:
     elevated_user_ids = set(
         UserProfile.objects.filter(user_id__in=access_user_ids)
         .filter(
-            Q(is_hr_user=True) | Q(role_codes__icontains='hr')
-            | Q(is_italian_tl_role=True) | Q(role_codes__icontains='italian_tl')
-            | Q(is_albanian_tl_role=True) | Q(role_codes__icontains='albanian_tl')
+            Q(is_hr_user=True) | users_with_role_q('hr', prefix='user__')
+            | Q(is_italian_tl_role=True) | users_with_role_q('italian_tl', prefix='user__')
+            | Q(is_albanian_tl_role=True) | users_with_role_q('albanian_tl', prefix='user__')
         )
         .values_list('user_id', flat=True)
     )

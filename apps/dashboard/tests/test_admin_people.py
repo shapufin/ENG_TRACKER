@@ -11,6 +11,8 @@ from rest_framework.test import APIClient
 from apps.dashboard.admin_people import build_admin_people
 from apps.leave_management.models import LeaveRequest
 from apps.overtime.models import Client, OvertimeLog
+from apps.permissions.models import Role
+from apps.permissions.services.role_service import assign_role
 from apps.standby.models import StandbyLog
 from apps.users.models import Tech, TechLevel
 from apps.users.models.core import UserTech
@@ -97,8 +99,9 @@ class RoleTests(PeopleBase):
         u = User.objects.create_user("multi", password="x")
         u.profile.is_italian_tl_role = True
         u.profile.is_hr_user = True
-        u.profile.role_codes = ["hbpr"]
-        u.profile.save(update_fields=["is_italian_tl_role", "is_hr_user", "role_codes"])
+        u.profile.save(update_fields=["is_italian_tl_role", "is_hr_user"])
+        Role.objects.get_or_create(code="hbpr", defaults={"name": "HBPR"})
+        assign_role(u, "hbpr")
         r = self.build()["roles"]
         self.assertEqual((r["italian_tl"], r["hr"], r["hbpr"]), (1, 1, 1))
         self.assertEqual(r["albanian_tl"], 0)
