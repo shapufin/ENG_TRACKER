@@ -55,7 +55,7 @@ interface ApprovalPeriodFinalizeResult {
   already_finalized: boolean;
 }
 
-export interface UserErasePreview {
+interface UserErasePreview {
   user_id: number;
   username: string;
   can_erase: boolean;
