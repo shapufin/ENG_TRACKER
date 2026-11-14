@@ -225,3 +225,16 @@ Derived from the 2026-10-18 `ticket_kpi` audit. Each line is a defect class that
 
 `?workspace_ids=` widens a plain employee's list to workspace peers only when the viewset sets `calendar_peer_visible = True` **and** the request says `calendar=true` (`PersonalOnlyFilterMixin._peers_visible_in_calendar`). Only `StandbyLogViewSet` opts in (who is on standby). Overtime logs, leave balances and audit logs stay self-only, so this supersedes the earlier "public workspace exposes member overtime" default. `AuditLogViewSet.filter_for_regular_user` is `user=request.user`. `GET /users/users/italian_team_members/` is self (the Manager), HR, staff or superuser only. `CustomTokenRefreshView` throttles by the `auth` scope only (no shared `anon` bucket); login keeps both. Tests: `apps/permissions/test_workspace_peer_scope.py`, `apps/users/tests_app/test_sec_handover_2026_11.py`.
 
+
+## Role drift, offboarding and role guards (2026-11-14)
+
+Source: `audithandover.md` (M2, M3, M5, S1 step 1, S4). Non-negotiables:
+
+1. **Approval is role predicates plus team scope only.** `PermissionService.can_approve` no longer falls through to `has_permission`; a bare `admin` role approves nothing outside its team and the owner rule. Pinned by `apps/permissions/test_no_capability_fallthrough.py`.
+2. **Role flags and role rows must agree.** `manage.py check_role_drift` reports a flag (`is_hr_user`, `is_italian_tl_role`, `is_albanian_tl_role`) with no active `UserRole`; `--fix` backfills through `assign_role` and never removes a role. Run it before and after a role change.
+3. **One global grant per user and role.** `UserRole` has a partial unique constraint on `(user, role)` where `team IS NULL` (migration `permissions.0008`), because `unique_together` does not bind NULL teams.
+4. **Managed roles cannot be deleted.** `DELETE /api/permissions/roles/{id}/` returns 409 for every code in `MANAGED_ROLE_CODES`; deleting one cascades every assignment.
+5. **Deactivation report names what is left behind.** `deactivation_warnings` (`apps/users/services/user_deactivation.py`) lists led teams, TL links, pending overtime/standby/leave of linked members, and open HBPR assignments. It is shown after the deactivation save; it does not block.
+6. **One leader-role constant.** `TL_ROLE_CODES` in `leader_ownership.py` is the only definition; `role_service` imports it.
+
+Still open (audithandover.md): S2 (`icontains` on `role_codes`), M3 create/destroy routing through `assign_role`/`revoke_role`, S1 steps 2–3 (flags stop being read, then dropped), S5c seam guard.
