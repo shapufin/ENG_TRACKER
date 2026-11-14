@@ -5,28 +5,23 @@ const roleFlag = (user: any, key: string): boolean => Boolean(user?.[key]);
 
 const anyRole = (...roles: boolean[]): boolean => roles.some(Boolean);
 
+// Role identity is the database grant (the API's `roles` list). The legacy
+// is_*_role flags were dropped server-side (audithandover.md S1 step 3), so
+// there is no flag fallback: a user without the grant does not hold the role.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const hasDatabaseRole = (user: any, code: string): boolean | undefined => {
-  if (!Array.isArray(user?.roles)) return undefined;
-  // An empty roles array means the backend sent the field but the user has
-  // no database role assignments. Fall through to legacy flags so users
-  // who were assigned roles via the old flag-only path are not locked out.
-  if (user.roles.length === 0) return undefined;
-  return user.roles.includes(code);
-};
+const hasDatabaseRole = (user: any, code: string): boolean =>
+  Array.isArray(user?.roles) && user.roles.includes(code);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const computeRoles = (user: any) => {
-  const isItalianTL = hasDatabaseRole(user, "italian_tl") ?? roleFlag(user, "is_italian_tl_role");
-  const isAlbanianTL =
-    hasDatabaseRole(user, "albanian_tl") ?? roleFlag(user, "is_albanian_tl_role");
+  const isItalianTL = hasDatabaseRole(user, "italian_tl");
+  const isAlbanianTL = hasDatabaseRole(user, "albanian_tl");
   const isTeamLeader = anyRole(isItalianTL, isAlbanianTL, roleFlag(user, "is_team_leader"));
-  const isHR = hasDatabaseRole(user, "hr") ?? roleFlag(user, "is_hr");
-  // HBPR has no legacy flag: the database role is the only source.
-  const isHBPR = hasDatabaseRole(user, "hbpr") ?? false;
+  const isHR = hasDatabaseRole(user, "hr");
+  const isHBPR = hasDatabaseRole(user, "hbpr");
   const isAdmin = roleFlag(user, "is_staff");
   const isSuperuser = roleFlag(user, "is_superuser");
-  const isCRAdmin = hasDatabaseRole(user, "cr_admin") ?? roleFlag(user, "is_cr_admin");
+  const isCRAdmin = hasDatabaseRole(user, "cr_admin");
   const hasControlRoomAccess = roleFlag(user, "has_control_room_access");
   // CR user = non-admin employee with active ControlRoomAccess. Their home
   // is /control-room/dashboard (the CR plugin page); they should NOT see

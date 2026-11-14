@@ -1077,6 +1077,9 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         from apps.permissions.services.role_service import find_blocked_tl_revocations
         from .services.hbpr_assignments import hbpr_revocation_refusal
         user = self.get_object()
+        # Two admins editing one user interleave without this (audithandover.md M4):
+        # hold the profile row until the transaction ends.
+        UserProfile.objects.select_for_update().filter(user=user).first()
         self._forbid_non_superuser_on_superuser(request, user)
         data = request.data
 

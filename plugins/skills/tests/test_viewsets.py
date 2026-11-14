@@ -755,7 +755,7 @@ class HistoryTest(ViewSetTestCase, TestCase):
 
     def test_date_from_filters_history(self):
         """Entries before date_from are excluded."""
-        from datetime import date, timedelta
+        from datetime import timedelta
         from django.utils import timezone
         from plugins.skills.models import SkillRatingHistory
 
@@ -778,7 +778,8 @@ class HistoryTest(ViewSetTestCase, TestCase):
             changed_by=self.employee, source='self',
         )
 
-        today = date.today().isoformat()
+        from core.utils.timezone_local import business_today
+        today = business_today().isoformat()
         resp = self._list(SkillRatingHistoryViewSet, self.employee, params={'date_from': today})
         self.assertEqual(resp.status_code, 200)
         results = resp.data.get('results', resp.data)
@@ -788,7 +789,7 @@ class HistoryTest(ViewSetTestCase, TestCase):
 
     def test_date_to_filters_history(self):
         """Entries after date_to are excluded."""
-        from datetime import date, timedelta
+        from datetime import timedelta
         from plugins.skills.models import SkillRatingHistory
 
         SkillRatingHistory.objects.create(
@@ -797,7 +798,8 @@ class HistoryTest(ViewSetTestCase, TestCase):
             changed_by=self.employee, source='self',
         )
         # date_to = yesterday → today's entry excluded
-        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        from core.utils.timezone_local import business_today
+        yesterday = (business_today() - timedelta(days=1)).isoformat()
         resp = self._list(SkillRatingHistoryViewSet, self.employee, params={'date_to': yesterday})
         self.assertEqual(resp.status_code, 200)
         results = resp.data.get('results', resp.data)
