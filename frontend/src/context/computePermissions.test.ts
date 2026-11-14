@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { computePermissions } from "./computePermissions";
 
-type Fixture = Record<string, unknown> | null;
+type Fixture = Record<string, unknown> | null | undefined;
 type Input = Parameters<typeof computePermissions>[0];
 
 // The API carries role identity as `roles` (database grants). These fixtures
