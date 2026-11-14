@@ -154,6 +154,20 @@ class RoleViewSet(SuperuserPermissionMixin, viewsets.ModelViewSet):
             return [permissions.IsAdminUser()]
         return [IsSuperuser()]
 
+    def destroy(self, request, *args, **kwargs):
+        # Deleting a managed role cascades every assignment of it (audithandover.md M3).
+        from rest_framework.response import Response
+
+        from apps.users.services.user_creation import MANAGED_ROLE_CODES
+
+        role = self.get_object()
+        if role.code in MANAGED_ROLE_CODES:
+            return Response(
+                {'detail': f'The {role.code} role is managed and cannot be deleted.'},
+                status=409,
+            )
+        return super().destroy(request, *args, **kwargs)
+
 
 class PermissionViewSet(SuperuserPermissionMixin, viewsets.ReadOnlyModelViewSet):
     queryset = Permission.objects.all().order_by('module', 'action')

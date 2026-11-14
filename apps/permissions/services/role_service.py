@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 
 from apps.permissions.models import Role, UserRole
+from apps.users.services.leader_ownership import TL_ROLE_CODES
 
 User = get_user_model()
 
@@ -59,7 +60,7 @@ def assign_role(user, role_code: str, team=None) -> UserRole:
     return assignment
 
 
-_TL_ROLE_CODES = ('italian_tl', 'albanian_tl')
+_TL_ROLE_CODES = TL_ROLE_CODES
 
 
 def get_tl_dependents(user, role_code: str):

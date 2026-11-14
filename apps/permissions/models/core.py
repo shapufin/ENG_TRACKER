@@ -6,6 +6,7 @@ Implements team-based and group-based permission inheritance.
 """
 
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import User
 from core.models.abstract import BaseModel
 
@@ -113,6 +114,15 @@ class UserRole(BaseModel):
     class Meta:
         db_table = 'user_roles'
         unique_together = ['user', 'role', 'team']
+        # unique_together does not bind when team is NULL (every global role row), so a
+        # second global grant of the same role could be inserted. audithandover.md M5.
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'role'],
+                condition=Q(team__isnull=True),
+                name='user_roles_unique_global',
+            ),
+        ]
         indexes = [
             models.Index(fields=['user']),
             models.Index(fields=['role']),
