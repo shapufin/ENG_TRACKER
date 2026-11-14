@@ -735,11 +735,9 @@ class WorkspaceFilterMixin:
     def _filter_team_leader_queryset(self, queryset, user, apply_workspace_filter=False):
         """Apply appropriate TL/staff filtering for team_logs / team_pending.
 
-        Uses the same membership sources as ``get_team_member_ids`` (FK
-        assignments, shared team M2M, and ``Team.team_leader`` / led_teams)
-        plus the TL themselves. Previously only italian_tl/albanian_tl FKs
-        were applied, so TLs whose authority comes from ``led_teams`` saw
-        empty team queues despite ``is_team_leader`` being True.
+        Uses ``get_team_member_ids``: members whose italian_tl / albanian_tl
+        FK points at the viewer, plus the viewer. Team membership and
+        ``Team.team_leader`` grant no internal data (item 64).
 
         Args:
             queryset: The queryset to filter

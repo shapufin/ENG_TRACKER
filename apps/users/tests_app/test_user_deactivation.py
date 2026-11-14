@@ -68,3 +68,53 @@ class NotificationRecipientTests(TestCase):
         self.assertEqual({u.pk for u in _team_recipients(member)}, {linked.pk})  # Team.team_leader is calendar-only
         User.objects.filter(pk__in=[leader.pk, linked.pk]).update(is_active=False)
         self.assertEqual(list(_team_recipients(member)), [])
+
+
+class OffboardingReportTests(TestCase):
+    """Deactivating a leader also reports the pending requests and open HBPR assignments left on them."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.permissions.models import Role
+        from apps.permissions.services.role_service import assign_role
+        from apps.users.services.hbpr_assignments import create_assignment
+
+        for code, name in [("hbpr", "HBPR"), ("albanian_tl", "Line Manager")]:
+            Role.objects.get_or_create(code=code, defaults={"name": name})
+        cls.leader = make_user("off-lead")
+        assign_role(cls.leader, "albanian_tl")
+        cls.hbpr = make_user("off-hbpr")
+        assign_role(cls.hbpr, "hbpr")
+        cls.assignment_factory = create_assignment
+        cls.member = make_user("off-member")
+        cls.member.profile.albanian_tl = cls.leader
+        cls.member.profile.save()
+
+    def test_pending_leave_and_overtime_of_linked_members_are_reported(self):
+        from datetime import date, time
+
+        from apps.leave_management.models import LeaveRequest
+        from apps.overtime.models import Client, OvertimeLog
+
+        LeaveRequest.objects.create(
+            user=self.member, request_type="vacation", start_date=date(2026, 12, 1),
+            end_date=date(2026, 12, 2), status="pending",
+        )
+        OvertimeLog.objects.create(
+            user=self.member, client=Client.objects.create(name="Off Client"), date="2026-12-03",
+            hours=2.0, start_time=time(18, 0), end_time=time(20, 0), description="x",
+        )
+        warnings = deactivation_warnings(self.leader)
+        self.assertTrue(any("2 pending requests" in line for line in warnings), warnings)
+
+    def test_open_hbpr_assignment_is_reported(self):
+        from datetime import date
+
+        self.assignment_factory(
+            hbpr=self.hbpr, albanian_tl=self.leader, effective_from=date(2026, 1, 1), cadence="weekly",
+        )
+        warnings = deactivation_warnings(self.leader)
+        self.assertTrue(any("HBPR" in line for line in warnings), warnings)
+
+    def test_plain_member_still_has_no_warnings(self):
+        self.assertEqual(deactivation_warnings(self.member), [])

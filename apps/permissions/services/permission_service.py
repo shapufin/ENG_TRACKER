@@ -111,11 +111,9 @@ class PermissionService:
         """
         Centralized approval permission logic moved from PermissionChecker.
 
-        TL approval uses the same membership sources as get_team_member_ids /
-        IsOwnerOrTeamLeader / DeletePermissionMixin: direct italian_tl and
-        albanian_tl FKs, shared team M2M membership, and Team.team_leader
-        (led_teams). FK-only checks silently deny led-team TLs who can already
-        see and delete those entries on team pages.
+        TL scope is link-only (item 64): a member's italian_tl / albanian_tl FK
+        decides who a leader may approve. Shared team membership and
+        Team.team_leader grant nothing here.
         """
         # SEC-09: nobody decides their own request, whatever their role
         # (staff, HR and superusers included). Ruling 2026-10-21: a team
@@ -161,8 +159,10 @@ class PermissionService:
                             getattr(user, 'id', None),
                         )
 
-        return self.has_permission(user, obj._meta.model_name, 'approve')
-    
+        # No capability fall-through: the seeded permission rows never match these
+        # module names, and the admin shortcut in has_permission skipped team scope.
+        return False
+
     def _check_role_permission(self, user, module, action):
         """Check if user has role-based permission."""
         user_roles = UserRole.objects.filter(
