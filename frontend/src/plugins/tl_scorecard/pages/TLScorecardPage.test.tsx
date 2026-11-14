@@ -180,7 +180,10 @@ describe("TLScorecardPage", () => {
 
     it.each([
       ["the cadence is set", { assignment_id: 11, cadence_missing: false, can_edit_cadence: true }],
-      ["the viewer cannot edit", { assignment_id: 11, cadence_missing: true, can_edit_cadence: false }],
+      [
+        "the viewer cannot edit",
+        { assignment_id: 11, cadence_missing: true, can_edit_cadence: false },
+      ],
       ["there is no assignment", null],
     ])("is hidden when %s", async (_label, payload) => {
       withBanner(payload);
@@ -221,7 +224,7 @@ describe("TLScorecardPage", () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByText("75%")).toBeInTheDocument());
-    expect(screen.getByText("3")).toBeInTheDocument(); // TL-Italy syncs
+    expect(screen.getByText("3")).toBeInTheDocument(); // Manager syncs
     expect(screen.getByText("1/1")).toBeInTheDocument(); // team meetings with HRBP
     expect(screen.getByText("5")).toBeInTheDocument(); // review deliveries YTD
   });

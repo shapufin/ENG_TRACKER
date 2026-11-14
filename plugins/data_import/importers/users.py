@@ -2,6 +2,7 @@
 Importer for bulk-importing users from CSV/Excel files.
 """
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from django.contrib.auth.models import User
@@ -36,6 +37,9 @@ PASSWORD_STRATEGY_CHOICES = [
     ("fixed", "Use a fixed default password for all users"),
     ("column", "Use the mapped Password column"),
 ]
+
+
+logger = logging.getLogger(__name__)
 
 
 @register
@@ -527,6 +531,18 @@ class UserImporter(StaffOnlyAuthority, BaseImporter):
             if user is None or leader is None or user.pk == leader.pk:
                 continue
             profile = user.profile
+            # Same guards as the immediate path (role, active, own-leader, circular, Line
+            # Manager above Line Manager) and the same audit row.
+            from apps.users.services.user_creation import LM_ABOVE_LM_ERROR, leader_link_error, record_leader_link_change
+
+            link = field.removesuffix("_id")  # the queue stores the column name
+            problem = leader_link_error(user.pk, link, leader.id)
+            if problem is None and link == "albanian_tl" and profile.is_albanian_tl and profile.albanian_tl_id != leader.id:
+                problem = LM_ABOVE_LM_ERROR
+            if problem:
+                logger.warning("Deferred leader link %s -> %s skipped: %s", username, leader_username, problem)
+                continue
+            record_leader_link_change(None, profile, link, getattr(profile, f"{link}_id"), leader.id, source="import")
             setattr(profile, field, leader.id)
             profile.save(update_fields=[field])
         return None

@@ -604,12 +604,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     team = serializers.SerializerMethodField()
     team_name = serializers.SerializerMethodField()
     team_code = serializers.SerializerMethodField()
-    teams = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=Team.objects.all(),
-        required=False,
-        allow_null=True
-    )
+    teams = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
     def validate_teams(self, teams):
         message = archived_team_error(teams or [])
@@ -684,9 +679,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
         ]
         # mfa_required is written only through UserViewSet.update_user, which
         # applies the staff-on-staff rule; this serializer must never set it.
+        # Leader links, role flags and teams are written only through the guarded paths
+        # (update_user, bulk_update, set_team_leader, importers): a direct write here would
+        # skip the leader, HBPR-revoke and audit checks (audit 2026-11-13).
         read_only_fields = [
             'id', 'mfa_required', 'employment_type', 'weekly_contract_hours',
-            'created_at', 'updated_at',
+            'albanian_tl', 'italian_tl', 'is_hr_user', 'is_italian_tl_role', 'is_albanian_tl_role',
+            'teams', 'created_at', 'updated_at',
         ]
 
     def validate_code(self, value):

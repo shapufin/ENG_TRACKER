@@ -48,7 +48,11 @@ CLOSED_YEAR_LOCKED_MODELS = ('overtime.overtimelog', 'standby.standbylog')
 # into the live database, so they are listed and need a separate confirmation.
 PRIVILEGE_FIELDS = {
     'auth.user': ('is_superuser', 'is_staff', 'is_active', 'password'),
-    'users.userprofile': ('is_hr_user', 'is_italian_tl_role', 'is_albanian_tl_role', 'mfa_required'),
+    'users.userprofile': (
+        'is_hr_user', 'is_italian_tl_role', 'is_albanian_tl_role', 'mfa_required',
+        # A leader link grants approval rights and payroll scope (audit 2026-11-13).
+        'italian_tl', 'albanian_tl',
+    ),
 }
 ROLE_GRANT_MODEL = 'permissions.userrole'
 
@@ -356,8 +360,25 @@ def commit(
         if staging:
             shutil.rmtree(staging, ignore_errors=True)
 
+    refresh_after_restore()
     _log_restore(user, manifest, expanded, result)
     return result
+
+
+def refresh_after_restore() -> None:
+    """Rebuild what raw restore saves skip: the profile role-code cache (the signal returns on
+    ``raw=True``) and every cached permission or closed-year answer."""
+    from django.core.cache import cache
+
+    from django.contrib.auth.models import User
+
+    from apps.permissions.services.role_service import _refresh_role_cache
+    from apps.users.services.approval_periods import clear_closed_year_cache
+
+    for user in User.objects.select_related('profile').iterator():
+        _refresh_role_cache(user)
+    cache.clear()
+    clear_closed_year_cache()
 
 
 def _commit_rows(expanded, graph, delete_missing, by_model, result) -> None:

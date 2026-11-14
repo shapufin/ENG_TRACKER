@@ -149,7 +149,7 @@ def _build_trend_sheet(wb, fmt, trend):
     ws.hide_gridlines(2)
     _print_setup(ws, (1, 1))
     headers = [
-        "Month", "1:1 compliance", "TL-Italy syncs", "Team meetings with HRBP",
+        "Month", "1:1 compliance", "Manager syncs", "Team meetings with HRBP",
         "Management reviews (YTD)", "Promotion ratio",
     ]
     ws.set_column(0, 0, 14)

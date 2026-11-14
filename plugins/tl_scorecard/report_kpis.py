@@ -93,7 +93,7 @@ def kpi_rows(scorecard, *, include_leave_overtime=True) -> list[dict]:
         row('Overtime', 'OT approval turnaround (days)', scorecard['overtime']['avg_turnaround_days'], 'num'),
         row('Meetings', '1:1 compliance', meetings['one_on_one_compliance_pct'], 'pct',
             TARGETS['one_on_one_pct']),
-        row('Meetings', 'TL-Italy syncs', meetings['tl_sync_count'], 'count'),
+        row('Meetings', 'Manager syncs', meetings['tl_sync_count'], 'count'),
         row('Meetings', 'Team meetings with HRBP', meetings['team_meetings_with_hrbp'], 'count'),
         row('Reviews', f'Management reviews (YTD, pro-rata of {TARGETS["reviews_per_year"]}/year)',
             reviews, 'count', reviews_goal),
