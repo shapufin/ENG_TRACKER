@@ -118,5 +118,4 @@ export const permissionService = {
     );
     return data;
   },
-
 };
