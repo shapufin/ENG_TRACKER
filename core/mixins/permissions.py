@@ -26,15 +26,23 @@ def actor_team_scope_cached(user):
     would otherwise repeat it for every record. The cache lives on the actor's
     profile instance and is removed when the bulk action ends.
     """
+    from apps.users.services import leader_ownership
+
     profile = getattr(user, 'profile', None)
+    # The leader set is the same for every row of the action (audithandover.md L2).
+    user._bulk_leader_user_ids = leader_ownership.leader_user_ids()
     if profile is None:
-        yield
+        try:
+            yield
+        finally:
+            del user._bulk_leader_user_ids
         return
     profile._bulk_team_member_ids = profile.get_team_member_ids()
     try:
         yield
     finally:
         del profile._bulk_team_member_ids
+        del user._bulk_leader_user_ids
 
 
 class SuperuserOnlyAdminMixin:
@@ -601,6 +609,11 @@ class IsOwnerOrTeamLeader(permissions.BasePermission):
                 target_user_ids = profile.get_team_member_ids()
                 return obj.user.id in target_user_ids
             except Exception:
+                # Fail closed: a lookup error denies the row, and is logged, not swallowed.
+                logger.exception(
+                    'Failed team-member lookup during object check for user_id=%s',
+                    getattr(request.user, 'id', None),
+                )
                 return False
         
         # Allow if user is HR
