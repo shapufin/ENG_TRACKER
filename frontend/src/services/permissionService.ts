@@ -66,20 +66,6 @@ export const permissionService = {
     return data;
   },
 
-  async createRole(payload: Partial<Role>): Promise<Role> {
-    const { data } = await api.post<Role>("/permissions/roles/", payload);
-    return data;
-  },
-
-  async updateRole(id: number, payload: Partial<Role>): Promise<Role> {
-    const { data } = await api.put<Role>(`/permissions/roles/${id}/`, payload);
-    return data;
-  },
-
-  async deleteRole(id: number): Promise<void> {
-    await api.delete(`/permissions/roles/${id}/`);
-  },
-
   async getPermissions(
     params?: Record<string, unknown>
   ): Promise<PaginatedResponse<PermissionItem>> {
@@ -94,20 +80,6 @@ export const permissionService = {
       params,
     });
     return data;
-  },
-
-  async createUserRole(payload: Partial<UserRole>): Promise<UserRole> {
-    const { data } = await api.post<UserRole>("/permissions/user-roles/", payload);
-    return data;
-  },
-
-  async updateUserRole(id: number, payload: Partial<UserRole>): Promise<UserRole> {
-    const { data } = await api.put<UserRole>(`/permissions/user-roles/${id}/`, payload);
-    return data;
-  },
-
-  async deleteUserRole(id: number): Promise<void> {
-    await api.delete(`/permissions/user-roles/${id}/`);
   },
 
   async getUserGroups(params?: Record<string, unknown>): Promise<PaginatedResponse<UserGroup>> {
@@ -145,14 +117,5 @@ export const permissionService = {
       { params }
     );
     return data;
-  },
-
-  async createRolePermission(payload: Partial<RolePermission>): Promise<RolePermission> {
-    const { data } = await api.post<RolePermission>("/permissions/role-permissions/", payload);
-    return data;
-  },
-
-  async deleteRolePermission(id: number): Promise<void> {
-    await api.delete(`/permissions/role-permissions/${id}/`);
   },
 };

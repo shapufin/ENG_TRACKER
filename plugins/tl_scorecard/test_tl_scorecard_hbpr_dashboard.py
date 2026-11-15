@@ -174,8 +174,12 @@ class HbprWorkspaceOverviewTests(HbprScorecardBase):
 
     def _query_count(self):
         from django.contrib.auth.models import User
+        from django.core.cache import cache
         from django.db import connection
         from django.test.utils import CaptureQueriesContext
+        # The locmem cache is shared across test cases; measure cold both times so a
+        # warm entry left by an earlier test cannot change the count.
+        cache.clear()
         fresh = User.objects.get(pk=self.hbpr.pk)  # scope is memoised per user instance
         with CaptureQueriesContext(connection) as ctx:
             self._get('overview', fresh)

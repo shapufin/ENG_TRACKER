@@ -457,25 +457,13 @@ def _set_cr_admin_role(user: User, *, active: bool) -> None:
     ``0003_seed_cr_admin_role`` not applied); callers treat absence the same
     as "not a CR admin".
     """
-    from apps.permissions.models import Role, UserRole
-    try:
-        role = Role.objects.get(code='cr_admin')
-    except Role.DoesNotExist:
+    from apps.permissions.models import Role
+    from apps.permissions.services.role_service import assign_role, revoke_role
+
+    if not Role.objects.filter(code='cr_admin').exists():
         return
+    # One writer: the role service keeps the role_codes cache and the permission cache in step.
     if active:
-        UserRole.objects.get_or_create(
-            user=user, role=role, team=None,
-            defaults={'is_active': True},
-        )
-        # Ensure any pre-existing row (e.g. previously deactivated) is active.
-        UserRole.objects.filter(user=user, role=role).update(is_active=True)
+        assign_role(user, 'cr_admin')
     else:
-        UserRole.objects.filter(user=user, role=role, is_active=True).update(is_active=False)
-    # .update() bypasses post_save/post_delete signals, so refresh the
-    # denormalized role_codes cache manually.
-    from apps.permissions.services.role_service import _refresh_role_cache
-    from core.utils.cache import invalidate_permission_cache_for_user
-    _refresh_role_cache(user)
-    # .update() sends no signal, so the cached permissions must be cleared explicitly (as
-    # revoke_role does), or a revoked cr_admin keeps access until the cache expires.
-    invalidate_permission_cache_for_user(user)
+        revoke_role(user, 'cr_admin')
