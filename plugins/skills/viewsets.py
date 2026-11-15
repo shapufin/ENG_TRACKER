@@ -9,6 +9,8 @@ Permission design (see plan Gap 4 / Contract C6):
   (writes → ``manage``, HR-only) for catalog CRUD.
 - Matrix/gap/export/history viewsets are read-only (GET → ``view``).
 """
+import datetime
+from core.utils.timezone_local import business_tz
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -442,18 +444,18 @@ class SkillRatingHistoryViewSet(PluginPermissionMixin, viewsets.ReadOnlyModelVie
             qs = qs.filter(skill_id=skill_id)
         date_from = params.get('date_from')
         date_to = params.get('date_to')
+        # Days are business days in Europe/Tirane (core.utils.timezone_local), not the
+        # UTC date of the timestamp: an entry made after midnight Tirane is that day's.
         if date_from:
             try:
-                import datetime
-                datetime.date.fromisoformat(date_from)
-                qs = qs.filter(changed_at__date__gte=date_from)
+                start = datetime.date.fromisoformat(date_from)
+                qs = qs.filter(changed_at__gte=datetime.datetime.combine(start, datetime.time.min, tzinfo=business_tz()))
             except (ValueError, TypeError):
                 pass  # malformed date — silently ignore
         if date_to:
             try:
-                import datetime
-                datetime.date.fromisoformat(date_to)
-                qs = qs.filter(changed_at__date__lte=date_to)
+                end = datetime.date.fromisoformat(date_to) + datetime.timedelta(days=1)
+                qs = qs.filter(changed_at__lt=datetime.datetime.combine(end, datetime.time.min, tzinfo=business_tz()))
             except (ValueError, TypeError):
                 pass
         return qs

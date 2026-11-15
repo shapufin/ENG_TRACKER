@@ -7,6 +7,7 @@ against its SLA deadline (see `sla.py`): decided within the deadline is
 on time, decided later or still pending past the deadline is a breach.
 Read endpoints only serve the stored snapshot plus a freshness check.
 """
+from apps.users.services.leader_ownership import TL_ROLE_CODES  # one definition (S3)
 from calendar import monthrange
 from collections import defaultdict
 from datetime import datetime, time, timedelta
@@ -202,7 +203,6 @@ def member_sets_for(rows, scope=None):
     return {(r.leader_id, r.team_id): managed.get(r.leader_id, set()) & members[r.team_id] for r in rows}
 
 
-TL_ROLE_CODES = ('italian_tl', 'albanian_tl')
 
 
 def candidate_leader_ids():

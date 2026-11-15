@@ -17,7 +17,6 @@ from .models import ScorecardMonthSnapshot
 from .scope import scoreable_member_ids
 from .services import month_blocks
 
-TL_ROLE_CODES = ('italian_tl', 'albanian_tl')
 
 
 def target_month(now: datetime) -> date:
