@@ -102,8 +102,12 @@ class PermissionService:
         from apps.users.services.leader_ownership import leader_user_ids, owner_leader_id
 
         profile = obj.user.profile
+        # Inside a bulk action the leader set is resolved once (actor_team_scope_cached).
+        leaders = getattr(user, '_bulk_leader_user_ids', None)
+        if leaders is None:
+            leaders = leader_user_ids()
         owner = owner_leader_id(
-            obj.status, obj.approved_by_id, profile.albanian_tl_id, profile.italian_tl_id, leader_user_ids(),
+            obj.status, obj.approved_by_id, profile.albanian_tl_id, profile.italian_tl_id, leaders,
         )
         return owner is None or owner == user.id
 
