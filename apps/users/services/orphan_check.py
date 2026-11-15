@@ -13,7 +13,7 @@ from apps.users.services.team_leaders import italian_tl_user_ids
 
 
 def _users_without_team():
-    # Same three sources as the Admin Users role tabs (see non_team_roles.py).
+    # Same sources as the Admin Users role tabs (see non_team_roles.py).
     users = (
         User.objects.filter(is_active=True, is_staff=False, is_superuser=False)
         .exclude(non_team_user_q())
