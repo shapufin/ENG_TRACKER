@@ -1,7 +1,8 @@
 from django import forms
-from django.contrib import admin, messages
+from django.contrib import admin
 from django.contrib.admin.forms import AdminAuthenticationForm
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.contrib.auth.forms import UserChangeForm
 from django.contrib.auth.models import User
 
 from .services import mfa as mfa_service
@@ -45,18 +46,44 @@ admin.site.login_form = MFAAdminAuthenticationForm
 admin.site.login_template = 'users/admin_login.html'
 
 
-class LeaderAwareUserAdmin(DjangoUserAdmin):
-    """Django's user admin, plus the importer's warning when a team leader is deactivated.
+class LeaderAwareUserChangeForm(UserChangeForm):
+    """Deactivating a user who leaves something behind needs an explicit confirmation.
 
-    Deactivation changes nothing else on purpose (reactivating restores it all), so this only
-    reports the teams and members left pointing at the user. See user_deactivation.py.
+    The lines are the same ones the importer reports (user_deactivation.py). The admin
+    must tick the box before the save goes through; reactivation never asks.
     """
 
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-        if change and 'is_active' in form.changed_data and not obj.is_active:
-            for line in deactivation_warnings(obj):
-                messages.warning(request, line)
+    confirm_offboarding = forms.BooleanField(
+        required=False,
+        label='I have read the offboarding warnings above and want to deactivate this user',
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        user = self.instance
+        deactivating = (
+            user.pk is not None
+            and 'is_active' in self.changed_data
+            and not cleaned.get('is_active')
+        )
+        if deactivating and not cleaned.get('confirm_offboarding'):
+            lines = deactivation_warnings(user)
+            if lines:
+                self.add_error('confirm_offboarding', ' '.join(lines))
+        return cleaned
+
+
+class LeaderAwareUserAdmin(DjangoUserAdmin):
+    """Django's user admin with the offboarding confirmation (audithandover.md M2).
+
+    Deactivation changes nothing else on purpose (reactivating restores it all); the form
+    lists what is left behind and asks for confirmation. See user_deactivation.py.
+    """
+
+    form = LeaderAwareUserChangeForm
+    fieldsets = DjangoUserAdmin.fieldsets + (
+        ('Offboarding', {'fields': ('confirm_offboarding',)}),
+    )
 
 
 try:
