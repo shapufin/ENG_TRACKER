@@ -1,4 +1,9 @@
 import { deriveFullName } from "./user-utils";
+import {
+  collapseSameDayStandbyLogs,
+  formatSegmentRange,
+  formatStandbyHours,
+} from "@/lib/standbyDayGroups";
 import type { StandbyLog, LeaveRequest, PublicHoliday, User } from "@/types";
 import type { CalendarEvent } from "@/components/calendar/types";
 
@@ -43,11 +48,24 @@ export const buildCalendarEvents = (
     !showFilters || visibleUsers.size === 0 || visibleUsers.has(userId);
 
   if (showStandby) {
-    standby.forEach((log) => {
+    // One pill per person and day: the weekly generator stores a night as several
+    // segment records (item 63), which would otherwise stack up in a month cell.
+    const perDay = [...standby].sort(
+      (a, b) =>
+        a.user - b.user ||
+        a.date.localeCompare(b.date) ||
+        (a.start_time ?? "").localeCompare(b.start_time ?? "")
+    );
+    collapseSameDayStandbyLogs(perDay).forEach((log) => {
       if (!isVisible(log.user)) return;
+      const hours = formatStandbyHours(log.hours);
+      const shifts = log.segments
+        ?.map((seg) => formatSegmentRange(seg))
+        .filter(Boolean)
+        .join(", ");
       items.push({
         id: `sb-${log.id}`,
-        title: `SB: ${log.hours}h`,
+        title: `SB: ${hours}h`,
         start: log.date,
         end: log.date,
         type: "standby",
@@ -58,11 +76,17 @@ export const buildCalendarEvents = (
         // events deliberately carry no tech level.
         userTechLevels: log.user_tech_levels,
         hours: log.hours,
-        description: log.description,
+        segmentIds: log.segment_ids,
+        pendingSegmentIds: log.segments
+          ?.filter((seg) => seg.status === "pending")
+          .map((seg) => seg.id),
+        description: shifts
+          ? [`Shifts: ${shifts}`, log.description].filter(Boolean).join(" · ")
+          : log.description,
         clientNames: log.client_names,
         compactLabel: log.client_names?.length
-          ? `Standby (${log.hours}h) · ${log.client_names.join(", ")}`
-          : `Standby (${log.hours}h)`,
+          ? `Standby (${hours}h) · ${log.client_names.join(", ")}`
+          : `Standby (${hours}h)`,
       });
     });
   }

@@ -128,3 +128,22 @@ export const formatSegmentRange = (log: Pick<StandbyLog, "start_time" | "end_tim
   log.start_time && log.end_time
     ? `${log.start_time.slice(0, 5)}–${log.end_time.slice(0, 5)}`
     : null;
+
+/** Hours as a plain number ("6", "15", "1.5"): the API sends "6.00". */
+export const formatStandbyHours = (hours: number | string) => String(Number(hours));
+
+/**
+ * Record ids behind a table selection. The table's selection keys are record ids
+ * (the first segment's id for a bundled day), so a bundled row selects all its shifts.
+ */
+export const selectedRecordIds = (
+  rows: readonly { id: number; segment_ids?: number[] }[],
+  selection: Record<string, boolean>
+): number[] => {
+  const picked = new Set(
+    Object.keys(selection)
+      .filter((key) => selection[key])
+      .map(Number)
+  );
+  return rows.filter((row) => picked.has(row.id)).flatMap((row) => row.segment_ids ?? [row.id]);
+};

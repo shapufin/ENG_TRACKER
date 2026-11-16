@@ -403,18 +403,35 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
             yield buffer.getvalue()
             buffer.seek(0)
             buffer.truncate()
-            for sb in queryset.iterator(chunk_size=1000):
+            # One row per person, day and status: the weekly generator stores a night
+            # as one record per calendar-day segment (invariant 63), and a file reads
+            # better with a day total. Adjacent rows are merged, so the order puts a
+            # day's segments together.
+            def emit(group):
+                first = group[0]
+                descriptions = dict.fromkeys(g.description for g in group if g.description)
+                evidence = dict.fromkeys(g.evidence for g in group if g.evidence)
                 writer.writerow([csv_safe(v) for v in (
-                    sb.user.get_full_name() if sb.user else '',
-                    sb.date.strftime('%d/%m/%Y') if sb.date else '',
-                    _format_hours(sb.hours) if sb.hours else '0',
-                    sb.status,
-                    sb.description or '',
-                    sb.evidence or '',
+                    first.user.get_full_name() if first.user else '',
+                    first.date.strftime('%d/%m/%Y') if first.date else '',
+                    _format_hours(sum((g.hours or 0 for g in group), 0)) if any(g.hours for g in group) else '0',
+                    first.status,
+                    '; '.join(descriptions),
+                    ', '.join(evidence),
                 )])
-                yield buffer.getvalue()
+                data = buffer.getvalue()
                 buffer.seek(0)
                 buffer.truncate()
+                return data
+
+            group = []
+            for sb in queryset.order_by('-date', 'user_id', 'status', 'start_time', 'id').iterator(chunk_size=1000):
+                if group and (sb.user_id, sb.date, sb.status) != (group[0].user_id, group[0].date, group[0].status):
+                    yield emit(group)
+                    group = []
+                group.append(sb)
+            if group:
+                yield emit(group)
 
         response = StreamingHttpResponse(csv_generator(), content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="standby_logs.csv"'

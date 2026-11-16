@@ -49,7 +49,11 @@ export const useEventActions = (event: CalendarEvent | null, onClose: () => void
       if (isLeave) {
         await leaveService.deleteRequest(recordId);
       } else if (isStandby) {
-        await standbyService.deleteLog(recordId);
+        if (event?.segmentIds && event.segmentIds.length > 1) {
+          await standbyService.bulkDelete(event.segmentIds);
+        } else {
+          await standbyService.deleteLog(recordId);
+        }
       }
     });
   };
@@ -59,7 +63,11 @@ export const useEventActions = (event: CalendarEvent | null, onClose: () => void
       if (isLeave) {
         await leaveService.approve(recordId);
       } else if (isStandby) {
-        await standbyService.approve(recordId);
+        if (event?.segmentIds && event.segmentIds.length > 1) {
+          await standbyService.bulkApprove(event.pendingSegmentIds ?? event.segmentIds);
+        } else {
+          await standbyService.approve(recordId);
+        }
       }
     });
   };
@@ -69,7 +77,11 @@ export const useEventActions = (event: CalendarEvent | null, onClose: () => void
       if (isLeave) {
         await leaveService.reject(recordId, reason);
       } else if (isStandby) {
-        await standbyService.reject(recordId, reason);
+        if (event?.segmentIds && event.segmentIds.length > 1) {
+          await standbyService.bulkReject(event.pendingSegmentIds ?? event.segmentIds, reason);
+        } else {
+          await standbyService.reject(recordId, reason);
+        }
       }
     });
   };

@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import React, { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTeamManagement } from "@/hooks/useTeamManagement";
@@ -139,9 +140,10 @@ const TeamManagementPage: React.FC = () => {
             ? target.segments.filter((s) => s.status === "pending").map((s) => s.id)
             : target.segment_ids;
           if (pendingIds.length > 0) {
-            standbyService.bulkApprove(pendingIds).then(() => {
-              queryClient.invalidateQueries({ queryKey: ["team", "standby"] });
-            });
+            standbyService
+              .bulkApprove(pendingIds)
+              .then(() => queryClient.invalidateQueries({ queryKey: ["team", "standby"] }))
+              .catch(() => toast.error("Could not approve this day. Refresh and try again."));
           }
         } else {
           sbApproveMutation.mutate(id);
@@ -318,11 +320,14 @@ const TeamManagementPage: React.FC = () => {
             if (type === "standby") {
               const target = displayStandby.find((l) => l.id === id);
               if (target?.segment_ids && target.segment_ids.length > 1) {
-                standbyService.bulkReject(target.segment_ids, rejectReason).then(() => {
-                  queryClient.invalidateQueries({ queryKey: ["team", "standby"] });
-                  setRejectReason("");
-                  setRejectingRecord(null);
-                });
+                standbyService
+                  .bulkReject(target.segment_ids, rejectReason)
+                  .then(() => {
+                    queryClient.invalidateQueries({ queryKey: ["team", "standby"] });
+                    setRejectReason("");
+                    setRejectingRecord(null);
+                  })
+                  .catch(() => toast.error("Could not reject this day. Refresh and try again."));
                 return;
               }
             }

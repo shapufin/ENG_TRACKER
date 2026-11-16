@@ -15,6 +15,10 @@ export interface CalendarEvent {
   /** Tech + held level labels, e.g. ["Infrastructure L3"]. */
   userTechLevels?: string[];
   hours?: number;
+  /** A bundled standby day lists every record id so actions reach all its shifts. */
+  segmentIds?: number[];
+  /** The ids still awaiting a decision, for approve and reject. */
+  pendingSegmentIds?: number[];
   days?: number;
   isHalfDay?: boolean;
   halfDayPeriod?: "morning" | "afternoon";

@@ -1,8 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { collapseSameDayStandbyLogs, computeDayGroups, formatSegmentRange } from "./standbyDayGroups";
+import {
+  selectedRecordIds,
+  formatStandbyHours,
+  collapseSameDayStandbyLogs,
+  computeDayGroups,
+  formatSegmentRange,
+} from "./standbyDayGroups";
 import type { StandbyLog } from "@/types";
 
-const log = (id: number, user: number, date: string, hours: number, status: StandbyLog["status"] = "approved"): StandbyLog =>
+const log = (
+  id: number,
+  user: number,
+  date: string,
+  hours: number,
+  status: StandbyLog["status"] = "approved"
+): StandbyLog =>
   ({
     id,
     user,
@@ -69,10 +81,7 @@ describe("collapseSameDayStandbyLogs", () => {
   });
 
   it("resolves status: pending if any is pending", () => {
-    const list = [
-      log(1, 1, "2026-11-24", 9, "approved"),
-      log(2, 1, "2026-11-24", 6, "pending"),
-    ];
+    const list = [log(1, 1, "2026-11-24", 9, "approved"), log(2, 1, "2026-11-24", 6, "pending")];
     const collapsed = collapseSameDayStandbyLogs(list);
     expect(collapsed[0].status).toBe("pending");
   });
@@ -113,5 +122,28 @@ describe("formatSegmentRange", () => {
       "18:00–00:00"
     );
     expect(formatSegmentRange({ start_time: null, end_time: null })).toBeNull();
+  });
+});
+
+describe("formatStandbyHours", () => {
+  it("drops the API's trailing zeros", () => {
+    expect(formatStandbyHours("6.00")).toBe("6");
+    expect(formatStandbyHours(1.5)).toBe("1.5");
+  });
+});
+
+describe("selectedRecordIds", () => {
+  const rows = [{ id: 10, segment_ids: [10, 11] }, { id: 20 }, { id: 30 }];
+
+  it("reads selection keys as record ids, not positions", () => {
+    expect(selectedRecordIds(rows, { "20": true })).toEqual([20]);
+  });
+
+  it("expands a bundled day to every shift", () => {
+    expect(selectedRecordIds(rows, { "10": true, "30": true })).toEqual([10, 11, 30]);
+  });
+
+  it("ignores unselected keys and unknown ids", () => {
+    expect(selectedRecordIds(rows, { "20": false, "99": true })).toEqual([]);
   });
 });

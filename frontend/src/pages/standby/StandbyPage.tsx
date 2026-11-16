@@ -11,7 +11,14 @@ import { RecordDetailModal } from "@/components/team/RecordDetailModal";
 import { usePhoneRecordDetail } from "@/components/team/usePhoneRecordDetail";
 import { useBulkOperations } from "@/hooks/useBulkOperations";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
-import { collapseSameDayStandbyLogs } from "@/lib/standbyDayGroups";
+import {
+  collapseSameDayStandbyLogs,
+  selectedRecordIds,
+  type DayGroupedStandbyLog,
+  type StandbyDaySegment,
+} from "@/lib/standbyDayGroups";
+import { StandbySegmentPicker } from "@/components/standby/StandbySegmentPicker";
+import { toast } from "sonner";
 import { useStandbyForm } from "./hooks/useStandbyForm";
 import { useStandbyColumns } from "./hooks/useStandbyColumns";
 import { StandbyFormDialog } from "./components/StandbyFormDialog";
@@ -125,6 +132,41 @@ export const StandbyPage: React.FC = () => {
 
   const displayLogs = React.useMemo(() => collapseSameDayStandbyLogs(logs || []), [logs]);
 
+  // A bundled day is several records: one call covers them all, and a failure is said out loud.
+  const runForDay = (request: Promise<unknown>, verb: string, onDone?: () => void) => {
+    request
+      .then(() => {
+        onDone?.();
+        return refetchStandbyData();
+      })
+      .catch(() =>
+        toast.error(`Could not ${verb} this day`, {
+          description: "Nothing may have changed. Refresh and try again.",
+        })
+      );
+  };
+
+  const [pickedDay, setPickedDay] = React.useState<DayGroupedStandbyLog | null>(null);
+  const handleEdit = (log: StandbyLog) => {
+    const day = log as DayGroupedStandbyLog;
+    if (day.segments && day.segments.length > 1) setPickedDay(day);
+    else openEdit(log);
+  };
+  const editSegment = (segment: StandbyDaySegment) => {
+    if (!pickedDay) return;
+    openEdit({
+      ...pickedDay,
+      segments: undefined,
+      segment_ids: undefined,
+      id: segment.id,
+      start_time: segment.start_time ?? undefined,
+      end_time: segment.end_time ?? undefined,
+      hours: segment.hours,
+      status: segment.status,
+    } as StandbyLog);
+    setPickedDay(null);
+  };
+
   const handleApprove = (id: number) => {
     const target = displayLogs.find((l) => l.id === id);
     if (target?.segment_ids && target.segment_ids.length > 1) {
@@ -132,7 +174,7 @@ export const StandbyPage: React.FC = () => {
         ? target.segments.filter((s) => s.status === "pending").map((s) => s.id)
         : target.segment_ids;
       if (pendingIds.length > 0) {
-        standbyService.bulkApprove(pendingIds).then(() => refetchStandbyData());
+        runForDay(standbyService.bulkApprove(pendingIds), "approve");
       }
     } else {
       approveMutation.mutate(id);
@@ -144,7 +186,7 @@ export const StandbyPage: React.FC = () => {
     canApprove,
     handleApprove,
     handleRejectClick,
-    openEdit,
+    handleEdit,
     openDelete,
     isAdmin,
     isSuperuser
@@ -228,6 +270,12 @@ export const StandbyPage: React.FC = () => {
         })}
       />
 
+      <StandbySegmentPicker
+        day={pickedDay}
+        onPick={editSegment}
+        onClose={() => setPickedDay(null)}
+      />
+
       <RecordDetailModal
         open={detail.record !== null}
         onOpenChange={detail.onOpenChange}
@@ -293,10 +341,9 @@ export const StandbyPage: React.FC = () => {
           if (!deletingId) return;
           const target = displayLogs.find((l) => l.id === deletingId);
           if (target?.segment_ids && target.segment_ids.length > 1) {
-            standbyService.bulkDelete(target.segment_ids).then(() => {
-              setDeleteOpen(false);
-              refetchStandbyData();
-            });
+            runForDay(standbyService.bulkDelete(target.segment_ids), "delete", () =>
+              setDeleteOpen(false)
+            );
           } else {
             deleteMutation.mutate(deletingId);
           }
@@ -306,10 +353,8 @@ export const StandbyPage: React.FC = () => {
         setBulkDeleteOpen={setBulkDeleteOpen}
         selectedCount={Object.keys(rowSelection).length}
         onBulkDelete={() => {
-          const selectedIndices = Object.keys(rowSelection).map(Number);
-          const selectedRows = selectedIndices.map((i) => displayLogs[i]).filter(Boolean);
-          const allIds = selectedRows.flatMap((r) => r.segment_ids ?? [r.id]);
-          bulkDeleteMutation.mutate(allIds);
+          const allIds = selectedRecordIds(displayLogs, rowSelection);
+          if (allIds.length > 0) bulkDeleteMutation.mutate(allIds);
         }}
         bulkDeleteIsConfirming={bulkDeleteMutation.isPending}
         rejectOpen={rejectOpen}
@@ -320,10 +365,9 @@ export const StandbyPage: React.FC = () => {
           if (!rejectingId) return;
           const target = displayLogs.find((l) => l.id === rejectingId);
           if (target?.segment_ids && target.segment_ids.length > 1) {
-            standbyService.bulkReject(target.segment_ids, rejectReason).then(() => {
-              setRejectOpen(false);
-              refetchStandbyData();
-            });
+            runForDay(standbyService.bulkReject(target.segment_ids, rejectReason), "reject", () =>
+              setRejectOpen(false)
+            );
           } else {
             rejectMutation.mutate({ id: rejectingId, reason: rejectReason });
           }

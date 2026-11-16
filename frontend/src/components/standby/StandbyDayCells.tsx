@@ -3,6 +3,7 @@ import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import {
   dayGroupsFor,
   formatSegmentRange,
+  formatStandbyHours,
   type DayGroupedStandbyLog,
 } from "@/lib/standbyDayGroups";
 import type { StandbyLog } from "@/types";
@@ -37,17 +38,17 @@ export const StandbyHoursCell = (ctx: Ctx) => {
     return (
       <div className="flex flex-col items-start gap-1 py-0.5">
         <Badge variant="secondary" className="rounded-full font-mono text-xs font-semibold">
-          {log.hours}h
+          {formatStandbyHours(log.hours)}h
         </Badge>
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-col items-start gap-1">
           {segments.map((seg) => {
             const range = formatSegmentRange(seg);
             return (
               <span
                 key={seg.id}
-                className="border-border/60 bg-muted/50 text-muted-foreground inline-flex items-center rounded-md border px-1.5 py-0.5 font-mono text-[11px] whitespace-nowrap"
+                className="border-border/60 bg-muted/50 text-muted-foreground inline-flex items-center rounded-md border px-1.5 py-0.5 font-mono text-xs whitespace-nowrap"
               >
-                {range} ({seg.hours}h)
+                {range} ({formatStandbyHours(seg.hours)}h)
               </span>
             );
           })}
@@ -61,14 +62,14 @@ export const StandbyHoursCell = (ctx: Ctx) => {
   return (
     <div className="flex flex-col items-start gap-0.5">
       <Badge variant="secondary" className="rounded-full font-mono text-xs font-semibold">
-        {log.hours}h
+        {formatStandbyHours(log.hours)}h
       </Badge>
       {range && (
         <span className="text-muted-foreground font-mono text-xs whitespace-nowrap">{range}</span>
       )}
       {group?.isLast && (
         <span className="text-muted-foreground text-xs whitespace-nowrap">
-          Day total {group.total}h
+          Day total {formatStandbyHours(group.total)}h
         </span>
       )}
     </div>

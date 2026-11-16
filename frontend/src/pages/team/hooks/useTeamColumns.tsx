@@ -53,7 +53,7 @@ export const useTeamColumns = (
       {
         id: "payroll_period",
         header: "Payroll",
-        size: 120,
+        size: 150,
         meta: { flex: true },
         cell: ({ row }) =>
           row.original.is_carried_over ? (
