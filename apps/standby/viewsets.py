@@ -239,10 +239,10 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
                 obj.user_id, date, serializer.validated_data['hours'], exclude_pk=obj.pk,
             )
         reassign = {'requested_processing_period': None} if date != obj.date else {}
-        if obj.status == 'approved':
+        if obj.status in ('approved', 'rejected'):  # an edit of a decided entry resubmits it (F8)
             # A resubmission restarts the SLA clock; the old deadline is not the TL's fault.
             instance = serializer.save(
-                status='pending', approved_by=None, approved_at=None,
+                status='pending', approved_by=None, approved_at=None, rejection_reason='',
                 submitted_at=timezone.now(), **reassign,
             )
         else:

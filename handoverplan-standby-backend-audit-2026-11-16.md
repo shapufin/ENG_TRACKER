@@ -13,7 +13,8 @@ Done, uncommitted on branch `fix/standby-backend-audit` (Batches A and B togethe
 - Pay pin: `plugins/payroll/tests/test_standby_midnight_split.py`. Docs: invariants item 63 and a `CLAUDE.md` hot invariant.
 - CORRECTION to section 2: the Monday-start week is **12 rows**, not 13 (1 + 4x2 + 2 + 1). The 123h, the 8 dates and the no-overlap rule in the plan are right; the tests pin 12.
 - Also done (second session): F5 (R3 ruled: cap untimed hours at 24 per user and day) and Batch C `repair_standby_overlaps` (`--month` required; production scope: 2026-11 only). Verified in the browser with dummy data (12 rows saved, per-day server reasons shown, repair dry run, apply and idempotent re-run).
-- NOT done: F8 (R4), single-form split (R5), Batch C repair command (own branch after B merges), production rollout (section 10, owner present). The untracked probe `apps/standby/test_tmp_audit_repro.py` could not be deleted by the session (delete was denied); remove it by hand before committing.
+- Third session: F8 built (edit of a rejected entry resubmits) and R5 built (single new entry splits at midnight). Owner asked for both.
+- NOT done (old text, now superseded): F8 (R4), single-form split (R5), Batch C repair command (own branch after B merges), production rollout (section 10, owner present). The untracked probe `apps/standby/test_tmp_audit_repro.py` could not be deleted by the session (delete was denied); remove it by hand before committing.
 
 ## 0. Before you start
 

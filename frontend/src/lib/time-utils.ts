@@ -1,3 +1,5 @@
+import { parseLocalDate, toLocalISODate } from "@/lib/date-format-utils";
+
 /** Calculate hours between two HH:MM times, supporting midnight crossing.
  *  Rounds up to the next full hour if any partial hour exists (e.g., 1h 1min = 2h).
  *  Example: 18:00 → 09:00 = 15h.
@@ -118,4 +120,24 @@ export const formatTimeInput = (raw: string): string => {
   }
 
   return digits;
+};
+
+export type TimeSegment = { date: string; start: string; end: string };
+
+/** Cut an overnight range at midnight so every segment stays inside one calendar day.
+ *  18:00-09:00 on a date becomes 18:00-00:00 that day and 00:00-09:00 the next.
+ *  A same-day range, or one ending exactly at 00:00, is a single segment.
+ */
+export const splitAtMidnight = (date: string, start: string, end: string): TimeSegment[] => {
+  const toMinutes = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + (m || 0);
+  };
+  if (toMinutes(end) > toMinutes(start) || end === "00:00") return [{ date, start, end }];
+  const next = parseLocalDate(date);
+  next.setDate(next.getDate() + 1);
+  return [
+    { date, start, end: "00:00" },
+    { date: toLocalISODate(next), start: "00:00", end },
+  ];
 };

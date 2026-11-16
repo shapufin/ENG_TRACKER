@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  splitAtMidnight,
   calculateHours,
   dayPeriod,
   formatTimeInput,
@@ -133,5 +134,23 @@ describe("formatTimeInput", () => {
     ["99", "99"],
   ])("formats %s as %s", (input, expected) => {
     expect(formatTimeInput(input)).toBe(expected);
+  });
+});
+
+describe("splitAtMidnight", () => {
+  it("cuts an overnight range into an evening and a next-day morning segment", () => {
+    expect(splitAtMidnight("2026-11-16", "18:00", "09:00")).toEqual([
+      { date: "2026-11-16", start: "18:00", end: "00:00" },
+      { date: "2026-11-17", start: "00:00", end: "09:00" },
+    ]);
+  });
+
+  it("rolls over a month end", () => {
+    expect(splitAtMidnight("2026-11-30", "22:00", "06:00")[1].date).toBe("2026-12-01");
+  });
+
+  it("keeps a same-day range and a range ending at midnight as one segment", () => {
+    expect(splitAtMidnight("2026-11-16", "09:00", "17:00")).toHaveLength(1);
+    expect(splitAtMidnight("2026-11-16", "18:00", "00:00")).toHaveLength(1);
   });
 });

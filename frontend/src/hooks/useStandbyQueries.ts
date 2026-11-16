@@ -3,6 +3,7 @@ import { standbyService } from "@/services/standbyService";
 import { userService } from "@/services/userService";
 import { toast } from "sonner";
 import { handleApiError } from "@/lib/error-handler";
+import { splitAtMidnight } from "@/lib/time-utils";
 import { extractApiErrorMessage } from "@/lib/apiFormError";
 import { buildCurrentMonthDateParams } from "@/lib/query-date-utils";
 import type { CustomDateRange } from "@/pages/hours_logs/components/useHoursLogPageState";
@@ -73,7 +74,30 @@ export const useStandbyQueries = (options: UseStandbyQueriesOptions) => {
   };
 
   const createMutation = useMutation({
-    mutationFn: standbyService.createLog,
+    // A single entry that crosses midnight is saved as two rows (one per calendar day).
+    mutationFn: async (payload: Parameters<typeof standbyService.createLog>[0]) => {
+      const {
+        date,
+        start_time: start,
+        end_time: end,
+      } = payload as {
+        date?: string;
+        start_time?: string;
+        end_time?: string;
+      };
+      if (!date || !start || !end) return standbyService.createLog(payload);
+      const segments = splitAtMidnight(date, start, end);
+      let created;
+      for (const segment of segments) {
+        created = await standbyService.createLog({
+          ...payload,
+          date: segment.date,
+          start_time: segment.start,
+          end_time: segment.end,
+        });
+      }
+      return created!;
+    },
     ...createCreateHandlers(refetchStandbyData, "Standby", {
       onSuccess: options?.onCreateSuccess,
     }),

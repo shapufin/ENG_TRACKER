@@ -152,4 +152,31 @@ describe("useStandbyQueries", () => {
     expect(message).toContain("Time range overlaps an existing standby entry.");
     expect(message).not.toContain("2026-11-16");
   });
+
+  it("splits an overnight single entry at midnight into two rows (R5)", async () => {
+    vi.mocked(standbyService.getLogs).mockResolvedValue({ results: [] } as any);
+    vi.mocked(standbyService.createLog).mockReset();
+    vi.mocked(standbyService.createLog).mockResolvedValue({} as any);
+
+    const queryClient = new QueryClient();
+    const { result } = renderHook(() => useStandbyQueries({ userId: 1 }), {
+      wrapper: createWrapper(queryClient),
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    result.current.createMutation.mutate({
+      date: "2026-11-16",
+      start_time: "18:00",
+      end_time: "09:00",
+      description: "x",
+    } as any);
+    await waitFor(() => expect(standbyService.createLog).toHaveBeenCalledTimes(2));
+    expect(
+      vi
+        .mocked(standbyService.createLog)
+        .mock.calls.map(([p]) => [p.date, p.start_time, p.end_time])
+    ).toEqual([
+      ["2026-11-16", "18:00", "00:00"],
+      ["2026-11-17", "00:00", "09:00"],
+    ]);
+  });
 });
