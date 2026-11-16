@@ -11,6 +11,7 @@ import { RecordDetailModal } from "@/components/team/RecordDetailModal";
 import { usePhoneRecordDetail } from "@/components/team/usePhoneRecordDetail";
 import { useBulkOperations } from "@/hooks/useBulkOperations";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
+import { collapseSameDayStandbyLogs } from "@/lib/standbyDayGroups";
 import { useStandbyForm } from "./hooks/useStandbyForm";
 import { useStandbyColumns } from "./hooks/useStandbyColumns";
 import { StandbyFormDialog } from "./components/StandbyFormDialog";
@@ -122,10 +123,26 @@ export const StandbyPage: React.FC = () => {
     createMutation,
   });
 
+  const displayLogs = React.useMemo(() => collapseSameDayStandbyLogs(logs || []), [logs]);
+
+  const handleApprove = (id: number) => {
+    const target = displayLogs.find((l) => l.id === id);
+    if (target?.segment_ids && target.segment_ids.length > 1) {
+      const pendingIds = target.segments
+        ? target.segments.filter((s) => s.status === "pending").map((s) => s.id)
+        : target.segment_ids;
+      if (pendingIds.length > 0) {
+        standbyService.bulkApprove(pendingIds).then(() => refetchStandbyData());
+      }
+    } else {
+      approveMutation.mutate(id);
+    }
+  };
+
   const columns = useStandbyColumns(
     canViewTeamData,
     canApprove,
-    (id) => approveMutation.mutate(id),
+    handleApprove,
     handleRejectClick,
     openEdit,
     openDelete,
@@ -199,7 +216,7 @@ export const StandbyPage: React.FC = () => {
           />
         }
         columns={columns}
-        data={logs}
+        data={displayLogs}
         rowSelection={rowSelection}
         onRowSelectionChange={setRowSelection}
         storageKey="table-visibility-standby-page"
@@ -272,20 +289,45 @@ export const StandbyPage: React.FC = () => {
         setDeleteOpen={setDeleteOpen}
         deleteTitle="Delete Entry"
         deleteDescription="Delete this standby entry?"
-        onDelete={() => deletingId && deleteMutation.mutate(deletingId)}
+        onDelete={() => {
+          if (!deletingId) return;
+          const target = displayLogs.find((l) => l.id === deletingId);
+          if (target?.segment_ids && target.segment_ids.length > 1) {
+            standbyService.bulkDelete(target.segment_ids).then(() => {
+              setDeleteOpen(false);
+              refetchStandbyData();
+            });
+          } else {
+            deleteMutation.mutate(deletingId);
+          }
+        }}
         deleteIsConfirming={deleteMutation.isPending}
         bulkDeleteOpen={bulkDeleteOpen}
         setBulkDeleteOpen={setBulkDeleteOpen}
         selectedCount={Object.keys(rowSelection).length}
-        onBulkDelete={() => bulkDeleteMutation.mutate(Object.keys(rowSelection).map(Number))}
+        onBulkDelete={() => {
+          const selectedIndices = Object.keys(rowSelection).map(Number);
+          const selectedRows = selectedIndices.map((i) => displayLogs[i]).filter(Boolean);
+          const allIds = selectedRows.flatMap((r) => r.segment_ids ?? [r.id]);
+          bulkDeleteMutation.mutate(allIds);
+        }}
         bulkDeleteIsConfirming={bulkDeleteMutation.isPending}
         rejectOpen={rejectOpen}
         setRejectOpen={setRejectOpen}
         rejectReason={rejectReason}
         onRejectReasonChange={setRejectReason}
-        onReject={() =>
-          rejectingId && rejectMutation.mutate({ id: rejectingId, reason: rejectReason })
-        }
+        onReject={() => {
+          if (!rejectingId) return;
+          const target = displayLogs.find((l) => l.id === rejectingId);
+          if (target?.segment_ids && target.segment_ids.length > 1) {
+            standbyService.bulkReject(target.segment_ids, rejectReason).then(() => {
+              setRejectOpen(false);
+              refetchStandbyData();
+            });
+          } else {
+            rejectMutation.mutate({ id: rejectingId, reason: rejectReason });
+          }
+        }}
         rejectIsConfirming={rejectMutation.isPending}
       />
     </PageShell>

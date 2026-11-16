@@ -81,12 +81,28 @@ const getBaseLogFields = (record: {
   start_time?: string | null;
   end_time?: string | null;
   hours?: number | null;
-}): DetailField[] => [
-  { label: "Date", value: formatDateDDMMYYYY(record.date), icon: Calendar },
-  { label: "Start Time", value: formatTime(record.start_time), icon: Clock },
-  { label: "End Time", value: formatTime(record.end_time), icon: Clock },
-  { label: "Hours", value: record.hours, icon: Timer },
-];
+  segments?: Array<{ start_time?: string | null; end_time?: string | null; hours?: number | null }>;
+}): DetailField[] => {
+  if (record.segments && record.segments.length > 1) {
+    const shiftsText = record.segments
+      .map(
+        (s) =>
+          `${s.start_time ? s.start_time.slice(0, 5) : "--"}–${s.end_time ? s.end_time.slice(0, 5) : "--"} (${s.hours}h)`
+      )
+      .join(", ");
+    return [
+      { label: "Date", value: formatDateDDMMYYYY(record.date), icon: Calendar },
+      { label: "Shifts", value: shiftsText, icon: Clock },
+      { label: "Total Hours", value: `${record.hours}h`, icon: Timer },
+    ];
+  }
+  return [
+    { label: "Date", value: formatDateDDMMYYYY(record.date), icon: Calendar },
+    { label: "Start Time", value: formatTime(record.start_time), icon: Clock },
+    { label: "End Time", value: formatTime(record.end_time), icon: Clock },
+    { label: "Hours", value: record.hours, icon: Timer },
+  ];
+};
 
 const getOvertimeFields = (record: OvertimeLog): DetailField[] => {
   const fields: DetailField[] = [...getBaseLogFields(record)];

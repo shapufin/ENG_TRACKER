@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTeamManagement } from "@/hooks/useTeamManagement";
 import { AnimatePresence } from "framer-motion";
 import { PageShell } from "@/components/layout/PageShell";
@@ -23,6 +24,8 @@ import { TeamFilterBar } from "./components/TeamFilterBar";
 import { TeamExportDialog } from "./components/TeamExportDialog";
 import { TeamGroupedTables } from "./components/TeamGroupedTables";
 import { handleRejectConfirm } from "./teamManagementHelpers";
+import { standbyService } from "@/services/standbyService";
+import { collapseSameDayStandbyLogs } from "@/lib/standbyDayGroups";
 
 const TEAM_OVERTIME_CARD = {
   title: "user_name",
@@ -61,6 +64,7 @@ const TeamManagementPage: React.FC = () => {
   } = useTeamManagement();
 
   const { canManageTeam } = usePermissions();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"overtime" | "standby" | "leave">("overtime");
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "rejected">(
     "all"
@@ -115,17 +119,44 @@ const TeamManagementPage: React.FC = () => {
     searchQuery
   );
 
+  const displayStandby = useMemo(
+    () => collapseSameDayStandbyLogs(filteredStandby),
+    [filteredStandby]
+  );
+
   const handleReject = (id: number, type: "overtime" | "standby" | "leave") => {
     setRejectingRecord({ id, type });
     setRejectOpen(true);
   };
+
+  const wrappedSbApprove = useMemo(
+    () => ({
+      ...sbApproveMutation,
+      mutate: (id: number) => {
+        const target = displayStandby.find((l) => l.id === id);
+        if (target?.segment_ids && target.segment_ids.length > 1) {
+          const pendingIds = target.segments
+            ? target.segments.filter((s) => s.status === "pending").map((s) => s.id)
+            : target.segment_ids;
+          if (pendingIds.length > 0) {
+            standbyService.bulkApprove(pendingIds).then(() => {
+              queryClient.invalidateQueries({ queryKey: ["team", "standby"] });
+            });
+          }
+        } else {
+          sbApproveMutation.mutate(id);
+        }
+      },
+    }),
+    [sbApproveMutation, displayStandby, queryClient]
+  );
 
   const { getOvertimeColumns, getStandbyColumns, getLeaveColumns } = useTeamColumns(
     setSelectedRecord,
     handleReject,
     otApproveMutation,
     otRejectMutation,
-    sbApproveMutation,
+    wrappedSbApprove,
     sbRejectMutation,
     leaveApproveMutation,
     leaveRejectMutation
@@ -249,7 +280,7 @@ const TeamManagementPage: React.FC = () => {
           <TabsContent value="standby">
             <LoadingStateWrapper isLoading={isLoading}>
               <TeamGroupedTables
-                rows={filteredStandby}
+                rows={displayStandby}
                 columnsBuilder={() => getStandbyColumns}
                 emptyCopy="No standby entries match your filters."
                 memberGroupMode={memberGroupMode}
@@ -281,7 +312,20 @@ const TeamManagementPage: React.FC = () => {
           onOpenChange={setRejectOpen}
           title="Reject Entry"
           description="Provide a reason for rejection:"
-          onConfirm={() =>
+          onConfirm={() => {
+            if (!rejectingRecord) return;
+            const { id, type } = rejectingRecord;
+            if (type === "standby") {
+              const target = displayStandby.find((l) => l.id === id);
+              if (target?.segment_ids && target.segment_ids.length > 1) {
+                standbyService.bulkReject(target.segment_ids, rejectReason).then(() => {
+                  queryClient.invalidateQueries({ queryKey: ["team", "standby"] });
+                  setRejectReason("");
+                  setRejectingRecord(null);
+                });
+                return;
+              }
+            }
             handleRejectConfirm(
               rejectingRecord,
               rejectReason,
@@ -294,8 +338,8 @@ const TeamManagementPage: React.FC = () => {
                 setRejectReason("");
                 setRejectingRecord(null);
               }
-            )
-          }
+            );
+          }}
           isConfirming={
             otRejectMutation.isPending ||
             sbRejectMutation.isPending ||
@@ -317,7 +361,14 @@ const TeamManagementPage: React.FC = () => {
         <ConfirmDialog
           open={confirmAction?.open || false}
           onOpenChange={(open) => setConfirmAction(open ? confirmAction : null)}
-          onConfirm={() => confirmBulkAction(Array.from(selectedItems))}
+          onConfirm={() => {
+            const ids = Array.from(selectedItems);
+            const expandedIds =
+              activeTab === "standby"
+                ? ids.flatMap((id) => displayStandby.find((l) => l.id === id)?.segment_ids ?? [id])
+                : ids;
+            confirmBulkAction(expandedIds);
+          }}
           title={`Confirm ${confirmAction?.action}`}
           description={`Are you sure you want to ${confirmAction?.action} ${confirmAction?.count} selected items?`}
         />

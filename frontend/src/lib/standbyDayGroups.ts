@@ -2,6 +2,23 @@ import type { StandbyLog } from "@/types";
 
 type GroupableLog = Pick<StandbyLog, "id" | "user" | "date" | "hours">;
 
+export interface StandbyDaySegment {
+  id: number;
+  start_time: string | null;
+  end_time: string | null;
+  hours: number;
+  status: StandbyLog["status"];
+  rejection_reason?: string;
+  is_carried_over?: boolean;
+}
+
+export interface DayGroupedStandbyLog extends StandbyLog {
+  /** If this entry represents multiple segments of the same day, they are listed here. */
+  segments?: StandbyDaySegment[];
+  /** All IDs of the segments that make up this row. */
+  segment_ids?: number[];
+}
+
 export interface DayGroupInfo {
   /** Not the first row of its day: the date and employee are already shown above. */
   continues: boolean;
@@ -34,6 +51,61 @@ export const computeDayGroups = (logs: readonly GroupableLog[]): Map<number, Day
       for (let i = start; i < end; i += 1) {
         result.set(logs[i].id, { continues: i > start, isLast: i === end - 1, count, total });
       }
+    }
+    start = end;
+  }
+  return result;
+};
+
+/**
+ * Collapses same-day segments of one person into a single visual row for management tables.
+ * Each segment retains its id, hours and times under `segments` so actions and details can access them.
+ */
+export const collapseSameDayStandbyLogs = <T extends StandbyLog>(
+  logs: readonly T[]
+): (T & { segments?: StandbyDaySegment[]; segment_ids?: number[] })[] => {
+  if (!logs || logs.length === 0) return [];
+  const result: (T & { segments?: StandbyDaySegment[]; segment_ids?: number[] })[] = [];
+  let start = 0;
+  while (start < logs.length) {
+    let end = start + 1;
+    while (
+      end < logs.length &&
+      logs[end].user === logs[start].user &&
+      logs[end].date === logs[start].date
+    ) {
+      end += 1;
+    }
+    const count = end - start;
+    if (count > 1) {
+      const group = logs.slice(start, end);
+      const totalHours = group.reduce((sum, log) => sum + Number(log.hours || 0), 0);
+      const segments: StandbyDaySegment[] = group.map((l) => ({
+        id: l.id,
+        start_time: l.start_time ?? null,
+        end_time: l.end_time ?? null,
+        hours: Number(l.hours),
+        status: l.status,
+        rejection_reason: l.rejection_reason,
+        is_carried_over: l.is_carried_over,
+      }));
+      const resolvedStatus = group.some((l) => l.status === "pending")
+        ? "pending"
+        : group.every((l) => l.status === "approved")
+          ? "approved"
+          : group.every((l) => l.status === "rejected")
+            ? "rejected"
+            : group[0].status;
+
+      result.push({
+        ...group[0],
+        hours: totalHours,
+        status: resolvedStatus,
+        segments,
+        segment_ids: group.map((l) => l.id),
+      });
+    } else {
+      result.push(logs[start]);
     }
     start = end;
   }

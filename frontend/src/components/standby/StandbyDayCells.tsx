@@ -1,6 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
-import { dayGroupsFor, formatSegmentRange } from "@/lib/standbyDayGroups";
+import {
+  dayGroupsFor,
+  formatSegmentRange,
+  type DayGroupedStandbyLog,
+} from "@/lib/standbyDayGroups";
 import type { StandbyLog } from "@/types";
 import type { AppCellContext } from "@/components/ui/tableTypes";
 
@@ -9,7 +13,7 @@ type Ctx = AppCellContext<StandbyLog>;
 const groupOf = ({ table, row }: Ctx) =>
   dayGroupsFor(table.getRowModel().rows).get(row.original.id);
 
-/** Date cell: the second and later segments of one day show a quiet marker instead. */
+/** Date cell: renders formatted date, with graceful fallback for uncollapsed multi-segment days. */
 export const StandbyDateCell = (ctx: Ctx) => {
   if (groupOf(ctx)?.continues) {
     return (
@@ -24,14 +28,39 @@ export const StandbyDateCell = (ctx: Ctx) => {
   return <>{formatDateDDMMYYYY(ctx.row.original.date)}</>;
 };
 
-/** Hours badge, the segment's own time range and, on the last segment, the day total. */
+/** Hours badge: combined total badge + separate shift chips for same-day segments. */
 export const StandbyHoursCell = (ctx: Ctx) => {
-  const log = ctx.row.original;
+  const log = ctx.row.original as DayGroupedStandbyLog;
+  const segments = log.segments;
+
+  if (segments && segments.length > 1) {
+    return (
+      <div className="flex flex-col items-start gap-1 py-0.5">
+        <Badge variant="secondary" className="rounded-full font-mono text-xs font-semibold">
+          {log.hours}h
+        </Badge>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {segments.map((seg) => {
+            const range = formatSegmentRange(seg);
+            return (
+              <span
+                key={seg.id}
+                className="border-border/60 bg-muted/50 text-muted-foreground inline-flex items-center rounded-md border px-1.5 py-0.5 font-mono text-[11px] whitespace-nowrap"
+              >
+                {range} ({seg.hours}h)
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   const group = groupOf(ctx);
   const range = formatSegmentRange(log);
   return (
     <div className="flex flex-col items-start gap-0.5">
-      <Badge variant="secondary" className="rounded-full font-mono text-xs">
+      <Badge variant="secondary" className="rounded-full font-mono text-xs font-semibold">
         {log.hours}h
       </Badge>
       {range && (

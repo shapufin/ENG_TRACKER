@@ -1,3 +1,4 @@
+import { StandbyDateCell, StandbyHoursCell } from "@/components/standby/StandbyDayCells";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -120,17 +121,13 @@ export const useTLApprovalColumns = ({
         accessorKey: "date",
         header: "Date",
         size: 108,
-        cell: (info) => formatDateDDMMYYYY(info.getValue() as string),
+        cell: StandbyDateCell,
       },
       {
         accessorKey: "hours",
         header: "Hours",
-        size: 87,
-        cell: ({ row }) => (
-          <Badge variant="secondary" className="rounded-full font-mono text-xs">
-            {row.original.hours}h
-          </Badge>
-        ),
+        size: 120,
+        cell: StandbyHoursCell,
       },
       {
         id: "payroll_period",
