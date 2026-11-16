@@ -14,6 +14,29 @@ Last verified: 2026-11-04 (security handover pass: 1528 tests across users, perm
 - Ruff on every changed Python file.
 - Focused runs: `py -3.14 manage.py test apps.<app>` or `apps.<app>.tests.<Class>`.
 
+## Frontend gate (a UI change is not done without it)
+
+- `cd frontend && npx tsc --noEmit && npx eslint src && npx vitest run && npm run build`, then the audits: `node scripts/surface-audit.mjs --strict --exclude=src/plugins/engagement`, `control-audit.mjs` (same flags), `modal-audit.mjs`, `table-header-audit.mjs`. Run the full suite once before merging, not only the files you touched.
+- Tests prove code, not behaviour. Anything that changes what a table, calendar or export shows is also **exercised in the browser with dummy data** (e2e DB, CloakBrowser): open the page, then use every action on the changed rows, not just render them.
+- Never merge or push a UI change from a "looks right" screenshot. A visual-only check once shipped a broken bulk delete (below).
+
+## Change-class checklists (read the one that matches before editing)
+
+**A. You change which rows a list shows (collapse, bundle, group, filter, re-sort, paginate differently).** Row identity leaks into more places than the cells. Walk this list and tick each one in the PR text:
+1. **Selection keys.** `rowSelection` keys are whatever the table's `getRowId` returns: the **record id** on tables that set `getRowId` (`HoursLogDataTable`, `TeamGroupedTables`, `HoursLogsTable`, `LeaveRequestsTable`, `UsersPageTable`, `HR*` tables), the **position in `data`** on tables that do not (Pending Approvals, `TLApprovalTabPanel`). Never index a list with a key; map keys to rows by id (`selectedRecordIds`). `src/lib/selectionKeyContract.test.ts` fails on a position lookup outside its documented allow-list.
+2. **Row actions and bulk actions** (approve, reject, delete, edit): each must reach every record the row stands for, say so on failure (toast, never a silent `.then` with no `.catch`), and refetch.
+3. **Detail views and edit forms** that read the row: a merged row carries the first record's fields, so an edit form needs a choice of record (`StandbySegmentPicker`).
+4. **Counts and badges** (tab counts, "N results", dashboard cards, sidebar badge) still count records, not display rows.
+5. **Exports and files**: every writer of the same data (CSV endpoint, Excel exporter, year-close bundle, client CSV/JSON, payroll). Decide per writer: bundle (human files) or stay raw (JSON dump), and test it.
+6. **Other surfaces of the same record**: calendar, Control Room, mobile cards, notifications, dashboards. Grep for the model name, do not trust memory.
+7. **Browser pass**: select several rows (a merged one included) and bulk delete; approve and reject a merged row as the leader; edit each record; download each export.
+
+**B. You change a backend rule that existing production rows may break** (overlap rules, caps, required fields). Run the matching management command or a query against a copy of the real data shape first, list the rows it would reject, and ship the repair path (dry run, backup, restore) in the same change. Production data predates the rule.
+
+**C. You add a table whose rows are selectable.** Set `getRowId` to the record id and write handlers against ids. Do not copy the position style from Pending Approvals.
+
+*Incident, 2026-11-16:* a commit that bundled same-day standby rows read `Object.keys(rowSelection)` as list positions on a table keyed by record id, so Delete Selected posted `{"ids":[]}` and production answered 400 (no one could bulk delete). The checks that passed were unit tests and a screenshot; no one selected a row and deleted it. The same commit also left the Calendar and the exports unbundled and the edit form editing only the first record. Items 1 to 7 above are that post-mortem; the router row in `CLAUDE.md` sends agents here on the words "bundle", "group rows", "selection", "bulk", "export".
+
 ## Month cutoff (overtime and standby)
 
 - Work date in month M is accepted only before 00:00 on the 5th of M+1, Europe/Tirane (`apps/users/services/approval_periods.py`: `work_date_cutoff`, `is_work_date_open`, `assert_work_date_open`).
