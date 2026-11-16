@@ -263,16 +263,17 @@ class TeamMemberQueryBudgetTests(TeamMembersBase):
     def test_team_owned_queries_stay_within_spec_budget(self):
         # Spec: <= ~10 queries. The team action itself uses 2: one member query
         # carrying every per-member figure as a correlated subquery, and one
-        # list query for upcoming leave.
+        # list query for upcoming leave, plus one read of the leader's 1-on-1 plans
+        # (with plans, a further fixed handful: see test_one_on_one_api).
         self._add_members(5)
         owned = self._team_owned(self._queries())
         self.assertLessEqual(len(owned), 10)
-        self.assertEqual(len(owned), 2)
+        self.assertEqual(len(owned), 3)
 
-    def test_endpoint_total_is_twelve(self):
-        # 12 = 1 plugin-enabled check + 1 payroll-enabled check (wages) + 2 team-owned
+    def test_endpoint_total_is_thirteen(self):
+        # 13 = 1 plugin-enabled check + 1 payroll-enabled check (wages) + 3 team-owned
         # + 5 permission/role lookups + 3 team-scope lookups shared with the other
         # scorecard endpoints (link-only member ids, then the Manager and Line Manager
         # exclusions; 4 before the scope became link-only, item 64: the team
         # and led-team lookups are gone). Constant per request, not per member.
-        self.assertEqual(len(self._queries()), 12)
+        self.assertEqual(len(self._queries()), 13)

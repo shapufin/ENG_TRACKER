@@ -14,6 +14,7 @@ class TlScorecardPlugin(BasePlugin):
         return [
             ('freeze_scorecard_months', 3600, 'plugins.tl_scorecard.snapshots.process_freeze_scorecards'),
             ('cadence_reminders', 3600, 'plugins.tl_scorecard.reminders.process_cadence_reminders_tick'),
+            ('one_on_one_reminders', 3600, 'plugins.tl_scorecard.one_on_one.process_one_on_one_reminders_tick'),
         ]
 
     @property

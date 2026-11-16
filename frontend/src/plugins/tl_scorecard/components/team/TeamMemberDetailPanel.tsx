@@ -37,6 +37,12 @@ import { cn } from "@/lib/utils";
 import { toneSurfaceClass } from "@/components/ui/tone";
 import type { TeamMemberSummary } from "../../types/tlScorecard";
 import {
+  ONE_ON_ONE_STATUS_LABEL,
+  ONE_ON_ONE_STATUS_TONE,
+  canSkip,
+  movedNote,
+} from "./oneOnOneMeta";
+import {
   EPR_STEPS,
   SENIORITY_LABELS,
   eprStageDone,
@@ -49,6 +55,11 @@ interface TeamMemberDetailPanelProps {
   /** Row from the already-loaded team list. Null closes the panel. */
   member: TeamMemberSummary | null;
   onOpenChange: (open: boolean) => void;
+  /** 1-on-1 actions, owned by the Team tab (it holds the dialogs). */
+  onSchedule?: (member: TeamMemberSummary) => void;
+  onLogOneOnOne?: (member: TeamMemberSummary) => void;
+  onSkipOneOnOne?: (member: TeamMemberSummary) => void;
+  onClearSchedule?: (member: TeamMemberSummary) => void;
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -65,6 +76,10 @@ const formatDays = (value: string): string => {
 export const TeamMemberDetailPanel: React.FC<TeamMemberDetailPanelProps> = ({
   member,
   onOpenChange,
+  onSchedule,
+  onLogOneOnOne,
+  onSkipOneOnOne,
+  onClearSchedule,
 }) => {
   if (!member) return null;
 
@@ -323,6 +338,70 @@ export const TeamMemberDetailPanel: React.FC<TeamMemberDetailPanelProps> = ({
                 <DetailDrawerEmpty />
               )}
             </DetailDrawerRow>
+            {meetings.plan ? (
+              <>
+                <DetailDrawerRow label="Schedule">{meetings.plan.cadence_display}</DetailDrawerRow>
+                <DetailDrawerRow label="Next 1:1">
+                  <span className="flex flex-wrap items-center justify-end gap-2">
+                    {formatDateDDMMYYYY(meetings.plan.next_due_on)}
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-xs font-normal",
+                        toneSurfaceClass[ONE_ON_ONE_STATUS_TONE[meetings.plan.status]]
+                      )}
+                    >
+                      {ONE_ON_ONE_STATUS_LABEL[meetings.plan.status]}
+                    </Badge>
+                  </span>
+                </DetailDrawerRow>
+                {movedNote(meetings.plan) && (
+                  <p className="text-muted-foreground text-xs">{movedNote(meetings.plan)}</p>
+                )}
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button type="button" size="control-sm" onClick={() => onLogOneOnOne?.(member)}>
+                    Log 1-on-1
+                  </Button>
+                  {canSkip(meetings.plan) && (
+                    <Button
+                      type="button"
+                      size="control-sm"
+                      variant="outline"
+                      onClick={() => onSkipOneOnOne?.(member)}
+                    >
+                      Skip
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    size="control-sm"
+                    variant="outline"
+                    onClick={() => onSchedule?.(member)}
+                  >
+                    Change schedule
+                  </Button>
+                  <Button
+                    type="button"
+                    size="control-sm"
+                    variant="ghost"
+                    onClick={() => onClearSchedule?.(member)}
+                  >
+                    Remove schedule
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  size="control-sm"
+                  variant="outline"
+                  onClick={() => onSchedule?.(member)}
+                >
+                  Set 1-on-1 schedule
+                </Button>
+              </div>
+            )}
           </DetailDrawerSection>
         </DialogBody>
 

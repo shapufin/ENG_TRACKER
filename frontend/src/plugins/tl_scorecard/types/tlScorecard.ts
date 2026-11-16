@@ -547,5 +547,28 @@ export interface TeamMemberSummary {
   };
   meetings: {
     last_one_on_one_on: string | null;
+    /** Recurring 1-on-1 schedule and the next slot; null when none is set. */
+    plan: OneOnOnePlan | null;
   };
+}
+
+export type OneOnOneStatus = "upcoming" | "due" | "overdue";
+
+export interface OneOnOnePlan {
+  cadence: "weekly" | "biweekly" | "monthly";
+  cadence_day_of_week: number | null;
+  cadence_nth_week: number | null;
+  cadence_display: string;
+  next_due_on: string;
+  status: OneOnOneStatus;
+  /** The date the slot moved from, and why (public holiday or the employee's leave). */
+  moved_from: string | null;
+  moved_reason: "holiday" | "leave" | null;
+}
+
+export interface OneOnOneSchedulePayload {
+  employee_ids: number[];
+  cadence: "weekly" | "biweekly" | "monthly";
+  cadence_day_of_week: number | null;
+  cadence_nth_week: number | null;
 }

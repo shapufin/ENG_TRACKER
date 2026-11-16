@@ -9,6 +9,7 @@ vi.mock("../services/myRecordsService", () => ({ getMyRecords: vi.fn() }));
 const get = vi.mocked(getMyRecords);
 
 const FULL: MyRecords = {
+  next_one_on_one: null,
   one_on_ones: [
     { id: 1, occurred_on: "2026-01-10", with_name: "Tina", summary: "Older chat" },
     { id: 2, occurred_on: "2026-03-10", with_name: "Tina", summary: "Newer chat" },
@@ -135,6 +136,7 @@ describe("MyRecordsPage", () => {
 
   it("shows closed/completed wording and per-section empty state", async () => {
     get.mockResolvedValue({
+      next_one_on_one: null,
       one_on_ones: [],
       epr_cycles: [],
       pips: [
@@ -166,10 +168,31 @@ describe("MyRecordsPage", () => {
   });
 
   it("shows a single empty state when everything is empty", async () => {
-    get.mockResolvedValue({ one_on_ones: [], pips: [], epr_cycles: [] });
+    get.mockResolvedValue({ next_one_on_one: null, one_on_ones: [], pips: [], epr_cycles: [] });
     renderPage();
     expect(await screen.findByText("Nothing shared yet")).toBeInTheDocument();
     expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+  });
+
+  it("shows the next 1-on-1 date when only a schedule exists", async () => {
+    get.mockResolvedValue({
+      next_one_on_one: {
+        with_name: "Tina",
+        next_due_on: "2026-11-18",
+        cadence_display: "Weekly (Wednesday)",
+      },
+      one_on_ones: [],
+      pips: [],
+      epr_cycles: [],
+    });
+    renderPage();
+    fireEvent.mouseDown(await screen.findByRole("tab", { name: /1-on-1 feedback/i }), {
+      button: 0,
+    });
+    const note = await screen.findByTestId("next-one-on-one");
+    expect(note).toHaveTextContent("Your next 1-on-1 with Tina is on 18/11/2026");
+    expect(note).toHaveTextContent("Weekly (Wednesday)");
+    expect(screen.queryByText("Nothing shared yet")).not.toBeInTheDocument();
   });
 
   it("shows a loading state, then an error with retry", async () => {

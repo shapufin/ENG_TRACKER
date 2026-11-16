@@ -24,8 +24,16 @@ export interface MyEprCycle {
   stage_summaries: { stage: string; summary: string }[];
 }
 
+export interface MyNextOneOnOne {
+  with_name: string;
+  next_due_on: string;
+  cadence_display: string;
+}
+
 export interface MyRecords {
   one_on_ones: MyOneOnOne[];
+  /** Date of the next recurring 1-on-1 with the current leader; null without a schedule. */
+  next_one_on_one: MyNextOneOnOne | null;
   pips: MyPip[];
   epr_cycles: MyEprCycle[];
 }

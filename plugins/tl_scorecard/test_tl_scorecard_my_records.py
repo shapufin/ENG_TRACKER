@@ -137,12 +137,13 @@ class MyRecordsTests(TestCase):
             self.assertNotIn(leaked, text)
 
     def test_nothing_else_is_ever_exposed(self):
-        self.assertEqual(set(self._get(self.emp).data), {'one_on_ones', 'pips', 'epr_cycles'})
+        self.assertEqual(set(self._get(self.emp).data), {'one_on_ones', 'next_one_on_one', 'pips', 'epr_cycles'})
 
     def test_a_user_with_no_records_gets_empty_lists(self):
         stranger = _make_user('stranger_mr')
         self.assertEqual(
-            self._get(stranger).data, {'one_on_ones': [], 'pips': [], 'epr_cycles': []})
+            self._get(stranger).data,
+            {'one_on_ones': [], 'next_one_on_one': None, 'pips': [], 'epr_cycles': []})
 
 
 class MyRecordsPureHrTests(TestCase):
@@ -154,3 +155,42 @@ class MyRecordsPureHrTests(TestCase):
         request = APIRequestFactory().get('/x/')
         force_authenticate(request, user=hr)
         self.assertEqual(MyRecordsViewSet.as_view({'get': 'list'})(request).status_code, 403)
+
+
+class MyNextOneOnOneTests(MyRecordsTests):
+    """Ruling R3: the employee sees the date of their next 1-on-1, and nothing else about the plan."""
+
+    def setUp(self):
+        super().setUp()
+        self.emp.profile.albanian_tl = self.tl
+        self.emp.profile.save()
+
+    def _plan(self, leader=None):
+        from .models import OneOnOnePlan
+        return OneOnOnePlan.objects.create(
+            leader=leader or self.tl, employee=self.emp, cadence='weekly',
+            cadence_day_of_week=2, effective_from=date(2030, 1, 1),
+        )
+
+    def test_none_without_a_plan(self):
+        self.assertIsNone(self._get(self.emp).data['next_one_on_one'])
+
+    def test_shows_date_leader_and_schedule_only(self):
+        self._plan()
+        row = self._get(self.emp).data['next_one_on_one']
+        self.assertEqual(set(row), {'with_name', 'next_due_on', 'cadence_display'})
+        self.assertEqual(row['with_name'], 'Tina Lead')
+        self.assertEqual(row['cadence_display'], 'Weekly (Wednesday)')
+
+    def test_a_plan_from_a_former_leader_is_not_shown(self):
+        self._plan(leader=self.other)
+        self.assertIsNone(self._get(self.emp).data['next_one_on_one'])
+
+    def test_status_and_skip_reasons_never_reach_the_employee(self):
+        from .models import OneOnOneSkip
+        self._plan()
+        OneOnOneSkip.objects.create(
+            leader=self.tl, employee=self.emp, slot_date=date(2030, 1, 2), reason='PRIVATE skip reason')
+        text = str(self._get(self.emp).data)
+        self.assertNotIn('PRIVATE skip reason', text)
+        self.assertNotIn('overdue', text)

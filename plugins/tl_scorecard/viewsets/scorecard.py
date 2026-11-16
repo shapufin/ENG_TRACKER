@@ -101,6 +101,12 @@ def _cadence_triple(assignment):
 class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
     plugin_name = 'tl_scorecard'
     throttle_scope = None  # set per action (export)
+    # A leader's own 1-on-1 plans: the leader check below decides, not the manage grant.
+    permission_action_map = {
+        'one_on_one_plans': 'view',
+        'one_on_one_plans_clear': 'view',
+        'one_on_one_skip': 'view',
+    }
 
     def _resolve_leader(self, request):
         """A TL always sees their own scorecard. Staff/superuser may pass
@@ -237,6 +243,79 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             leader, business_today(), include_meetings=is_staff_user(user) or leader.id == user.id,
         )
         return Response(TeamMemberSummarySerializer(rows, many=True).data)
+
+    @staticmethod
+    def _own_team_leader(request):
+        """1-on-1 plans are the leader's own: no HBPR, no staff acting for a leader."""
+        from apps.permissions.services.role_service import has_role
+
+        user = request.user
+        if is_hbpr_only(user) or not (has_role(user, 'italian_tl') or has_role(user, 'albanian_tl')):
+            raise PermissionDenied('Only a team leader manages their own 1-on-1 plans.')
+        return user
+
+    @staticmethod
+    def _employees(leader, body):
+        ids = body.get('employee_ids')
+        if not isinstance(ids, list) or not ids or not all(isinstance(i, int) for i in ids):
+            raise ValidationError({'employee_ids': 'Give a list of employee ids.'})
+        users = {u.id: u for u in User.objects.filter(id__in=ids)}
+        if len(users) != len(set(ids)):
+            raise ValidationError({'employee_ids': 'Unknown employee.'})
+        return [users[i] for i in dict.fromkeys(ids)]
+
+    @action(detail=False, methods=['post'], url_path='one-on-one-plans')
+    def one_on_one_plans(self, request):
+        """Set the recurring 1-on-1 schedule for one or many of the leader's members.
+
+        All or nothing: one employee outside the leader's team rejects the batch.
+        Creates no meeting; the leader confirms or skips each due slot.
+        """
+        from django.db import transaction
+
+        from .. import one_on_one
+
+        leader = self._own_team_leader(request)
+        employees = self._employees(leader, request.data)
+        try:
+            with transaction.atomic():
+                for employee in employees:
+                    one_on_one.set_plan(
+                        leader, employee,
+                        cadence=request.data.get('cadence'),
+                        day_of_week=request.data.get('cadence_day_of_week'),
+                        nth_week=request.data.get('cadence_nth_week'),
+                    )
+        except DjangoValidationError as exc:
+            return Response(exc.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'updated': len(employees)})
+
+    @action(detail=False, methods=['post'], url_path='one-on-one-plans/clear')
+    def one_on_one_plans_clear(self, request):
+        from .. import one_on_one
+
+        leader = self._own_team_leader(request)
+        employees = self._employees(leader, request.data)
+        cleared = sum(one_on_one.clear_plan(leader, e) for e in employees)
+        return Response({'cleared': cleared})
+
+    @action(detail=False, methods=['post'], url_path='one-on-one-plans/skip')
+    def one_on_one_skip(self, request):
+        """Skip the 1-on-1 that is due now, with a reason. Not a held meeting."""
+        from .. import one_on_one
+
+        leader = self._own_team_leader(request)
+        employee_id = request.data.get('employee')
+        employee = User.objects.filter(id=employee_id).first() if isinstance(employee_id, int) else None
+        if employee is None:
+            raise ValidationError({'employee': 'Unknown employee.'})
+        try:
+            skip = one_on_one.skip_slot(
+                leader, employee, reason=request.data.get('reason'), recorded_by=request.user,
+            )
+        except DjangoValidationError as exc:
+            return Response(exc.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'id': skip.id, 'slot_date': skip.slot_date}, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['get'], url_path='epr-progress')
     def epr_progress(self, request):

@@ -61,7 +61,11 @@ export const MyRecordsPage: React.FC = () => {
   const query = useQuery({ queryKey: ["tl-scorecard", "my-records"], queryFn: getMyRecords });
   const data = query.data;
   const isEmpty =
-    !!data && !data.one_on_ones.length && !data.pips.length && !data.epr_cycles.length;
+    !!data &&
+    !data.one_on_ones.length &&
+    !data.next_one_on_one &&
+    !data.pips.length &&
+    !data.epr_cycles.length;
 
   return (
     <PageShell title="My records" subtitle="What your team leader has shared about your growth">
@@ -100,7 +104,7 @@ export const MyRecordsPage: React.FC = () => {
                   )}
                 </TabsContent>
                 <TabsContent value="one-on-ones" className="mt-4">
-                  <OneOnOneTimeline items={data.one_on_ones} />
+                  <OneOnOneTimeline items={data.one_on_ones} next={data.next_one_on_one} />
                 </TabsContent>
                 {data.pips.length > 0 && (
                   <TabsContent value="coaching" className="mt-4">

@@ -8,7 +8,6 @@ the write service; history is retained via effective dates.
 
 from __future__ import annotations
 
-import calendar
 from datetime import date, timedelta
 
 from django.conf import settings
@@ -16,6 +15,12 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from core.models.abstract import BaseModel, TrackedFieldsMixin
+from core.utils.cadence import (  # noqa: F401  (re-exported: other modules import it from here)
+    MAX_PUSHES,
+    get_nth_weekday_of_month,
+    next_due_slot as _shared_next_due_slot,
+    raw_next_due as _shared_raw_next_due,
+)
 from core.utils.timezone_local import business_today
 
 CADENCE_CHOICES = [
@@ -40,28 +45,6 @@ WEEKDAY_NAMES = [
     "Sunday",
 ]
 NTH_WEEK_NAMES = {1: "1st", 2: "2nd", 3: "3rd", 4: "4th", -1: "Last"}
-
-
-def get_nth_weekday_of_month(year: int, month: int, nth: int, weekday: int) -> date:
-    """Compute the calendar date for the Nth weekday of a given year and month.
-
-    nth: 1 (1st), 2 (2nd), 3 (3rd), 4 (4th), or -1 (Last)
-    weekday: 0=Monday ... 6=Sunday
-    """
-    if nth == -1:
-        last_day = calendar.monthrange(year, month)[1]
-        cur = date(year, month, last_day)
-        offset = (cur.weekday() - weekday) % 7
-        return cur - timedelta(days=offset)
-
-    first_day = date(year, month, 1)
-    offset = (weekday - first_day.weekday()) % 7
-    first_occurrence = first_day + timedelta(days=offset)
-    target = first_occurrence + timedelta(weeks=nth - 1)
-    if target.month != month:
-        # Fallback to last occurrence if month doesn't have 5
-        return target - timedelta(weeks=1)
-    return target
 
 
 class HbprAlbanianTlAssignment(TrackedFieldsMixin, BaseModel):
@@ -200,8 +183,7 @@ class HbprAlbanianTlAssignment(TrackedFieldsMixin, BaseModel):
             return f"{prefix} ({weekday_name})"
         return dict(CADENCE_CHOICES).get(self.cadence, self.cadence)
 
-    # Holiday pushes stop here: a run of holidays longer than this never loops forever.
-    _MAX_HOLIDAY_PUSHES = 6
+    _MAX_HOLIDAY_PUSHES = MAX_PUSHES
 
     def next_due_on(self, *, last_meeting_on: date | None) -> date | None:
         """Next cadence date after the last slot, moved past public holidays."""
@@ -213,9 +195,8 @@ class HbprAlbanianTlAssignment(TrackedFieldsMixin, BaseModel):
         """``(due, moved_from)``: the next slot, and the holiday date it replaced.
 
         A due date that is a global public holiday moves to the following slot of
-        the same cadence (weekly +1 week, biweekly +2, monthly next month), and
-        repeats while that one is a holiday too. ``moved_from`` is the first
-        holiday hit, ``None`` when nothing moved.
+        the same cadence, and repeats while that one is a holiday too. The maths is
+        shared with the 1-on-1 plans (``core.utils.cadence``).
         """
         from apps.leave_management.models.core import global_holiday_dates
 
@@ -223,67 +204,14 @@ class HbprAlbanianTlAssignment(TrackedFieldsMixin, BaseModel):
             return None, None
         due = self._raw_next_due(last_meeting_on=last_meeting_on)
         holidays = global_holiday_dates(due, due + timedelta(days=366))
-        moved_from = None
-        for _ in range(self._MAX_HOLIDAY_PUSHES):
-            if due not in holidays:
-                break
-            moved_from = moved_from or due
-            due = self._raw_next_due(last_meeting_on=due)
-        return due, moved_from
+        return _shared_next_due_slot(
+            self.cadence, self.cadence_day_of_week, self.cadence_nth_week,
+            self.effective_from, last_meeting_on, blocked=holidays,
+        )
 
     def _raw_next_due(self, *, last_meeting_on: date | None) -> date:
         """Next cadence date after the last meeting (or the start date)."""
-        anchor = last_meeting_on or self.effective_from
-
-        if self.cadence == "weekly":
-            if self.cadence_day_of_week is not None:
-                if last_meeting_on is None:
-                    offset = (self.cadence_day_of_week - self.effective_from.weekday()) % 7
-                    return self.effective_from + timedelta(days=offset)
-                next_due = last_meeting_on + timedelta(days=7)
-                offset = (self.cadence_day_of_week - next_due.weekday()) % 7
-                return next_due + timedelta(days=offset)
-            return anchor + timedelta(days=7)
-
-        if self.cadence == "biweekly":
-            if self.cadence_day_of_week is not None:
-                if last_meeting_on is None:
-                    offset = (self.cadence_day_of_week - self.effective_from.weekday()) % 7
-                    return self.effective_from + timedelta(days=offset)
-                next_due = last_meeting_on + timedelta(days=14)
-                offset = (self.cadence_day_of_week - next_due.weekday()) % 7
-                return next_due + timedelta(days=offset)
-            return anchor + timedelta(days=14)
-
-        # Monthly
-        if self.cadence_nth_week is not None and self.cadence_day_of_week is not None:
-            if last_meeting_on is None:
-                candidate = get_nth_weekday_of_month(
-                    self.effective_from.year,
-                    self.effective_from.month,
-                    self.cadence_nth_week,
-                    self.cadence_day_of_week,
-                )
-                if candidate >= self.effective_from:
-                    return candidate
-                # Candidate has passed relative to effective_from; advance to next month
-                next_year = self.effective_from.year + (1 if self.effective_from.month == 12 else 0)
-                next_month = 1 if self.effective_from.month == 12 else self.effective_from.month + 1
-                return get_nth_weekday_of_month(
-                    next_year, next_month, self.cadence_nth_week, self.cadence_day_of_week
-                )
-            # Advance to the month following last_meeting_on
-            next_year = last_meeting_on.year + (1 if last_meeting_on.month == 12 else 0)
-            next_month = 1 if last_meeting_on.month == 12 else last_meeting_on.month + 1
-            return get_nth_weekday_of_month(
-                next_year, next_month, self.cadence_nth_week, self.cadence_day_of_week
-            )
-
-        # Standard monthly (day of month, clamped to month end)
-        year, month = anchor.year, anchor.month
-        if month == 12:
-            year, month = year + 1, 1
-        else:
-            month += 1
-        day = min(anchor.day, calendar.monthrange(year, month)[1])
-        return date(year, month, day)
+        return _shared_raw_next_due(
+            self.cadence, self.cadence_day_of_week, self.cadence_nth_week,
+            self.effective_from, last_meeting_on,
+        )

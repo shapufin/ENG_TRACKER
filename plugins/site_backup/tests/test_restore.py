@@ -541,6 +541,48 @@ class HbprAssignmentNullCadenceRestoreTests(TestCase):
         self.assertIsNone(restored.effective_to)
 
 
+class OneOnOnePlanRestoreTests(TestCase):
+    """1-on-1 plans and skips come back from a backup, and a restore adds no audit rows."""
+
+    def test_plans_and_skips_round_trip(self):
+        import datetime as dt
+
+        from plugins.tl_scorecard.models import OneOnOnePlan, OneOnOneSkip
+
+        admin = User.objects.create_user(username='admin_oo', password='x', is_superuser=True)
+        lm = User.objects.create_user(username='lm_oo', password='x')
+        emp = User.objects.create_user(username='emp_oo', password='x')
+        plan = OneOnOnePlan.objects.create(
+            leader=lm, employee=emp, cadence='monthly', cadence_day_of_week=1,
+            cadence_nth_week=2, effective_from=dt.date(2026, 1, 1),
+        )
+        skip = OneOnOneSkip.objects.create(
+            leader=lm, employee=emp, slot_date=dt.date(2026, 2, 10), reason='Client site',
+        )
+
+        with tempfile.TemporaryDirectory() as media:
+            with override_settings(MEDIA_ROOT=media):
+                record = backup_service.create_backup(admin, include_media=False)
+                OneOnOnePlan.objects.all().delete()
+                OneOnOneSkip.objects.all().delete()
+                with record.file.open('rb') as fh:
+                    restore_service.commit(
+                        fh,
+                        approved_models=[
+                            'tl_scorecard.oneononeplan', 'tl_scorecard.oneononeskip',
+                        ],
+                        confirmed=True,
+                        user=admin,
+                    )
+
+        restored = OneOnOnePlan.objects.get(pk=plan.pk)
+        self.assertEqual(
+            (restored.cadence, restored.cadence_day_of_week, restored.cadence_nth_week),
+            ('monthly', 1, 2),
+        )
+        self.assertEqual(OneOnOneSkip.objects.get(pk=skip.pk).reason, 'Client site')
+
+
 class ContentTypeRemapTests(TestCase):
     """R1: Permission rows point at ContentType, which is not in the fixture."""
 

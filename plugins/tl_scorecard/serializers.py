@@ -672,8 +672,20 @@ class TeamGovernanceSerializer(serializers.Serializer):
     pending_promotion = serializers.BooleanField()
 
 
+class TeamOneOnOnePlanSerializer(serializers.Serializer):
+    cadence = serializers.CharField()
+    cadence_day_of_week = serializers.IntegerField(allow_null=True)
+    cadence_nth_week = serializers.IntegerField(allow_null=True)
+    cadence_display = serializers.CharField()
+    next_due_on = serializers.DateField()
+    status = serializers.ChoiceField(choices=['upcoming', 'due', 'overdue'])
+    moved_from = serializers.DateField(allow_null=True)
+    moved_reason = serializers.ChoiceField(choices=['holiday', 'leave'], allow_null=True)
+
+
 class TeamMeetingsSerializer(serializers.Serializer):
     last_one_on_one_on = serializers.DateField(allow_null=True)
+    plan = TeamOneOnOnePlanSerializer(allow_null=True)
 
 
 class TeamMemberSummarySerializer(serializers.Serializer):

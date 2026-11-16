@@ -126,6 +126,8 @@ endpoint cannot clear. Tests:
 `plugins/site_backup/tests/test_restore.py` (`HbprAssignmentNullCadenceRestoreTests`),
 `frontend/e2e/hbpr-optional-cadence.spec.ts`.
 
+**Employee 1-on-1 plans (2026-11-16).** A Line Manager's recurring 1-on-1 schedule per employee (Team tab, `OneOnOnePlan`) shares its schedule maths with the HBPR cadence (`core/utils/cadence.py`) but is a separate, leader-only record: it never creates a meeting, a skip is not a held meeting, and neither is ever visible to the HBPR (employee one-on-ones stay hidden through every door). Details and tests: `docs/workflow-invariants.md` item 84.
+
 ## Architecture guardrails (added by the 2026-10-02 hardening pass)
 
 - **Fail-closed scoping.** HBPR-readable scorecard viewsets subclass

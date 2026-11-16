@@ -28,6 +28,7 @@ from .models import (
     EPRStageRecord,
     IdleFlag,
     Meeting,
+    OneOnOneSkip,
     PIPRecord,
     PromotionFlag,
     ReviewDelivery,
@@ -89,6 +90,12 @@ class TrendWindow:
         self.meetings = list(Meeting.objects.filter(
             organizer=leader, occurred_on__gte=first_month, occurred_on__lt=end,
         ).prefetch_related('attendees'))
+        # (employee id, slot date) of every 1-on-1 skipped with a reason: not a miss (ruling R1).
+        self.skips = [
+            (employee_id, slot_date) for employee_id, slot_date, reason in OneOnOneSkip.objects.filter(
+                leader=leader, slot_date__gte=first_month, slot_date__lt=end,
+            ).values_list('employee_id', 'slot_date', 'reason') if reason.strip()
+        ]
 
     @staticmethod
     def _submitted_in(rows, month_start, month_end):
@@ -102,6 +109,9 @@ class TrendWindow:
 
     def pending_leave_before(self, month_end) -> int:
         return sum(1 for submitted in self.pending_leave if submitted < month_end)
+
+    def skipped_in(self, month_start, month_end) -> set:
+        return {e for e, day in self.skips if month_start <= day < month_end}
 
     def meetings_in(self, meeting_type, month_start, month_end):
         return [
@@ -175,7 +185,13 @@ def meeting_compliance_metrics(leader, team_member_ids, month: date, window: Tre
         }
         tl_sync_count = len(window.meetings_in('tl_sync', month_start, month_end))
         team_meetings = window.meetings_in('team_meeting', month_start, month_end)
+        skipped = window.skipped_in(month_start, month_end)
     else:
+        skipped = {
+            e for e, reason in OneOnOneSkip.objects.filter(
+                leader=leader, slot_date__gte=month_start, slot_date__lt=month_end,
+            ).values_list('employee_id', 'reason') if reason.strip()
+        }
         def _month_meetings(meeting_type):
             return Meeting.objects.filter(
                 organizer=leader, meeting_type=meeting_type,
@@ -185,10 +201,12 @@ def meeting_compliance_metrics(leader, team_member_ids, month: date, window: Tre
         members_with_one_on_one = set(_month_meetings('one_on_one').values_list('counterparty_id', flat=True))
         tl_sync_count = _month_meetings('tl_sync').count()
         team_meetings = list(_month_meetings('team_meeting').prefetch_related('attendees'))
-    compliant_members = len(members_with_one_on_one & set(team_member_ids))
-    one_on_one_pct = (
-        round((compliant_members / len(team_member_ids)) * 100, 1) if team_member_ids else None
-    )
+    members = set(team_member_ids)
+    compliant_members = len(members_with_one_on_one & members)
+    # A member whose 1-on-1 was skipped with a reason is not a miss: they leave the
+    # denominator unless a 1-on-1 was held anyway (ruling R1, item 84).
+    eligible = len(members - (skipped - members_with_one_on_one))
+    one_on_one_pct = round((compliant_members / eligible) * 100, 1) if eligible else None
     # `.attendees.all()`, not `.filter(...)` — the latter bypasses the
     # prefetch_related cache above and re-queries per meeting (N+1).
     held_with_hrbp = sum(1 for m in team_meetings if any(a.role == 'hrbp' for a in m.attendees.all()))

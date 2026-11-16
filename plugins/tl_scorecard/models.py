@@ -504,3 +504,69 @@ class ScorecardMonthSnapshot(models.Model):
 
     def __str__(self):
         return f'Scorecard {self.leader_id} {self.month:%Y-%m}'
+
+
+class OneOnOnePlan(models.Model):
+    """A Line Manager's recurring 1-on-1 schedule for one employee.
+
+    Configuration only: a plan never creates a `Meeting`. The next due slot is computed
+    (`one_on_one.next_slot`) and the leader confirms it as held (a normal `Meeting`) or
+    skips it (`OneOnOneSkip`). Never visible to the HBPR, like the meetings themselves.
+    """
+    CADENCE_CHOICES = [('weekly', 'Weekly'), ('biweekly', 'Biweekly'), ('monthly', 'Monthly')]
+
+    leader = models.ForeignKey(User, on_delete=models.CASCADE, related_name='one_on_one_plans')
+    employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='one_on_one_plans_as_employee')
+    cadence = models.CharField(max_length=20, choices=CADENCE_CHOICES)
+    cadence_day_of_week = models.PositiveSmallIntegerField(null=True, blank=True)
+    cadence_nth_week = models.SmallIntegerField(null=True, blank=True)
+    effective_from = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'tl_scorecard_one_on_one_plans'
+        ordering = ['employee_id']
+        constraints = [
+            models.UniqueConstraint(fields=['leader', 'employee'], name='unique_one_on_one_plan_per_pair'),
+        ]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        from core.utils.cadence import schedule_errors
+
+        errors = schedule_errors(self.cadence, self.cadence_day_of_week, self.cadence_nth_week)
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return f'1-on-1 plan {self.leader_id} -> {self.employee_id} ({self.cadence})'
+
+
+class OneOnOneSkip(models.Model):
+    """A due 1-on-1 slot the leader chose not to hold, with the reason.
+
+    Leader-authored history (kept when the employee moves). A skip is NOT a held meeting:
+    it never counts toward 1-on-1 compliance, it only moves the next due date on.
+    """
+    leader = models.ForeignKey(User, on_delete=models.CASCADE, related_name='one_on_one_skips')
+    employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='one_on_one_skips_as_employee')
+    slot_date = models.DateField(help_text='The due date that was skipped')
+    reason = models.TextField()
+    recorded_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name='one_on_one_skips_recorded',
+    )
+    recorded_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'tl_scorecard_one_on_one_skips'
+        ordering = ['-slot_date']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['leader', 'employee', 'slot_date'], name='unique_one_on_one_skip_per_slot',
+            ),
+        ]
+
+    def __str__(self):
+        return f'Skipped 1-on-1 {self.slot_date}'

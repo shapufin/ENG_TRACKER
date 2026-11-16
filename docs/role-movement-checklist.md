@@ -59,6 +59,9 @@ Then check by hand, for the employee, the old leader and the new leader:
 - [ ] Backup/restore: a new field or model is covered by `plugins/site_backup/tests/test_backup_coverage_guard.py`; signal receivers handle `raw=True`.
 - [ ] Closed years and monthly locks still refuse writes for everyone.
 
+## 4b. New leader-owned records or schedules
+Run the checklist in `docs/workflow-invariants.md` item 86 (no auto-written evidence, current-link re-check in jobs and reads, `has_role()`, mobile card column, query budgets, `raw=True` guards).
+
 ## 5. Known open rulings (each is pinned by a test; change the test with the ruling)
 1. Leave has no owner rule: both linked leaders may decide a request.
 2. An employee who leaves a team keeps the old leader's scope until the link changes (item 36).
@@ -68,6 +71,8 @@ Then check by hand, for the employee, the old leader and the new leader:
 6. Two leaders closing one employee leave two closure rows (harmless).
 7. Promotion history gaps (item 73).
 8. Production settings accept the public placeholder `BACKUP_ENCRYPTION_KEYS` used by CI.
+9. A leader's own pending overtime/standby is listed only for their own leader (item 82 (d)); decided 2026-11-16 to keep (R4). A leader with no Manager link has no owner, so only staff see those rows.
+10. A 1-on-1 plan outlives an employee's move (the Team tab, My Records and reminders re-check the current link; the row stays until the leader removes it).
 
 ## 6. Known blind spots (not simulated as of 2026-11-13)
 Browser UI for a move, payroll PDF/Excel contents, the real month-freeze job and `manager_changed_at`, push delivery, backup/restore round-trip of a moved employee (links are plain FKs in the PK-based fixture, so it should hold, but it was not run), year-close of leave and payroll files, and an admin-granted role `approve` permission on overtime (falls through `can_approve` and was not tested against the owner rule).

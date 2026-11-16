@@ -1,7 +1,10 @@
 import React, { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { ShieldAlert, Target, UserMinus, Users } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { CalendarClock, ShieldAlert, Target, UserMinus, Users } from "lucide-react";
 import { UserCell } from "@/components/admin/UserCell";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataTable } from "@/components/ui/DataTable";
 import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -15,7 +18,13 @@ import { toDays } from "@/pages/admin/hooks/leaveBalanceFilters";
 import { cn } from "@/lib/utils";
 import { tlScorecardService } from "../../services/tlScorecardService";
 import type { TeamMemberSummary } from "../../types/tlScorecard";
+import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
+import { LogMeetingDialog } from "../LogMeetingDialog";
+import { errorMessage } from "../records/errorMessage";
+import { OneOnOnePlanDialog } from "./OneOnOnePlanDialog";
+import { SkipOneOnOneDialog } from "./SkipOneOnOneDialog";
 import { TeamMemberDetailPanel } from "./TeamMemberDetailPanel";
+import { ONE_ON_ONE_STATUS_LABEL, ONE_ON_ONE_STATUS_TONE } from "./oneOnOneMeta";
 import {
   EPR_STEPS,
   SENIORITY_LABELS,
@@ -51,6 +60,23 @@ const GovernanceBadges: React.FC<{ member: TeamMemberSummary }> = ({ member }) =
   );
 };
 
+/** The next recurring 1-on-1 date and whether it is due; "Not set" without a schedule. */
+const NextOneOnOne: React.FC<{ member: TeamMemberSummary }> = ({ member }) => {
+  const plan = member.meetings.plan;
+  if (!plan) return <span className="text-muted-foreground text-xs">Not set</span>;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="tabular-nums">{formatDateDDMMYYYY(plan.next_due_on)}</span>
+      <Badge
+        variant="outline"
+        className={cn("text-xs font-normal", toneSurfaceClass[ONE_ON_ONE_STATUS_TONE[plan.status]])}
+      >
+        {ONE_ON_ONE_STATUS_LABEL[plan.status]}
+      </Badge>
+    </div>
+  );
+};
+
 /** Three dots, one per EPR stage; the text is what screen readers announce. */
 const EprStepper: React.FC<{ member: TeamMemberSummary }> = ({ member }) => {
   const doneCount = EPR_STEPS.filter((step) => eprStageDone(member.epr, step.stage)).length;
@@ -78,7 +104,7 @@ const EprStepper: React.FC<{ member: TeamMemberSummary }> = ({ member }) => {
 
 const TEAM_CARD: DataTableCardSpec = {
   title: "full_name",
-  meta: ["leave_available", "epr", "governance", "wage"],
+  meta: ["leave_available", "epr", "next_one_on_one", "governance", "wage"],
 };
 
 const buildColumns = (): AppColumnDef<TeamMemberSummary>[] => [
@@ -114,6 +140,11 @@ const buildColumns = (): AppColumnDef<TeamMemberSummary>[] => [
     cell: ({ row }) => <EprStepper member={row.original} />,
   },
   {
+    id: "next_one_on_one",
+    header: "Next 1:1",
+    cell: ({ row }) => <NextOneOnOne member={row.original} />,
+  },
+  {
     id: "governance",
     header: "Governance",
     cell: ({ row }) => <GovernanceBadges member={row.original} />,
@@ -139,12 +170,57 @@ const buildColumns = (): AppColumnDef<TeamMemberSummary>[] => [
  * The roster is one request; opening a member reads the row already loaded.
  */
 export const TeamTab: React.FC = () => {
+  const queryClient = useQueryClient();
   const [selected, setSelected] = useState<TeamMemberSummary | null>(null);
+  const [scheduleIds, setScheduleIds] = useState<number[] | null>(null);
+  const [logFor, setLogFor] = useState<TeamMemberSummary | null>(null);
+  const [skipFor, setSkipFor] = useState<TeamMemberSummary | null>(null);
+  const [clearFor, setClearFor] = useState<TeamMemberSummary | null>(null);
   const teamQuery = useQuery({
     queryKey: ["tl-scorecard", "team-members", "self"],
     queryFn: async () => (await tlScorecardService.getTeamMembers()).data,
   });
   const columns = useMemo(() => buildColumns(), []);
+
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "team-members"] });
+    void queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "scorecard"] });
+  };
+  const notifyError = (error: unknown) => toast.error(errorMessage(error));
+  const scheduleMutation = useMutation({
+    mutationFn: tlScorecardService.setOneOnOnePlans,
+    onSuccess: () => {
+      toast.success("1-on-1 schedule saved");
+      refresh();
+    },
+    onError: notifyError,
+  });
+  const clearMutation = useMutation({
+    mutationFn: (id: number) => tlScorecardService.clearOneOnOnePlans([id]),
+    onSuccess: () => {
+      toast.success("1-on-1 schedule removed");
+      setClearFor(null);
+      refresh();
+    },
+    onError: notifyError,
+  });
+  const skipMutation = useMutation({
+    mutationFn: (data: { employee: number; reason: string }) =>
+      tlScorecardService.skipOneOnOne(data),
+    onSuccess: () => {
+      toast.success("1-on-1 skipped");
+      refresh();
+    },
+    onError: notifyError,
+  });
+  const logMutation = useMutation({
+    mutationFn: tlScorecardService.createMeeting,
+    onSuccess: () => {
+      toast.success("1-on-1 logged");
+      refresh();
+    },
+    onError: notifyError,
+  });
 
   if (teamQuery.isError) {
     return (
@@ -199,6 +275,18 @@ export const TeamTab: React.FC = () => {
         />
       </div>
 
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="control"
+          onClick={() => setScheduleIds(members.map((m) => m.id))}
+        >
+          <CalendarClock className="mr-2 h-4 w-4" aria-hidden="true" />
+          1-on-1 schedule
+        </Button>
+      </div>
+
       <GlassCard animateOnMount={false} className="overflow-hidden p-0">
         <DataTable
           columns={columns}
@@ -215,6 +303,56 @@ export const TeamTab: React.FC = () => {
       <TeamMemberDetailPanel
         member={selected}
         onOpenChange={(open) => !open && setSelected(null)}
+        onSchedule={(m) => setScheduleIds([m.id])}
+        onLogOneOnOne={setLogFor}
+        onSkipOneOnOne={setSkipFor}
+        onClearSchedule={setClearFor}
+      />
+
+      {scheduleIds && (
+        <OneOnOnePlanDialog
+          open
+          onOpenChange={(open) => !open && setScheduleIds(null)}
+          members={members}
+          initialIds={scheduleIds}
+          onSave={async (data) => {
+            await scheduleMutation.mutateAsync(data);
+          }}
+        />
+      )}
+      {logFor && logFor.meetings.plan && (
+        <LogMeetingDialog
+          open
+          onOpenChange={(open) => !open && setLogFor(null)}
+          prefill={{
+            counterparty: logFor.id,
+            occurredOn: logFor.meetings.plan.next_due_on,
+          }}
+          onCreate={async (data) => {
+            await logMutation.mutateAsync(data);
+          }}
+        />
+      )}
+      {skipFor && skipFor.meetings.plan && (
+        <SkipOneOnOneDialog
+          open
+          onOpenChange={(open) => !open && setSkipFor(null)}
+          employeeName={skipFor.full_name}
+          dueOn={skipFor.meetings.plan.next_due_on}
+          onSkip={async (reason) => {
+            await skipMutation.mutateAsync({ employee: skipFor.id, reason });
+          }}
+        />
+      )}
+      <ConfirmDialog
+        open={clearFor !== null}
+        onOpenChange={(open) => !open && setClearFor(null)}
+        title="Remove 1-on-1 schedule?"
+        description={`${clearFor?.full_name ?? "This person"} will no longer have a recurring 1-on-1. Skips and logged 1-on-1s are kept.`}
+        confirmLabel="Remove"
+        variant="destructive"
+        isConfirming={clearMutation.isPending}
+        onConfirm={() => clearFor && clearMutation.mutate(clearFor.id)}
       />
     </div>
   );

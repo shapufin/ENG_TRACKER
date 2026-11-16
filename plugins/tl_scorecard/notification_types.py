@@ -514,3 +514,31 @@ ALL_TYPES = (
     HbprCadenceDue, HbprCadenceOverdue,
     HbprAssignmentChanged, FlagResolved, EprStageCompleted, HbprMeetingChanged,
 )
+
+
+class OneOnOneDue(NotificationType):
+    """One or more of a Line Manager's recurring 1-on-1s are due or overdue."""
+    event_type = 'scorecard_one_on_one_due'
+    label = '1-on-1s due'
+    description = (
+        'Sent to a Line Manager when a recurring 1-on-1 with a team member is due or overdue, '
+        'at most once a week. Never sent to the HBPR.'
+    )
+    category = 'team'
+    notification_type = 'info'
+    push_by_default = False
+    link = '/tl-scorecard?tab=team'
+
+    def recipients(self, context):
+        return User.objects.filter(id=context['leader_id'], is_active=True)
+
+    def title(self, context):
+        return '1-on-1s due'
+
+    def message(self, context):
+        count = context['count']
+        return f'{count} 1-on-1{"" if count == 1 else "s"} with your team {"is" if count == 1 else "are"} due. Log or skip each one.'
+
+    def dedupe_key(self, context, user):
+        year, week, _ = context['today'].isocalendar()
+        return f'one-on-one-due:{user.id}:{year}-{week}'

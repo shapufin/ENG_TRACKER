@@ -49,7 +49,7 @@ const MEMBER: TeamMemberSummary = {
     open_absences: 1,
     pending_promotion: false,
   },
-  meetings: { last_one_on_one_on: "2026-10-01" },
+  meetings: { last_one_on_one_on: "2026-10-01", plan: null },
 };
 
 const OTHER: TeamMemberSummary = {

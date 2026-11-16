@@ -32,6 +32,8 @@ interface LogMeetingDialogProps {
   /** In edit mode type, counterparty and team are fixed; `onCreate` receives the edited values. */
   mode?: "create" | "edit";
   initial?: Meeting;
+  /** Create mode: start as a 1-on-1 with this person on this date (a due 1-on-1 slot). */
+  prefill?: { counterparty: number; occurredOn: string };
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -42,6 +44,7 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
   onCreate,
   mode = "create",
   initial,
+  prefill,
 }) => {
   const isEdit = mode === "edit";
   const { user } = useAuth();
@@ -49,14 +52,16 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
     initial?.meeting_type ?? "one_on_one"
   );
   const [counterpartyId, setCounterpartyId] = useState<number | null>(
-    initial?.counterparty ?? null
+    initial?.counterparty ?? prefill?.counterparty ?? null
   );
   const [teamId, setTeamId] = useState<number | null>(
     initial?.team ?? user?.teams?.[0]?.id ?? null
   );
   const [options, setOptions] = useState<SelectOption[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [occurredOn, setOccurredOn] = useState(initial?.occurred_on ?? todayIso());
+  const [occurredOn, setOccurredOn] = useState(
+    initial?.occurred_on ?? prefill?.occurredOn ?? todayIso()
+  );
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [referenceUrl, setReferenceUrl] = useState(initial?.reference_url ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);

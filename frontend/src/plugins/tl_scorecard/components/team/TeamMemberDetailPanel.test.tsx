@@ -47,6 +47,7 @@ const mockMember: TeamMemberSummary = {
   },
   meetings: {
     last_one_on_one_on: "2026-09-15",
+    plan: null,
   },
 };
 

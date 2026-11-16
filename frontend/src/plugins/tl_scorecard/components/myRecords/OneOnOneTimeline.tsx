@@ -6,14 +6,17 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { SearchField } from "@/components/ui/SearchField";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { avatarSeed } from "../avatarSeed";
-import type { MyOneOnOne } from "../../types/myRecords";
+import type { MyNextOneOnOne, MyOneOnOne } from "../../types/myRecords";
 
 const matches = (o: MyOneOnOne, q: string) =>
   [o.summary, o.with_name, o.occurred_on, formatDateDDMMYYYY(o.occurred_on)].some((v) =>
     v.toLowerCase().includes(q)
   );
 
-export const OneOnOneTimeline: React.FC<{ items: MyOneOnOne[] }> = ({ items }) => {
+export const OneOnOneTimeline: React.FC<{
+  items: MyOneOnOne[];
+  next?: MyNextOneOnOne | null;
+}> = ({ items, next = null }) => {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const sorted = [...items]
@@ -24,6 +27,18 @@ export const OneOnOneTimeline: React.FC<{ items: MyOneOnOne[] }> = ({ items }) =
       <h2 id="my-121-heading" className="text-lg font-semibold">
         1-on-1s
       </h2>
+      {next && (
+        <p
+          className="bg-surface-sunken rounded-lg border p-3 text-sm"
+          data-testid="next-one-on-one"
+        >
+          Your next 1-on-1 with {next.with_name} is on{" "}
+          <time dateTime={next.next_due_on} className="font-medium">
+            {formatDateDDMMYYYY(next.next_due_on)}
+          </time>
+          <span className="text-muted-foreground"> ({next.cadence_display})</span>
+        </p>
+      )}
       {items.length === 0 ? (
         <p className="text-muted-foreground text-sm">
           Summaries your team leader shares will appear here.

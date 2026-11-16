@@ -196,8 +196,16 @@ class TeamImporter(StaffOnlyAuthority, CodeKeyedImporter):
         leaders = list(
             User.objects.filter(is_active=True)
             .values_list("username", flat=True)
-            .order_by("username")[:30]
+            .order_by("username")
         )
+        groups = list(
+            Team.objects.exclude(calendar_group="")
+            .values_list("calendar_group", flat=True)
+            .distinct()
+            .order_by("calendar_group")
+        )
+        if groups:
+            dropdowns["calendar_group"] = groups
         if team_codes:
             dropdowns["parent_team_code"] = team_codes
         if leaders:
@@ -219,7 +227,7 @@ class TeamImporter(StaffOnlyAuthority, CodeKeyedImporter):
 
         users = [
             {"Username": u.username, "Full Name": u.get_full_name() or u.username}
-            for u in User.objects.filter(is_active=True).order_by("username")[:50]
+            for u in User.objects.filter(is_active=True).order_by("username")
         ]
         if users:
             ref["Available Leaders"] = users

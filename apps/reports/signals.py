@@ -38,6 +38,8 @@ def get_object_repr(instance):
 
 def log_change(sender, instance, created, action_override=None, **kwargs):
     """Log a change to the audit trail."""
+    if kwargs.get('raw'):
+        return  # a fixture load or site restore: the audit rows travel in the archive
     import logging
     logger = logging.getLogger(__name__)
 

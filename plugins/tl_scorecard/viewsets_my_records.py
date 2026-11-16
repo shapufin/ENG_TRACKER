@@ -11,7 +11,8 @@ from rest_framework.response import Response
 
 from core.mixins.permissions import HbprBlockedMixin, HrOnlyBlockedMixin, PluginEnabledMixin
 
-from .models import EPRCycle, Meeting, PIPRecord
+from .models import EPRCycle, Meeting, OneOnOnePlan, PIPRecord
+from .one_on_one import cadence_label, next_slot
 
 
 def _name(user):
@@ -33,6 +34,30 @@ def _one_on_ones(user):
         }
         for m in meetings
     ]
+
+
+def _next_one_on_one(user):
+    """The date of the employee's next recurring 1-on-1 with their CURRENT leader.
+
+    A whitelist of three fields: no status, no skip reasons, no overdue wording. A plan
+    from a former leader is not shown.
+    """
+    profile = getattr(user, 'profile', None)
+    if profile is None:
+        return None
+    leader_ids = [i for i in (profile.albanian_tl_id, profile.italian_tl_id) if i]
+    plans = {
+        p.leader_id: p
+        for p in OneOnOnePlan.objects.filter(employee=user, leader_id__in=leader_ids).select_related('leader')
+    }
+    plan = next((plans[i] for i in leader_ids if i in plans), None)
+    if plan is None:
+        return None
+    return {
+        'with_name': _name(plan.leader),
+        'next_due_on': next_slot(plan).due_on,
+        'cadence_display': cadence_label(plan),
+    }
 
 
 def _pips(user):
@@ -79,6 +104,7 @@ class MyRecordsViewSet(HrOnlyBlockedMixin, HbprBlockedMixin, PluginEnabledMixin,
         user = request.user
         return Response({
             'one_on_ones': _one_on_ones(user),
+            'next_one_on_one': _next_one_on_one(user),
             'pips': _pips(user),
             'epr_cycles': _epr_cycles(user),
         })

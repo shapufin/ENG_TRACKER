@@ -20,6 +20,7 @@ from django.db.models.functions import Coalesce
 
 from apps.leave_management.models import LeaveBalance, LeaveRequest
 
+from .one_on_one import plan_payloads as plan_payloads_for
 from .models import Absence, EPRCycle, EPRGoal, IdleFlag, Meeting, PIPRecord, PromotionFlag
 from .scope import scoreable_member_ids
 
@@ -177,6 +178,7 @@ def team_member_summaries(leader, today: date, include_meetings: bool) -> list[d
     )
     upcoming = _upcoming_leave([member.id for member in members], today)
 
+    plan_payloads = plan_payloads_for(leader, today=today) if include_meetings else {}
     rows = []
     for member in members:
         profile = getattr(member, 'profile', None)
@@ -232,6 +234,7 @@ def team_member_summaries(leader, today: date, include_meetings: bool) -> list[d
             },
             'meetings': {
                 'last_one_on_one_on': member.last_one_on_one if include_meetings else None,
+                'plan': plan_payloads.get(member.id),
             },
         })
     return rows

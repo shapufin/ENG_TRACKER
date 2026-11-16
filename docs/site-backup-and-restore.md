@@ -46,6 +46,8 @@ It also fails if a model that stores uploaded files (for example Ticket KPI `KPI
 
 `HbprAlbanianTlAssignment` is dumped like any other model. Since 2026-11-11 its `cadence` may be NULL ("set later by the Line Manager"); the row restores with NULL intact and nothing re-defaults it (`test_restore.py::HbprAssignmentNullCadenceRestoreTests`). Migration `users` 0028 changes `migration_state_hash`, so a backup taken before it cannot be restored onto a database that has it: restore is blocked by design (see "How the plugin works"). Restore such a backup on the commit it came from, migrate, then upgrade (`docs/workflow-invariants.md` item 72).
 
+`OneOnOnePlan` and `OneOnOneSkip` (Line Manager 1-on-1 schedule and skips, `tl_scorecard` migration 0009) are dumped like any other model and round-trip (`test_restore.py::OneOnOnePlanRestoreTests`); the migration changes `migration_state_hash`, so restore a backup taken before it on the commit it came from, migrate, then upgrade. Restores add no audit rows: `reports.signals.log_change` skips `raw=True` saves (`docs/workflow-invariants.md` item 85).
+
 ## Caveats
 
 - `--delete-missing` on `auth.user` can remove the superuser you are signed in as when restoring through the UI. The CLI has no session, so use it for provisioning.
