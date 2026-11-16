@@ -1,3 +1,4 @@
+import { StandbyDateCell, StandbyHoursCell } from "@/components/standby/StandbyDayCells";
 import { useMemo } from "react";
 import { leaveDaysLabel } from "@/components/leave/leaveDuration";
 import { Badge } from "@/components/ui/badge";
@@ -52,7 +53,7 @@ export const useTeamColumns = (
       {
         id: "payroll_period",
         header: "Payroll",
-        size: 110,
+        size: 120,
         meta: { flex: true },
         cell: ({ row }) =>
           row.original.is_carried_over ? (
@@ -70,7 +71,7 @@ export const useTeamColumns = (
       {
         accessorKey: "client_name",
         header: "Client",
-        size: 110,
+        size: 120,
         meta: { flex: true },
         cell: ({ row }) => row.original.client_name || "-",
       },
@@ -123,18 +124,14 @@ export const useTeamColumns = (
         header: "Date",
         size: 95,
         meta: { flex: true },
-        cell: ({ row }) => formatDateDDMMYYYY(row.original.date),
+        cell: StandbyDateCell,
       },
       {
         accessorKey: "hours",
         header: "Hours",
-        size: 100,
+        size: 120,
         meta: { flex: true },
-        cell: ({ row }) => (
-          <Badge variant="secondary" className="rounded-full font-mono text-xs">
-            {row.original.hours}h
-          </Badge>
-        ),
+        cell: StandbyHoursCell,
       },
       {
         id: "payroll_period",

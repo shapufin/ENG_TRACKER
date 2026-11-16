@@ -4,7 +4,8 @@ import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { DescriptionColumn } from "@/components/admin/DescriptionColumn";
 import { UserCell } from "@/components/admin/UserCell";
 import { createCrudActionsColumn } from "@/components/ui/tableColumnHelpers";
-import { formatDateDDMMYYYY, isPastMonth } from "@/lib/date-format-utils";
+import { StandbyDateCell, StandbyHoursCell } from "@/components/standby/StandbyDayCells";
+import { isPastMonth } from "@/lib/date-format-utils";
 import type { StandbyLog } from "@/types";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 
@@ -24,7 +25,7 @@ export const useStandbyColumns = (
         accessorKey: "date",
         header: "Date",
         size: 95,
-        cell: ({ row }) => formatDateDDMMYYYY(row.original.date),
+        cell: StandbyDateCell,
       },
       ...(canViewTeamData
         ? [
@@ -41,12 +42,8 @@ export const useStandbyColumns = (
       {
         accessorKey: "hours",
         header: "Hours",
-        size: 87,
-        cell: ({ row }) => (
-          <Badge variant="secondary" className="rounded-full font-mono text-xs">
-            {row.original.hours}h
-          </Badge>
-        ),
+        size: 120,
+        cell: StandbyHoursCell,
       },
       {
         id: "payroll_period",
