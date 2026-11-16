@@ -126,7 +126,7 @@ export const useTLApprovalColumns = ({
       {
         accessorKey: "hours",
         header: "Hours",
-        size: 120,
+        size: 150,
         cell: StandbyHoursCell,
       },
       {

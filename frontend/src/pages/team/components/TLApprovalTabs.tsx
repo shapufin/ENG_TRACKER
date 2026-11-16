@@ -15,6 +15,9 @@ interface TLApprovalTabsProps {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     leave: { data?: any[]; isLoading: boolean; error: any; refetch: () => void };
   };
+  /** Rows the tables show when they differ from the query data (bundled standby days). */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tableData?: Partial<Record<Tab, any[]>>;
   columns: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     overtime: any[];
@@ -59,6 +62,7 @@ export const TLApprovalTabs: React.FC<TLApprovalTabsProps> = ({
   activeTab,
   onActiveTabChange,
   queries,
+  tableData,
   columns,
   rowSelection,
   onRowSelectionChange,
@@ -68,38 +72,41 @@ export const TLApprovalTabs: React.FC<TLApprovalTabsProps> = ({
   getSelectedIds,
   isBulkPending,
   header,
-}) => (
-  <Tabs value={activeTab} onValueChange={(v) => onActiveTabChange(v as Tab)}>
-    <TabsList className="grid w-full grid-cols-3">
-      {TABS.map(({ key, label }) => (
-        <TabsTrigger key={key} value={key}>
-          {label} ({queries[key].data?.length || 0})
-        </TabsTrigger>
-      ))}
-    </TabsList>
+}) => {
+  const rowsOf = (key: Tab) => tableData?.[key] ?? queries[key].data ?? [];
+  return (
+    <Tabs value={activeTab} onValueChange={(v) => onActiveTabChange(v as Tab)}>
+      <TabsList className="grid w-full grid-cols-3">
+        {TABS.map(({ key, label }) => (
+          <TabsTrigger key={key} value={key}>
+            {label} ({queries[key].data?.length || 0})
+          </TabsTrigger>
+        ))}
+      </TabsList>
 
-    {TABS.map(({ key, label }) => (
-      <TabsContent value={key} key={key}>
-        <TLApprovalTabPanel
-          header={header}
-          type={key}
-          label={label.toLowerCase()}
-          storageKey={`table-visibility-tl-approvals-${key}`}
-          defaultColumnVisibility={HIDDEN_BY_DEFAULT[key]}
-          data={queries[key].data || []}
-          isLoading={queries[key].isLoading}
-          error={queries[key].error}
-          onRefetch={queries[key].refetch}
-          columns={columns[key]}
-          rowSelection={rowSelection[key]}
-          onRowSelectionChange={onRowSelectionChange(key)}
-          selectedCount={getSelectedIds(key, queries[key].data || []).length}
-          onClearSelection={() => onClearSelection(key)}
-          onBulkApprove={() => onBulkApprove(key, queries[key].data || [])}
-          onBulkReject={() => onBulkReject(key, queries[key].data || [])}
-          isBulkPending={isBulkPending}
-        />
-      </TabsContent>
-    ))}
-  </Tabs>
-);
+      {TABS.map(({ key, label }) => (
+        <TabsContent value={key} key={key}>
+          <TLApprovalTabPanel
+            header={header}
+            type={key}
+            label={label.toLowerCase()}
+            storageKey={`table-visibility-tl-approvals-${key}`}
+            defaultColumnVisibility={HIDDEN_BY_DEFAULT[key]}
+            data={rowsOf(key)}
+            isLoading={queries[key].isLoading}
+            error={queries[key].error}
+            onRefetch={queries[key].refetch}
+            columns={columns[key]}
+            rowSelection={rowSelection[key]}
+            onRowSelectionChange={onRowSelectionChange(key)}
+            selectedCount={getSelectedIds(key, rowsOf(key)).length}
+            onClearSelection={() => onClearSelection(key)}
+            onBulkApprove={() => onBulkApprove(key, rowsOf(key))}
+            onBulkReject={() => onBulkReject(key, rowsOf(key))}
+            isBulkPending={isBulkPending}
+          />
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
+};

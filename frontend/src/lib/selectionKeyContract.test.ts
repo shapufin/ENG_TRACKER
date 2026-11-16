@@ -17,7 +17,7 @@ const ALLOWED: Record<string, string> = {
   "lib/standbyDayGroups.ts":
     "computeDayGroups walks rows with its own loop index; selectedRecordIds reads keys as record ids.",
   "pages/team/hooks/useTLApprovalDashboard.ts":
-    "Pending Approvals tables (TLApprovalTabPanel) set no getRowId, so keys are positions in the tab's data.",
+    "Pending Approvals tables (TLApprovalTabPanel) set no getRowId, so keys are positions in the displayed rows (tabData, bundled standby days for the standby tab).",
 };
 
 const SRC = join(__dirname, "..");

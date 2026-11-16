@@ -37,6 +37,7 @@ export const TLApprovalDashboard: React.FC = () => {
     bulkApproveMutation,
     bulkRejectMutation,
     getSelectedIds,
+    tabData,
     clearSelection,
     handleRowSelectionChange,
     handleApprove,
@@ -171,6 +172,7 @@ export const TLApprovalDashboard: React.FC = () => {
         activeTab={activeTab}
         onActiveTabChange={setActiveTab}
         queries={queries}
+        tableData={tabData}
         columns={{ overtime: overtimeColumns, standby: standbyColumns, leave: leaveColumns }}
         rowSelection={rowSelection}
         onRowSelectionChange={handleRowSelectionChange}

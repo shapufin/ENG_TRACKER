@@ -10,6 +10,7 @@ import { userService } from "@/services/userService";
 import { toast } from "sonner";
 import { getNextPendingMonth, getMonthRange, toMonthKey } from "./pendingMonthNavigation";
 import { toLocalISODate } from "@/lib/date-format-utils";
+import { collapseSameDayStandbyLogs, type DayGroupedStandbyLog } from "@/lib/standbyDayGroups";
 import type { OvertimeLog, StandbyLog, LeaveRequest } from "@/types";
 import type { PendingStatType } from "@/components/team/TLApprovalStats";
 
@@ -66,6 +67,18 @@ export const useTLApprovalDashboard = (canManageTeam: boolean) => {
   const queries = useTeamPendingQueries({ dateFrom, dateTo, canManageTeam });
   const pendingMonths = usePendingMonths({ canManageTeam });
 
+  // The standby tab shows one row per person-day (item 63); every action below goes
+  // through these rows and expands a bundled day to the records it stands for.
+  const standbyRows = useMemo(
+    () => collapseSameDayStandbyLogs(queries.standby.data ?? []),
+    [queries.standby.data]
+  );
+  const tabData = useMemo(() => ({ standby: standbyRows }), [standbyRows]);
+  const pendingIdsOf = (row: DayGroupedStandbyLog) =>
+    row.segments
+      ? row.segments.filter((seg) => seg.status === "pending").map((seg) => seg.id)
+      : [row.id];
+
   const refetchMap = {
     overtime: queries.overtime.refetch,
     standby: queries.standby.refetch,
@@ -88,7 +101,11 @@ export const useTLApprovalDashboard = (canManageTeam: boolean) => {
     const selection = rowSelection[type];
     return Object.keys(selection)
       .filter((key) => selection[key])
-      .map((idx) => data[parseInt(idx)]?.id)
+      .flatMap((idx) => {
+        const row = data[parseInt(idx)];
+        if (!row) return [];
+        return type === "standby" ? pendingIdsOf(row as DayGroupedStandbyLog) : [row.id];
+      })
       .filter(Boolean);
   };
 
@@ -109,6 +126,12 @@ export const useTLApprovalDashboard = (canManageTeam: boolean) => {
     };
 
   const handleApprove = (type: Tab, id: number) => {
+    const day = type === "standby" ? standbyRows.find((row) => row.id === id) : undefined;
+    if (day?.segments && day.segments.length > 1) {
+      const ids = pendingIdsOf(day);
+      if (ids.length > 0) bulkApproveMutation.mutate({ type, ids });
+      return;
+    }
     approveMutation.mutate({ type, id });
   };
 
@@ -142,12 +165,18 @@ export const useTLApprovalDashboard = (canManageTeam: boolean) => {
         type === "overtime"
           ? queries.overtime.data
           : type === "standby"
-            ? queries.standby.data
+            ? standbyRows
             : queries.leave.data;
       const ids = getSelectedIds(type, data || []);
       if (ids.length > 0) bulkRejectMutation.mutate({ type, ids, reason: rejectReason });
     } else {
-      rejectMutation.mutate({ type, id, reason: rejectReason });
+      const day = type === "standby" ? standbyRows.find((row) => row.id === id) : undefined;
+      if (day?.segments && day.segments.length > 1) {
+        const ids = pendingIdsOf(day);
+        if (ids.length > 0) bulkRejectMutation.mutate({ type, ids, reason: rejectReason });
+      } else {
+        rejectMutation.mutate({ type, id, reason: rejectReason });
+      }
     }
     setRejectReason("");
     setRejectOpen(false);
@@ -206,6 +235,7 @@ export const useTLApprovalDashboard = (canManageTeam: boolean) => {
     rejectReason,
     setRejectReason,
     queries,
+    tabData,
     pendingMonths,
     periodStatus: periodStatus.data,
     periodStatusLoading: periodStatus.isLoading,
