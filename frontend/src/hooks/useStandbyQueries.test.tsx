@@ -5,6 +5,7 @@ import { useStandbyQueries } from "./useStandbyQueries";
 import { standbyService } from "@/services/standbyService";
 import { userService } from "@/services/userService";
 import { createWrapper } from "@/test/hookTestUtils";
+import { toast } from "sonner";
 
 vi.mock("@/services/standbyService", () => ({
   standbyService: {
@@ -124,5 +125,31 @@ describe("useStandbyQueries", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     result.current.createWeeklyMutation.mutate([{ date: "2024-01-01" }] as any);
     await waitFor(() => expect(standbyService.createLog).toHaveBeenCalled());
+  });
+
+  it("shows the server's reason for each failed day of a weekly create", async () => {
+    vi.mocked(standbyService.getLogs).mockResolvedValue({ results: [] } as any);
+    vi.mocked(standbyService.createLog)
+      .mockResolvedValueOnce({} as any)
+      .mockRejectedValueOnce({
+        response: {
+          data: { non_field_errors: ["Time range overlaps an existing standby entry."] },
+        },
+      });
+
+    const queryClient = new QueryClient();
+    const { result } = renderHook(() => useStandbyQueries({ userId: 1 }), {
+      wrapper: createWrapper(queryClient),
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    result.current.createWeeklyMutation.mutate([
+      { date: "2026-11-16" },
+      { date: "2026-11-21" },
+    ] as any);
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    const message = vi.mocked(toast.error).mock.calls.at(-1)?.[0] as string;
+    expect(message).toContain("2026-11-21");
+    expect(message).toContain("Time range overlaps an existing standby entry.");
+    expect(message).not.toContain("2026-11-16");
   });
 });

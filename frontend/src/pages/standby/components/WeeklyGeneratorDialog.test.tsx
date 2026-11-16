@@ -102,6 +102,36 @@ describe("WeeklyGeneratorDialog", () => {
     expect(thead?.className).not.toContain("backdrop-blur-sm");
   });
 
+  it("groups the segments of one date under a day total and routes edits by row index", () => {
+    const onUpdatePreviewRow = vi.fn();
+    const row = (date: string, start: string, end: string, hours: number): PreviewEntry => ({
+      date,
+      start,
+      end,
+      hours,
+      isWeekend: false,
+      isEdited: false,
+    });
+    const weeklyPreview = [
+      row("2026-11-16", "18:00", "00:00", 6),
+      row("2026-11-17", "00:00", "09:00", 9),
+      row("2026-11-17", "18:00", "00:00", 6),
+      row("2026-11-18", "00:00", "00:00", 24),
+    ];
+    render(<WeeklyGeneratorDialog {...makeProps({ weeklyPreview, onUpdatePreviewRow })} />);
+
+    expect(screen.getByText(/4 entries over 3 days/i)).toBeInTheDocument();
+    expect(screen.getByText(/45h total/i)).toBeInTheDocument();
+    // Tuesday has two segments: one header with the day total (15h), not two date cells.
+    expect(screen.getAllByText("17/11/2026")).toHaveLength(1);
+    expect(screen.getByText("Day total 15h")).toBeInTheDocument();
+    // The second Tuesday segment is the third flat row (index 2).
+    const hourInputs = screen.getAllByRole("spinbutton");
+    expect(hourInputs).toHaveLength(4);
+    fireEvent.change(hourInputs[2], { target: { value: "5" } });
+    expect(onUpdatePreviewRow).toHaveBeenCalledWith(2, "hours", 5);
+  });
+
   it("opens as a bottom sheet on phones", () => {
     render(<WeeklyGeneratorDialog {...makeProps()} />);
     expect(screen.getByRole("dialog").className).toContain("max-md:bottom-0");

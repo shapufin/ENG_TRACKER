@@ -32,36 +32,64 @@ const createDefaultWeeklyForm = (): WeeklyFormState => ({
   client_ids: [],
 });
 
+const MIDNIGHT = "00:00";
+
+const toMinutes = (time: string) => {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + (m || 0);
+};
+
+const makeRow = (dateStr: string, start: string, end: string): WeeklyPreviewEntry => {
+  const dayOfWeek = parseLocalDate(dateStr).getDay();
+  return {
+    date: dateStr,
+    start,
+    end,
+    hours: calculateHours(start, end) ?? 0,
+    isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+    isEdited: false,
+  };
+};
+
+/**
+ * One row per standby segment, every row inside its own calendar day (item 63).
+ * A night is cut at midnight: the evening part (start-00:00) on its own date and
+ * the morning part (00:00-end) on the next one. A 24h weekend day is 00:00-00:00.
+ * The week spans 8 dates: the last night closes on the next day with 00:00-end.
+ */
 const buildWeeklyPreview = (form: WeeklyFormState): WeeklyPreviewEntry[] => {
   if (!form.start_date) return [];
-  const start = parseLocalDate(form.start_date);
+  const first = parseLocalDate(form.start_date);
+  const crossesMidnight =
+    !!form.start_time && !!form.end_time && toMinutes(form.end_time) <= toMinutes(form.start_time);
+  const hasMorning = crossesMidnight && form.end_time !== MIDNIGHT;
+  const dateAt = (offset: number) => {
+    const date = new Date(first);
+    date.setDate(first.getDate() + offset);
+    return date;
+  };
+  const isFullDay = (date: Date) =>
+    form.weekend_24h && (date.getDay() === 0 || date.getDay() === 6);
+
   const preview: WeeklyPreviewEntry[] = [];
   for (let i = 0; i < 7; i++) {
-    const date = new Date(start);
-    date.setDate(start.getDate() + i);
+    const date = dateAt(i);
     const dateStr = toLocalISODate(date);
-    const dayOfWeek = date.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    if (isWeekend && form.weekend_24h) {
-      preview.push({
-        date: dateStr,
-        start: "00:00",
-        end: "23:59",
-        hours: 24,
-        isWeekend,
-        isEdited: false,
-      });
+    if (isFullDay(date)) {
+      preview.push(makeRow(dateStr, MIDNIGHT, MIDNIGHT));
+    } else if (!crossesMidnight) {
+      preview.push(makeRow(dateStr, form.start_time, form.end_time));
     } else {
-      const hours = calculateHours(form.start_time, form.end_time) ?? 0;
-      preview.push({
-        date: dateStr,
-        start: form.start_time,
-        end: form.end_time,
-        hours,
-        isWeekend,
-        isEdited: false,
-      });
+      if (hasMorning && i > 0) preview.push(makeRow(dateStr, MIDNIGHT, form.end_time));
+      preview.push(makeRow(dateStr, form.start_time, MIDNIGHT));
     }
+  }
+  // A 24h Saturday already ends at midnight into a 24h Sunday: only a normal
+  // last day (or a 24h Sunday) leaves a night to close.
+  const last = dateAt(6);
+  const lastEndsInNight = !(isFullDay(last) && last.getDay() === 6);
+  if (hasMorning && lastEndsInNight) {
+    preview.push(makeRow(toLocalISODate(dateAt(7)), MIDNIGHT, form.end_time));
   }
   return preview;
 };
@@ -200,29 +228,11 @@ export const useStandbyForm = () => {
   };
 
   const resetPreviewRow = (index: number) => {
+    // The builder is the one source of every row, so a reset can never drift from it.
+    const rebuilt = buildWeeklyPreview(weeklyForm)[index];
+    if (!rebuilt) return;
     const updated = [...weeklyPreview];
-    const dayOfWeek = new Date(updated[index].date).getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    if (isWeekend && weeklyForm.weekend_24h)
-      updated[index] = {
-        date: updated[index].date,
-        start: "00:00",
-        end: "23:59",
-        hours: 24,
-        isWeekend,
-        isEdited: false,
-      };
-    else {
-      const hours = calculateHours(weeklyForm.start_time, weeklyForm.end_time);
-      updated[index] = {
-        date: updated[index].date,
-        start: weeklyForm.start_time,
-        end: weeklyForm.end_time,
-        hours: hours ?? 0,
-        isWeekend,
-        isEdited: false,
-      };
-    }
+    updated[index] = rebuilt;
     setWeeklyPreview(updated);
   };
 

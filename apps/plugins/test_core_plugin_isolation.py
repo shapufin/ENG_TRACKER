@@ -37,6 +37,7 @@ ALLOWED_IMPORTS = {
     "apps/reports/services/security_audit.py": {"audit_log"},
     "apps/reports/viewsets.py": {"control_room"},
     "apps/standby/admin.py": {"payroll"},
+    "apps/standby/management/commands/repair_standby_overlaps.py": {"audit_log", "payroll"},
     "apps/standby/viewsets.py": {"audit_log", "notifications", "payroll"},
     # Demo seeder: loaded only when invoked by name, so it cannot break startup.
     "apps/users/management/commands/seed_skills_demo.py": {"skills"},

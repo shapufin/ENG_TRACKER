@@ -145,6 +145,8 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
                     f'Time range overlaps an existing standby entry on {overlap.date} '
                     f'({overlap.start_time}–{overlap.end_time}).'
                 )
+        if date and not (start_time and end_time):
+            self._ensure_untimed_day_cap(target_user.id, date, serializer.validated_data['hours'])
         instance = serializer.save(user=target_user)
         # Attach M2M clients if provided — read from serializer.validated_data
         # which has been validated by validate_client_ids (existence check).
@@ -160,6 +162,25 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
                 obj=instance,
             )
         self.invalidate_related_cache()
+
+    @staticmethod
+    def _ensure_untimed_day_cap(user_id, date, hours, exclude_pk=None):
+        """Entries without times skip the overlap rule, so cap their hours per user and day at 24."""
+        from django.db.models import Sum
+        from rest_framework.exceptions import ValidationError
+
+        others = (
+            StandbyLog.objects.filter(user_id=user_id, date=date, start_time__isnull=True)
+            .exclude(status='rejected')
+            .exclude(pk=exclude_pk)
+            .aggregate(total=Sum('hours'))['total']
+            or 0
+        )
+        if others + hours > 24:
+            raise ValidationError(
+                {'hours': f'Standby entries without times cannot exceed 24 hours on {date} '
+                          f'({others} already recorded).'}
+            )
 
     @staticmethod
     def _ensure_pattern_belongs_to(pattern, user_id):
@@ -213,6 +234,10 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
                     f'Time range overlaps an existing standby entry on {overlap.date} '
                     f'({overlap.start_time}–{overlap.end_time}).'
                 )
+        if date and not (start_time and end_time):
+            self._ensure_untimed_day_cap(
+                obj.user_id, date, serializer.validated_data['hours'], exclude_pk=obj.pk,
+            )
         reassign = {'requested_processing_period': None} if date != obj.date else {}
         if obj.status == 'approved':
             # A resubmission restarts the SLA clock; the old deadline is not the TL's fault.
@@ -476,8 +501,10 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
         except PermissionDenied as exc:
             return Response({'error': str(exc)}, status=status.HTTP_403_FORBIDDEN)
 
-        date_from = request.query_params.get('date_from')
-        date_to = request.query_params.get('date_to')
+        from core.utils.admin_logs import optional_iso_date
+
+        date_from = optional_iso_date(request.query_params, 'date_from')
+        date_to = optional_iso_date(request.query_params, 'date_to')
 
         if date_from:
             queryset = queryset.filter(date__gte=date_from)
@@ -537,8 +564,10 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
 
         queryset = self._filter_owned_by_leader(queryset, user)
 
+        from core.utils.admin_logs import optional_iso_date
+
         status_filter = request.query_params.get('status')
-        date_filter = request.query_params.get('date')
+        date_filter = optional_iso_date(request.query_params, 'date')
 
         if status_filter:
             queryset = queryset.filter(status=status_filter)
@@ -574,13 +603,14 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
         queryset = StandbyLog.objects.all().select_related('user', 'approved_by', 'pattern').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level')
 
         # Apply filters from query params
+        from core.utils.admin_logs import filter_admin_logs, optional_iso_date, status_counts
+
         status_filter = request.query_params.get('status')
-        date_filter = request.query_params.get('date')
+        date_filter = optional_iso_date(request.query_params, 'date')
 
         if date_filter:
             queryset = queryset.filter(date=date_filter)
 
-        from core.utils.admin_logs import filter_admin_logs, status_counts
 
         queryset = filter_admin_logs(queryset, request.query_params, ['user__username', 'user__first_name', 'user__last_name', 'description', 'evidence'])
         counts = status_counts(queryset)

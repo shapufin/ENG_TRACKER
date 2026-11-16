@@ -87,11 +87,37 @@ export const WeeklyGeneratorDialog: React.FC<WeeklyGeneratorDialogProps> = ({
     onPatchWeeklyForm({ client_ids: next });
   };
 
+  // Several rows can share a date (a night is split at midnight): group them for
+  // display, keeping each row's flat index for the edit and reset handlers.
+  const dayGroups = weeklyPreview.reduce<
+    {
+      date: string;
+      isWeekend: boolean;
+      total: number;
+      rows: { day: WeeklyPreviewEntry; idx: number }[];
+    }[]
+  >((groups, day, idx) => {
+    const group = groups.at(-1);
+    if (group && group.date === day.date) {
+      group.rows.push({ day, idx });
+      group.total += day.hours;
+    } else {
+      groups.push({
+        date: day.date,
+        isWeekend: day.isWeekend,
+        total: day.hours,
+        rows: [{ day, idx }],
+      });
+    }
+    return groups;
+  }, []);
+  const totalHours = weeklyPreview.reduce((sum, day) => sum + day.hours, 0);
+
   return (
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Generate Weekly Standby (7 days)"
+      title="Generate Weekly Standby"
       onSubmit={onSubmit}
       isSubmitting={isSubmitting}
       size="lg"
@@ -184,7 +210,8 @@ export const WeeklyGeneratorDialog: React.FC<WeeklyGeneratorDialogProps> = ({
         {weeklyPreview.length > 0 && (
           <div className="overflow-x-auto rounded-lg border">
             <div className="bg-muted px-3 py-2 text-sm font-medium">
-              Preview ({weeklyPreview.length} days) - Click cells to edit
+              Preview ({weeklyPreview.length} entries over {dayGroups.length} days, {totalHours}h
+              total) - Click cells to edit. Each night is split at midnight.
             </div>
             <table className="w-full table-fixed text-sm">
               <colgroup>
@@ -204,55 +231,89 @@ export const WeeklyGeneratorDialog: React.FC<WeeklyGeneratorDialogProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {weeklyPreview.map((day, idx) => (
-                  <tr key={idx} className={`border-t ${day.isWeekend ? "bg-warning/10" : ""}`}>
-                    <td className="px-3 py-1 whitespace-nowrap">
-                      {formatDateDDMMYYYY(day.date)}
-                      {day.isWeekend && (
-                        <span className="text-tone-warning-text ml-1 text-xs font-medium">
-                          (weekend)
-                        </span>
+                {dayGroups.flatMap((group) => {
+                  const split = group.rows.length > 1;
+                  const weekendTag = group.isWeekend && (
+                    <span className="text-tone-warning-text ml-1 text-xs font-medium">
+                      (weekend)
+                    </span>
+                  );
+                  const header = split && (
+                    <tr
+                      key={`${group.date}-head`}
+                      className={cn("border-t", group.isWeekend && "bg-warning/10")}
+                    >
+                      <td className="px-3 py-1 font-medium whitespace-nowrap" colSpan={3}>
+                        {formatDateDDMMYYYY(group.date)}
+                        {weekendTag}
+                      </td>
+                      <td
+                        className="text-muted-foreground px-3 py-1 text-xs whitespace-nowrap"
+                        colSpan={2}
+                      >
+                        Day total {group.total}h
+                      </td>
+                    </tr>
+                  );
+                  const rows = group.rows.map(({ day, idx }) => (
+                    <tr
+                      key={idx}
+                      className={cn(
+                        !split && "border-t",
+                        !split && day.isWeekend && "bg-warning/10"
                       )}
-                    </td>
-                    <td className="px-3 py-1">
-                      <TimeInput
-                        showPeriod={false}
-                        value={day.start}
-                        onChange={(v) => onUpdatePreviewRow(idx, "start", v)}
-                        className="h-7 w-full min-w-0 px-1 py-0 text-xs"
-                      />
-                    </td>
-                    <td className="px-3 py-1">
-                      <TimeInput
-                        showPeriod={false}
-                        value={day.end}
-                        onChange={(v) => onUpdatePreviewRow(idx, "end", v)}
-                        className="h-7 w-full min-w-0 px-1 py-0 text-xs"
-                      />
-                    </td>
-                    <td className="px-3 py-1 font-medium">
-                      <Input
-                        type="number"
-                        value={day.hours}
-                        onChange={(e) => onUpdatePreviewRow(idx, "hours", Number(e.target.value))}
-                        className="h-7 w-full min-w-0 px-1 py-0 text-xs"
-                      />
-                    </td>
-                    <td className="px-3 py-1">
-                      {day.isEdited && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 w-6 p-0"
-                          onClick={() => onResetPreviewRow(idx)}
-                          title="Reset to calculated value"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                    >
+                      <td className="px-3 py-1 whitespace-nowrap">
+                        {split ? (
+                          <span className="sr-only">Segment of {formatDateDDMMYYYY(day.date)}</span>
+                        ) : (
+                          <>
+                            {formatDateDDMMYYYY(day.date)}
+                            {weekendTag}
+                          </>
+                        )}
+                      </td>
+                      <td className="px-3 py-1">
+                        <TimeInput
+                          showPeriod={false}
+                          value={day.start}
+                          onChange={(v) => onUpdatePreviewRow(idx, "start", v)}
+                          className="h-7 w-full min-w-0 px-1 py-0 text-xs"
+                        />
+                      </td>
+                      <td className="px-3 py-1">
+                        <TimeInput
+                          showPeriod={false}
+                          value={day.end}
+                          onChange={(v) => onUpdatePreviewRow(idx, "end", v)}
+                          className="h-7 w-full min-w-0 px-1 py-0 text-xs"
+                        />
+                      </td>
+                      <td className="px-3 py-1 font-medium">
+                        <Input
+                          type="number"
+                          value={day.hours}
+                          onChange={(e) => onUpdatePreviewRow(idx, "hours", Number(e.target.value))}
+                          className="h-7 w-full min-w-0 px-1 py-0 text-xs"
+                        />
+                      </td>
+                      <td className="px-3 py-1">
+                        {day.isEdited && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={() => onResetPreviewRow(idx)}
+                            title="Reset to calculated value"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ));
+                  return [header, ...rows];
+                })}
               </tbody>
             </table>
           </div>

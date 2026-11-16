@@ -25,6 +25,12 @@ def parse_iso_date(value, name):
         raise ValidationError({name: 'Enter a valid date (YYYY-MM-DD).'})
 
 
+def optional_iso_date(params, name):
+    """The ISO date in ``params[name]``, ``None`` when absent or blank, a 400 when malformed."""
+    value = params.get(name)
+    return parse_iso_date(value, name) if value else None
+
+
 def parse_int_param(value, name):
     """An integer query filter value, or a 400 instead of an ORM ValueError (500)."""
     try:

@@ -173,6 +173,11 @@ class StandbyLogCreateSerializer(serializers.ModelSerializer):
         hours = data.get('hours')
         start_time = data.get('start_time')
         end_time = data.get('end_time')
+        if bool(start_time) != bool(end_time):
+            raise serializers.ValidationError({
+                'start_time': 'Both start_time and end_time must be provided together.',
+                'end_time': 'Both start_time and end_time must be provided together.',
+            })
         if hours is None:
             if start_time and end_time:
                 hours = _calculate_hours_from_times(start_time, end_time)

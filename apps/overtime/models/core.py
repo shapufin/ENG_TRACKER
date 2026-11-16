@@ -236,9 +236,9 @@ class OvertimeLog(BaseModel):
             self.hours = calculated_hours
         
         if self.hours <= 0:
-            raise ValueError("Hours must be greater than 0")
+            raise ValidationError({'hours': "Hours must be greater than 0"})
         if self.hours > 24:
-            raise ValueError("Hours cannot exceed 24 in a single day")
+            raise ValidationError({'hours': "Hours cannot exceed 24 in a single day"})
         from django.db import transaction
         from apps.overtime.paid_blocks import recalculate_day
 

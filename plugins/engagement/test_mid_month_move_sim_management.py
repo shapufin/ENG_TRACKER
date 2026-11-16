@@ -26,6 +26,7 @@ from apps.overtime.models import Client, OvertimeLog
 from apps.permissions.services.role_service import assign_role
 from apps.standby.models import StandbyLog
 from apps.users.models import Team
+from core.utils.working_days import next_working_day
 from apps.users.services.leader_ownership import leader_user_ids
 from apps.users.services.team_membership import change_user_teams
 from plugins.engagement.models import TLApprovalMetric
@@ -127,9 +128,11 @@ class MoveWorld(TestCase):
         self.ot_pending = self._ot(self.emp)
         self.ot_decided = self._ot(self.emp, 'approved', self.lm1)
         self.sb_pending = StandbyLog.objects.create(user=self.emp, date=self.today, hours=8, status='pending').pk
+        # A vacation needs a business day: today + 40 is a weekend on Mon/Tue.
+        leave_day = next_working_day(self.today + timedelta(days=40))
         self.leave_pending = LeaveRequest.objects.create(
-            user=self.emp, request_type='vacation', start_date=self.today + timedelta(days=40),
-            end_date=self.today + timedelta(days=40), status='pending',
+            user=self.emp, request_type='vacation', start_date=leave_day,
+            end_date=leave_day, status='pending',
         ).pk
         doc = KPIEvidence(user=self.emp, month=self.today.replace(day=1), evidence_type='document', description='d')
         doc.file.save('mid.txt', ContentFile(b'x'), save=False)

@@ -3,6 +3,7 @@ import { standbyService } from "@/services/standbyService";
 import { userService } from "@/services/userService";
 import { toast } from "sonner";
 import { handleApiError } from "@/lib/error-handler";
+import { extractApiErrorMessage } from "@/lib/apiFormError";
 import { buildCurrentMonthDateParams } from "@/lib/query-date-utils";
 import type { CustomDateRange } from "@/pages/hours_logs/components/useHoursLogPageState";
 import { useActiveClients } from "./useActiveClients";
@@ -116,7 +117,10 @@ export const useStandbyQueries = (options: UseStandbyQueriesOptions) => {
           await standbyService.createLog(entry);
           results.push({ success: true, entry });
         } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : "Unknown error";
+          const msg = extractApiErrorMessage(
+            err,
+            err instanceof Error ? err.message : "Unknown error"
+          );
           results.push({ success: false, entry, error: msg });
         }
       }
@@ -131,7 +135,9 @@ export const useStandbyQueries = (options: UseStandbyQueriesOptions) => {
       } else {
         const failedEntries = results.filter((r) => !r.success);
         toast.error(
-          `${failCount} entries failed: ${failedEntries.map((e) => (e.entry as { date?: string }).date).join(", ")}`
+          `${failCount} entries failed: ${failedEntries
+            .map((e) => `${(e.entry as { date?: string }).date} (${e.error})`)
+            .join("; ")}`
         );
       }
     },

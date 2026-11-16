@@ -13,6 +13,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from django.core.exceptions import ValidationError as DjangoValidationError
+
 
 @dataclass
 class ImportField:
@@ -68,6 +70,8 @@ def row_error_from_exception(row_index: int, exc: Exception) -> ImportRowResult:
     """
     if isinstance(exc, ValueError):
         return ImportRowResult(row_index=row_index, status="error", errors=[str(exc)])
+    if isinstance(exc, DjangoValidationError):
+        return ImportRowResult(row_index=row_index, status="error", errors=list(exc.messages))
     logger.error("Unexpected error importing row %s", row_index, exc_info=exc)
     return ImportRowResult(
         row_index=row_index, status="error", errors=[f"Unexpected error: {exc}"]

@@ -614,7 +614,9 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
         # Apply filters from query params (using DjangoFilterBackend logic manually for actions)
         status_filter = request.query_params.get('status')
         client_filter = request.query_params.get('client')
-        date_filter = request.query_params.get('date')
+        from core.utils.admin_logs import optional_iso_date
+
+        date_filter = optional_iso_date(request.query_params, 'date')
 
         if status_filter:
             queryset = queryset.filter(status=status_filter)
@@ -657,8 +659,10 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
             return Response({'error': str(exc)}, status=status.HTTP_403_FORBIDDEN)
 
         # Apply additional filters from query params
-        date_from = request.query_params.get('date_from')
-        date_to = request.query_params.get('date_to')
+        from core.utils.admin_logs import optional_iso_date
+
+        date_from = optional_iso_date(request.query_params, 'date_from')
+        date_to = optional_iso_date(request.query_params, 'date_to')
 
         if date_from:
             queryset = queryset.filter(date__gte=date_from)
@@ -723,7 +727,9 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
         # Apply filters from query params (same as team_logs)
         status_filter = request.query_params.get('status')
         client_filter = request.query_params.get('client')
-        date_filter = request.query_params.get('date')
+        from core.utils.admin_logs import optional_iso_date
+
+        date_filter = optional_iso_date(request.query_params, 'date')
 
         if client_filter:
             queryset = queryset.filter(client_id=client_filter)

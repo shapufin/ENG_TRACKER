@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -207,7 +208,7 @@ class StandbyLog(BaseModel):
             self.hours = calculated_hours
         
         if self.hours <= 0:
-            raise ValueError("Hours must be greater than 0")
+            raise ValidationError({'hours': "Hours must be greater than 0"})
         if self.hours > 24:
-            raise ValueError("Hours cannot exceed 24 in a single day")
+            raise ValidationError({'hours': "Hours cannot exceed 24 in a single day"})
         super().save(*args, **kwargs)
