@@ -1,18 +1,8 @@
 import { describe, expect, it } from "vitest";
-import {
-  collapseSameDayStandbyLogs,
-  computeDayGroups,
-  formatSegmentRange,
-} from "./standbyDayGroups";
+import { collapseSameDayStandbyLogs, computeDayGroups, formatSegmentRange } from "./standbyDayGroups";
 import type { StandbyLog } from "@/types";
 
-const log = (
-  id: number,
-  user: number,
-  date: string,
-  hours: number,
-  status: StandbyLog["status"] = "approved"
-): StandbyLog =>
+const log = (id: number, user: number, date: string, hours: number, status: StandbyLog["status"] = "approved"): StandbyLog =>
   ({
     id,
     user,
@@ -79,7 +69,10 @@ describe("collapseSameDayStandbyLogs", () => {
   });
 
   it("resolves status: pending if any is pending", () => {
-    const list = [log(1, 1, "2026-11-24", 9, "approved"), log(2, 1, "2026-11-24", 6, "pending")];
+    const list = [
+      log(1, 1, "2026-11-24", 9, "approved"),
+      log(2, 1, "2026-11-24", 6, "pending"),
+    ];
     const collapsed = collapseSameDayStandbyLogs(list);
     expect(collapsed[0].status).toBe("pending");
   });
