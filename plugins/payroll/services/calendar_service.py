@@ -9,6 +9,8 @@ import logging
 from datetime import date, timedelta
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
+
 from ..models import PayrollWorkCalendar, PayrollWorkday
 
 logger = logging.getLogger(__name__)
@@ -93,9 +95,8 @@ def generate_workdays_for_year(calendar: PayrollWorkCalendar) -> int:
 def _get_holidays_for_year(year: int) -> dict[date, str]:
     """Return holidays for a given year.
 
-    First checks the global ``PublicHoliday`` catalog. If no holidays exist yet
-    for that year, falls back to Albanian standard reference holidays and auto-seeds
-    them into ``PublicHoliday`` so the HR catalog and Vacation Leave are aligned.
+    First checks the global ``PublicHoliday`` catalog. For 2026 only, with none defined, the verified
+    Albanian reference list is seeded into it. Any other year with no holidays raises ``ValidationError``.
     """
     from apps.dashboard.models.calendar import PublicHoliday
 
@@ -107,18 +108,15 @@ def _get_holidays_for_year(year: int) -> dict[date, str]:
     if existing:
         return existing
 
-    fixed = dict(ALBANIA_2026_HOLIDAYS) if year == 2026 else {
-        date(year, 1, 1): "New Year's Day",
-        date(year, 1, 2): "New Year's Holiday",
-        date(year, 3, 14): 'Summer Day',
-        date(year, 3, 22): 'Nevruz Day',
-        date(year, 5, 1): 'Labour Day',
-        date(year, 10, 19): 'Mother Teresa Day',
-        date(year, 11, 28): 'Independence Day',
-        date(year, 11, 29): 'Liberation Day',
-        date(year, 12, 8): 'National Youth Day',
-        date(year, 12, 25): 'Christmas Day',
-    }
+    if year != 2026:
+        # Only 2026 has a verified reference list. Any other year used to be filled with ten fixed dates
+        # (no Easter, no Eid) and written into the HR catalog as if HR had entered them: leave and payroll
+        # would then price an incomplete holiday set. HR enters the real holidays first.
+        raise ValidationError(
+            f'No public holidays are defined for {year}. Enter the {year} holidays in HR > Holidays first, '
+            f'then generate the calendar.'
+        )
+    fixed = dict(ALBANIA_2026_HOLIDAYS)
 
     for h_date, h_name in fixed.items():
         PublicHoliday.objects.get_or_create(

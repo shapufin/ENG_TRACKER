@@ -408,7 +408,7 @@ Do this in November or December, before people book leave for the new year:
 
 1. `python manage.py check_year_start --year <next year>`: read-only; exits non-zero and names what is missing (global public holidays, an active payroll work calendar that marks every holiday, a rule set effective on 1 January).
 2. Add the holidays in HR > Holidays. A holiday added, moved or deleted later recounts open future vacation and its balances automatically; `python manage.py recount_leave_days --from <date> --to <date>` (dry run, add `--apply`) repairs a past change.
-3. Create or seed the work calendar for the year; `python manage.py sync_payroll_holidays` mirrors HR holidays into it. Payroll refuses a draft whose month has a holiday the calendar does not mark.
+3. Create the work calendar for the year and use *Generate* only after step 2: generation is refused (400) while the year has no holidays, it never invents them; `python manage.py sync_payroll_holidays` mirrors HR holidays into it. Payroll refuses a draft whose month has a holiday the calendar does not mark.
 4. Leave carry-over rolls over on the first leave read of the year; the year close and its retention notices run from the scheduler.
 
 ## Logs and dependency lock (audit 2026-11-16 L1, L9)

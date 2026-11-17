@@ -67,6 +67,10 @@ Backend 4,882 tests, frontend 4,393 with coverage, a 5-seed balance reconciliati
 
 See workflow-invariants item 87(v). Fixed: leave requests crossing a report window edge were missing from the leave Excel, the report summary/detail and the Excel overview. Verified equal to the source rows: OT/standby Excel, CSVs, global stats, admin trends/overview, payroll Excel summary/detail/PDF. Not covered by a cross-check: scorecard, engagement, skills and ticket-KPI exports (plugin-specific, covered by their own tests), analytics export jobs.
 
+## Follow-up (2026-11-17)
+
+Generating a payroll work calendar for a year other than 2026 no longer writes an approximate holiday list into the HR catalog; it is refused until HR has entered that year's holidays (workflow-invariants 87(u)).
+
 ## Still open (not started)
 
 M6 (PostgreSQL-only concurrency test), R3 to R7, section 5 lows (L1 to L9), handover section 7. Docs synced: `docs/workflow-invariants.md` item 87, `CLAUDE.md` hot invariant, runbook 5.4.

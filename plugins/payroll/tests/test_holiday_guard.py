@@ -66,3 +66,43 @@ class HolidayCalendarGuardTests(TestCase):
         )
         PublicHoliday.objects.bulk_create([PublicHoliday(name='New Year', date=date(2027, 1, 1))])
         self.assertEqual(len(generate_draft_run(self._run(2027, 1), [self.employee])), 1)
+
+
+class CalendarGenerationDoesNotInventHolidaysTests(TestCase):
+    """A new year's calendar must come from the holidays HR entered, not from a built-in approximation."""
+
+    @classmethod
+    def setUpTestData(cls):
+        PayrollConfiguration.objects.update_or_create(pk=1, defaults={})
+        cls.admin = User.objects.create_superuser(username='cg_admin', email='a@t.com', password='x')
+
+    def test_generating_a_year_with_no_holidays_is_refused_and_seeds_nothing(self):
+        from plugins.payroll.services.calendar_service import generate_workdays_for_year
+        calendar = PayrollWorkCalendar.objects.create(country='AL', year=2028, is_active=True)
+        with self.assertRaises(ValidationError) as ctx:
+            generate_workdays_for_year(calendar)
+        self.assertIn('2028', ctx.exception.messages[0])
+        self.assertEqual(PublicHoliday.objects.filter(date__year=2028).count(), 0)   # nothing was invented
+        self.assertEqual(calendar.workdays.count(), 0)
+
+    def test_the_generate_endpoint_answers_400_with_the_reason(self):
+        from rest_framework.test import APIClient
+        calendar = PayrollWorkCalendar.objects.create(country='AL', year=2028, is_active=True)
+        api = APIClient()
+        api.force_authenticate(user=self.admin)
+        response = api.post(f'/api/plugins/payroll/work-calendar/{calendar.pk}/generate_year/', {}, format='json')
+        self.assertEqual(response.status_code, 400, getattr(response, 'data', None))
+        self.assertIn('holidays', str(response.data).lower())
+
+    def test_generation_uses_the_holidays_hr_entered(self):
+        from plugins.payroll.services.calendar_service import generate_workdays_for_year
+        PublicHoliday.objects.bulk_create([PublicHoliday(name='Real', date=date(2028, 1, 3))])
+        calendar = PayrollWorkCalendar.objects.create(country='AL', year=2028, is_active=True)
+        generate_workdays_for_year(calendar)
+        marked = set(calendar.workdays.filter(is_holiday=True).values_list('date', flat=True))
+        self.assertEqual(marked, {date(2028, 1, 3)})
+
+    def test_2026_keeps_its_reference_list(self):
+        from plugins.payroll.services.calendar_service import seed_albania_2026
+        calendar = seed_albania_2026()
+        self.assertTrue(calendar.workdays.filter(is_holiday=True).exists())

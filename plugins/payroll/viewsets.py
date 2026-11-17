@@ -847,8 +847,12 @@ class PayrollWorkCalendarViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
         """Generate workdays for this calendar year from weekday defaults."""
         calendar = self.get_object()
         from .services.calendar_service import generate_workdays_for_year
-        with transaction.atomic():
-            count = generate_workdays_for_year(calendar)
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        try:
+            with transaction.atomic():
+                count = generate_workdays_for_year(calendar)
+        except DjangoValidationError as exc:
+            return Response({'detail': ' '.join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
         _log_audit(request.user, 'payroll_calendar_generate',
                     f'Generated workdays for {calendar.country} {calendar.year}: {count} days')
         return Response({'status': 'generated', 'workday_count': count})
