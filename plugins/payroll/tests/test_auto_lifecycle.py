@@ -15,7 +15,7 @@ from apps.users.services.approval_periods import finalize_period
 from plugins.notifications.models import Notification
 from plugins.payroll import signals
 from plugins.payroll.plugin import PayrollPlugin
-from plugins.payroll.models import PayrollConfiguration, PayrollRun, WageAssignment
+from plugins.payroll.models import PayrollConfiguration, PayrollRun, PayrollWorkCalendar, PayrollWorkday, WageAssignment
 from plugins.payroll.services.payroll_service import advance_payroll_period, payroll_lifecycle_tick
 
 User = get_user_model()
@@ -69,6 +69,12 @@ class AutoLifecycleTests(TestCase):
 
     def test_month_end_holiday_moves_the_draft_back_a_day(self):
         PublicHoliday.objects.create(name='H', date=date(2026, 10, 30), country_code='AL')
+        # The work calendar marks the holiday (the guard refuses a draft otherwise).
+        calendar = PayrollWorkCalendar.objects.create(country='AL', year=2026, is_active=True)
+        PayrollWorkday.objects.create(
+            calendar=calendar, date=date(2026, 10, 30), is_holiday=True, is_working_day=False,
+            standard_hours=Decimal('0'), holiday_name='H',
+        )
         payroll_lifecycle_tick(datetime(2026, 10, 28, 12, 0, tzinfo=TIRANE))
         self.assertFalse(PayrollRun.objects.exists())  # the 29th is the last working day now
         payroll_lifecycle_tick(BEFORE_MONTH_END)

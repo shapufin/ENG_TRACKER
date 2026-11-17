@@ -73,25 +73,24 @@ if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
     python manage.py grant_hbpr_plugin_access || echo "[entrypoint] HBPR grant skipped (non-fatal)"
 
     # Archive retention: ended HBPR assignments older than 6 months are deleted when
-    # no governance evidence references them. No scheduler exists, so the sweep also
+    # no governance evidence references them. The sweep also
     # runs lazily on the staff-only admin list read; this reconciles on every boot.
     echo "[entrypoint] Purging HBPR assignment archive..."
     python manage.py purge_hbpr_archive || echo "[entrypoint] HBPR archive purge skipped (non-fatal)"
 
     # PERF-06 retention: read notifications older than 180 days are deleted (unread are
-    # kept). No scheduler exists, so this runs on boot; for a long-lived replica also
-    # run `python manage.py prune_notifications` from a daily cron.
+    # kept). Also a daily scheduler job (notifications.housekeeping), so no host cron is needed.
     echo "[entrypoint] Pruning old read notifications..."
     python manage.py prune_notifications || echo "[entrypoint] Notification prune skipped (non-fatal)"
 
     # Audit-log retention: only when an admin explicitly set retention_days on the
     # audit_log plugin (--if-configured is a no-op otherwise, so no trail is ever
-    # deleted by default). No scheduler exists; for a long-lived replica also cron it.
+    # deleted by default). Also a daily scheduler job (audit_log.purge).
     echo "[entrypoint] Purging audit logs past the configured retention..."
     python manage.py purge_audit_logs --if-configured || echo "[entrypoint] Audit log purge skipped (non-fatal)"
 
     # Every login and refresh leaves an OutstandingToken row and nothing else ever removes
-    # it. Expired rows are useless (they cannot refresh), so drop them; also cron it daily.
+    # it. Expired rows are useless (they cannot refresh), so drop them; also a daily scheduler job (core.flush_expired_tokens).
     echo "[entrypoint] Flushing expired refresh tokens..."
     python manage.py flushexpiredtokens || echo "[entrypoint] Expired token flush skipped (non-fatal)"
 

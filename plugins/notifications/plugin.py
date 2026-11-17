@@ -30,6 +30,9 @@ class NotificationPlugin(BasePlugin):
         )
         return [path('', include(router.urls))]
 
+    def get_scheduled_jobs(self):
+        return [('housekeeping', 86400, 'plugins.notifications.housekeeping.prune')]
+
     def get_permission_actions(self):
         # NotificationViewSet uses PluginEnabledMixin only (no grants) — all write
         # endpoints (mark_read, preferences, subscribe, unsubscribe) are

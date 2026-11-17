@@ -288,12 +288,23 @@ It writes a heartbeat file; the container's healthcheck reads that file, so `doc
 scheduler` showing `unhealthy` means jobs are not running. If the scheduler is down, queued
 exports stay `pending` — the UI shows "queued longer than 2 minutes, check the scheduler".
 
-Plugin jobs it owns:
+Jobs it owns (the table is the output of every plugin's `get_scheduled_jobs()` plus `CORE_JOBS`; a daily retention job also runs once at boot from `docker/entrypoint.sh`, so no host cron is required):
 
 | Job | Plugin | Interval | Notes |
 |---|---|---|---|
 | `process_client_exports` | onboarding | 10 s | Builds requested ZIPs. `EXPORT_JOBS_INLINE=True` (dev/test only) bypasses it. |
 | `cleanup_exports` | onboarding | hourly | Deletes expired (24 h) export files and rows. |
+| `reports` | analytics | hourly | Sends every due scheduled analytics report once (`plugins/analytics/scheduled_reports.py`); needs the `scheduler` service and working SMTP. Manual: `manage.py run_scheduled_reports`. |
+| `purge` | analytics | daily | Deletes analytics snapshots and metrics past retention (`purge_analytics_data`). |
+| `housekeeping` | notifications | daily | Deletes read notifications older than 180 days and old idempotency records. |
+| `purge` | audit_log | daily | `purge_audit_logs --if-configured`: a no-op unless an admin set `retention_days`. |
+| `flush_expired_tokens` | core | daily | Deletes expired refresh-token rows; runs whichever plugins are enabled. |
+| `lifecycle` | payroll | hourly | Month-end draft, urgent reminders, early and cutoff finalize. |
+| `freeze_scorecard_months` | tl_scorecard | hourly | Freezes finished scorecard months. |
+| `cadence_reminders` | tl_scorecard | hourly | HBPR cadence reminders. |
+| `one_on_one_reminders` | tl_scorecard | hourly | Recurring 1-on-1 reminders. |
+| `close_year` | year_close | hourly | Builds the year-close snapshot when last year is eligible. |
+| `retention_notices` | year_close | daily | Notices only; a purge is never scheduled. |
 
 Boot commands still run once per start. For anything the scheduler does not cover, use host
 cron with `docker compose exec -T backend python manage.py <command>`:
@@ -304,7 +315,7 @@ cron with `docker compose exec -T backend python manage.py <command>`:
 | Audit log retention | `purge_audit_logs --if-configured` | daily | Deletes older than the plugin's `retention_days`; no-op until an admin sets it. Also runs at boot. |
 | Expired refresh tokens | `flushexpiredtokens` | daily | simplejwt's own command: deletes expired `OutstandingToken` rows (every login and refresh adds one, nothing else removes them). Also runs at boot. |
 | Monthly audit archive | `rotate_audit_logs` | monthly (1st of month) | Compresses full previous month into `media/audit_archives/audit_logs_YYYY_MM.json.gz` and prunes database. UI button also available in `/admin/audit-logs`. |
-| Month cutoff auto-finalize | `auto_finalize_approval_periods [--period YYYY-MM-DD]` | hourly (payroll plugin scheduler job `payroll.lifecycle`, which also creates the month-end draft, sends urgent reminders and finalizes payroll early or at the cutoff: workflow-invariants item 59; needs `run_scheduler` running) | A no-op until 00:00 on the cutoff day (the 2nd of the next month, moved to the next working day, Europe/Tirane); then closes the previous month for every user no Line Manager or Manager closed, so payroll finalize is never blocked. Idempotent. Run by hand to close a month ahead of the job. |
+| Month cutoff auto-finalize | `auto_finalize_approval_periods [--period YYYY-MM-DD]` | hourly (payroll plugin scheduler job `payroll.lifecycle`, which also creates the month-end draft, sends urgent reminders and finalizes payroll early or at the cutoff: workflow-invariants item 59; needs `run_scheduler` running) | A no-op until 00:00 on the cutoff day (the 5th of the next month, moved to the next working day, Europe/Tirane); then closes the previous month for every user no Line Manager or Manager closed, so payroll finalize is never blocked. Idempotent. Run by hand to close a month ahead of the job. |
 | Cancelled payroll run leftovers (one time) | `purge_cancelled_run_leftovers` | once after deploying 2026-11-04 | Deletes lines and draft entries kept by runs cancelled before `cancel_run` cleaned up after itself. Idempotent; nothing to schedule. |
 | Analytics retention | `purge_analytics_data` | daily | Snapshots and metric points older than `data_retention_days` (default 365). Not run at boot, so it needs the cron. |
 | Engagement freeze backfill | `finalize_frozen_metrics` | once after deploying the metrics freeze (optional daily) | Gives every snapshot past its freeze one final recompute; idempotent. Reads do it lazily, this is the bulk path. `docs/team-lifecycle.md` section 4. |
@@ -314,6 +325,8 @@ cron with `docker compose exec -T backend python manage.py <command>`:
 | HBPR assignment archive | `purge_hbpr_archive` | optional | Runs at boot and lazily on the staff-only assignments list. |
 | Application backup | `create_site_backup` | weekly | Site Backup plugin archive (database fixture plus media). Separate from the `db-backup` loop; restore headlessly with `restore_site_backup` (`docs/site-backup-and-restore.md`). |
 | Database, media and snapshot dumps | `db-backup` profile | `BACKUP_INTERVAL_SECONDS` | Section 3. Copy offsite yourself. |
+
+**Hung jobs.** The scheduler records the job it is running. If one run lasts longer than `SCHEDULER_JOB_TIMEOUT` seconds (default 1800; raise it only for a legitimately longer export) the heartbeat thread stops and the process exits, so the compose healthcheck goes red and `restart: unless-stopped` restarts it; the log line is `Scheduled job <name> is stuck past its limit`. Production also sets `EMAIL_TIMEOUT` (30 s), `DB_CONNECT_TIMEOUT` (10 s) and `DB_LOCK_TIMEOUT_MS` (30000) so a dead SMTP socket or a lock wait fails the job instead of hanging it. `PUSH_ENDPOINT_EXTRA_HOSTS` (comma-separated hostnames, empty by default) allows an extra Web Push host beyond the built-in browser services.
 
 A one-off run of a plugin job (for a retry) is
 `docker compose exec -T scheduler python manage.py run_scheduler --once`.
@@ -387,3 +400,12 @@ Two-factor (TOTP) is optional per person until an admin switches on the company-
 - Turning the company-wide requirement on never locks anyone out: a user without a factor is walked
   through setup at sign-in, and only then receives a session. The window between switching it on and a
   person finishing setup is the one moment a stolen password alone is enough for that person's account.
+
+## Year-start checklist (audit 2026-11-16 M4)
+
+Do this in November or December, before people book leave for the new year:
+
+1. `python manage.py check_year_start --year <next year>`: read-only; exits non-zero and names what is missing (global public holidays, an active payroll work calendar that marks every holiday, a rule set effective on 1 January).
+2. Add the holidays in HR > Holidays. A holiday added, moved or deleted later recounts open future vacation and its balances automatically; `python manage.py recount_leave_days --from <date> --to <date>` (dry run, add `--apply`) repairs a past change.
+3. Create or seed the work calendar for the year; `python manage.py sync_payroll_holidays` mirrors HR holidays into it. Payroll refuses a draft whose month has a holiday the calendar does not mark.
+4. Leave carry-over rolls over on the first leave read of the year; the year close and its retention notices run from the scheduler.

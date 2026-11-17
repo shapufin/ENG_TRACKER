@@ -23,19 +23,31 @@ from django.views.decorators.http import require_GET
 # (evidence, onboarding, exports and backups are all served through DRF
 # endpoints that scope per object), so this view is only for the site logo
 # plus staff tooling. Longest matching prefix wins; anything else is staff-only.
+# The logo is "public": the app authenticates with bearer tokens (never a Django session,
+# which is all this view can see) and the login and maintenance pages show it to visitors
+# who are not signed in (audit 2026-11-16 M1).
 _MEDIA_PREFIX_RULES = (
-    ("branding/", "authenticated"),
+    ("branding/", "public"),
     ("backups/", "superuser"),
 )
 
 
-def _may_read_media(user, path: str) -> bool:
+def _media_rule(path: str) -> str:
     normalized = path.replace("\\", "/").lstrip("/")
     for prefix, rule in _MEDIA_PREFIX_RULES:
         if normalized.startswith(prefix):
-            if rule == "superuser":
-                return bool(user.is_superuser)
-            return True
+            return rule
+    return "staff"
+
+
+def _may_read_media(user, path: str) -> bool:
+    rule = _media_rule(path)
+    if rule == "public":
+        return True
+    if not user or not user.is_authenticated:
+        return False
+    if rule == "superuser":
+        return bool(user.is_superuser)
     return bool(user.is_staff or user.is_superuser)
 
 
@@ -83,9 +95,6 @@ def protected_media(request, path: str):
         raise Http404("File not found.")
 
     user = getattr(request, "user", None)
-    if not user or not user.is_authenticated:
-        return HttpResponseForbidden("Authentication required.")
-
     if not _may_read_media(user, os.path.relpath(full, media_root)):
         return HttpResponseForbidden("Not allowed to read this file.")
 

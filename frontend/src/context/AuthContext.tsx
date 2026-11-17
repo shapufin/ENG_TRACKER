@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { isMfaChallenge, type AuthResponse, type User, type LoginCredentials } from "@/types";
 import { authService } from "@/services/authService";
-import { isMaintenanceError, setAccessToken } from "@/lib/api";
+import { isAuthRejection, setAccessToken } from "@/lib/api";
 import { AuthContext, type AuthContextType } from "./auth-context-base";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -30,11 +30,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               localStorage.setItem("user", JSON.stringify(currentUser));
             }
           } catch (error) {
-            // Keep the last authenticated identity during an offline
-            // bootstrap so user-scoped cached data can be displayed, and
-            // during maintenance: a closed platform must not destroy the
-            // session — it resumes when maintenance ends.
-            if (!navigator.onLine || isMaintenanceError(error)) {
+            // Keep the last authenticated identity unless the server refused the
+            // session (401/403): offline, behind a captive portal, a 5xx or a
+            // closed platform (maintenance) must not destroy the session or the
+            // offline queue; the session resumes when the server answers again.
+            if (!isAuthRejection(error)) {
               try {
                 if (!cancelled) setUser(JSON.parse(storedUser));
               } catch {

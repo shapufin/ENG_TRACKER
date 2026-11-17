@@ -8,8 +8,8 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.db import models
-from django.db.models.signals import post_save
+from django.db import models, transaction
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -462,6 +462,42 @@ class LeaveRequest(BaseModel):
         if is_new and self.submitted_at is None:
             self.submitted_at = self.created_at
             super().save(update_fields=['submitted_at'])
+
+
+def _recount_after_holiday_change(dates):
+    """Recount future leave for each changed holiday date, after the commit (audit M4)."""
+    import logging
+
+    def run():
+        from apps.leave_management.services.holiday_recount import recount_leave_days
+        for day in sorted(dates):
+            try:
+                recount_leave_days(date_from=day, date_to=day, apply=True)
+            except Exception:
+                # Never block saving a holiday; `manage.py recount_leave_days` repairs it.
+                logging.getLogger(__name__).exception('Leave recount failed for holiday %s', day)
+
+    transaction.on_commit(run)
+
+
+@receiver(post_save, sender='dashboard.PublicHoliday')
+def recount_leave_on_holiday_save(sender, instance, **kwargs):
+    if kwargs.get('raw'):
+        return
+    dates = set()
+    if instance.calendar_id is None:
+        dates.add(instance.date)
+    prev_date = getattr(instance, '_previous_date', None)
+    if prev_date and getattr(instance, '_previous_calendar', None) is None:
+        dates.add(prev_date)  # moved, or turned into a workspace-only holiday
+    if dates:
+        _recount_after_holiday_change(dates)
+
+
+@receiver(post_delete, sender='dashboard.PublicHoliday')
+def recount_leave_on_holiday_delete(sender, instance, **kwargs):
+    if instance.calendar_id is None:
+        _recount_after_holiday_change({instance.date})
 
 
 @receiver(post_save, sender='users.UserProfile')

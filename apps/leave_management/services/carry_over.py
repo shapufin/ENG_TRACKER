@@ -202,6 +202,42 @@ def plan_vacation_split(user_id: int, start_date, end_date, is_half_day: bool = 
     }
 
 
+def reserve_vacation_days(request_obj):
+    """Reserve a vacation request's days as pending: carry-over first, then the current year.
+
+    Records both parts on the request so later moves stay exact. Shared by request
+    creation and the holiday recount.
+    """
+    with transaction.atomic():
+        # Lock the carry row before planning, so the availability the plan reads is
+        # the committed value after any concurrent request has finished with it.
+        carry_lock = find_carry_balance(request_obj.user_id, request_obj.start_date)
+        if carry_lock is not None:
+            LeaveBalance.objects.select_for_update().filter(pk=carry_lock.pk).first()
+        plan = plan_vacation_split(
+            request_obj.user_id, request_obj.start_date, request_obj.end_date, request_obj.is_half_day
+        )
+        carry_days = plan['carry_days']
+        carry_row = None
+        if carry_days > 0:
+            carry_row = LeaveBalance.objects.select_for_update().get(pk=plan['carry_balance'].pk)
+            carry_row.pending_days += carry_days
+            carry_row.save(update_fields=['pending_days'])
+
+        current = LeaveBalance.objects.filter(
+            user_id=request_obj.user_id, leave_type='vacation', is_carry_over=False,
+            year=request_obj.start_date.year,
+        ).select_for_update().first()
+        if current and plan['current_days'] > 0:
+            current.pending_days += plan['current_days']
+            current.save(update_fields=['pending_days'])
+
+        request_obj.carry_balance = carry_row
+        request_obj.carry_days = carry_days
+        request_obj.balance = current
+        request_obj.save(update_fields=['carry_balance', 'carry_days', 'balance'])
+
+
 # (old status, new status) -> which counters move on each part of a request.
 # 'reserve' = pending, 'use' = used. A missing pair moves nothing.
 _TRANSITIONS = {

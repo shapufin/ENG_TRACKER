@@ -66,21 +66,30 @@ def raw_next_due(cadence, day_of_week, nth_week, effective_from, last_meeting_on
     return date(year, month, min(anchor.day, calendar.monthrange(year, month)[1]))
 
 
-def next_due_slot(cadence, day_of_week, nth_week, effective_from, last_meeting_on, *, blocked):
+def next_due_slot(cadence, day_of_week, nth_week, effective_from, last_meeting_on, *, blocked, max_days=None):
     """``(due, moved_from)``: the next slot, moved past every date in ``blocked``.
 
     ``blocked`` is a set of dates (public holidays, and for 1-on-1s the employee's leave).
     ``moved_from`` is the first blocked date hit, ``None`` when nothing moved.
+
+    By default a blocked run is followed for at most ``MAX_PUSHES`` steps, which is enough for
+    holidays. Pass ``max_days`` (a date horizon) for blocks that can last weeks, such as leave:
+    the search then continues until a free date or until that many days past the first slot.
     """
     if not cadence:
         return None, None
     due = raw_next_due(cadence, day_of_week, nth_week, effective_from, last_meeting_on)
+    first = due
     moved_from = None
-    for _ in range(MAX_PUSHES):
-        if due not in blocked:
+    pushes = 0
+    while due in blocked:
+        if max_days is None and pushes >= MAX_PUSHES:
+            break
+        if max_days is not None and (due - first).days > max_days:
             break
         moved_from = moved_from or due
         due = raw_next_due(cadence, day_of_week, nth_week, effective_from, due)
+        pushes += 1
     return due, moved_from
 
 

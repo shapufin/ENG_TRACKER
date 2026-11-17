@@ -8,7 +8,7 @@ import threading
 
 from django.core.management.base import BaseCommand
 
-from core.plugins.scheduler import Heartbeat, Scheduler, collect_jobs
+from core.plugins.scheduler import DEFAULT_JOB_TIMEOUT_SECONDS, Heartbeat, Scheduler, collect_all_jobs
 
 
 class Command(BaseCommand):
@@ -24,7 +24,10 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        scheduler = Scheduler(collect_jobs, heartbeat_path=options['heartbeat_file'] or None)
+        job_timeout = float(os.environ.get('SCHEDULER_JOB_TIMEOUT', DEFAULT_JOB_TIMEOUT_SECONDS))
+        scheduler = Scheduler(
+            collect_all_jobs, heartbeat_path=options['heartbeat_file'] or None, job_timeout=job_timeout,
+        )
         if options['once']:
             scheduler.run_due()
             return
@@ -32,16 +35,14 @@ class Command(BaseCommand):
         stop = threading.Event()
         for sig in (signal.SIGTERM, signal.SIGINT):
             signal.signal(sig, lambda *_: stop.set())
-        heartbeat = None
-        if options['heartbeat_file']:
-            heartbeat = Heartbeat(options['heartbeat_file'])
-            heartbeat.start()
+        # Always started: besides the healthcheck file it is the watchdog for a hung job.
+        heartbeat = Heartbeat(options['heartbeat_file'], stuck=scheduler.stuck_job)
+        heartbeat.start()
         self.stdout.write('Scheduler started.')
         try:
             while not stop.is_set():
                 scheduler.run_due()
                 stop.wait(options['tick'])
         finally:
-            if heartbeat:
-                heartbeat.stop()
+            heartbeat.stop()
         self.stdout.write('Scheduler stopped.')

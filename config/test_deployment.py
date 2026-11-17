@@ -689,7 +689,7 @@ class ProductionSettingsHardeningTests(SimpleTestCase):
         'DB_HOST': 'localhost', 'FRONTEND_URL': 'http://localhost',
     }
 
-    def _run(self, expression, drop=(), **extra_env):
+    def _run(self, expression, drop=(), argv=(), **extra_env):
         import os
         import subprocess
         import sys
@@ -704,7 +704,7 @@ class ProductionSettingsHardeningTests(SimpleTestCase):
         return subprocess.run(
             [sys.executable, '-c',
              'import json, config.settings_production as s; '
-             f'print(json.dumps({expression}))'],
+             f'print(json.dumps({expression}))', *argv],
             cwd=str(settings.BASE_DIR), env=env, capture_output=True, text=True,
         )
 
@@ -714,6 +714,20 @@ class ProductionSettingsHardeningTests(SimpleTestCase):
         out = self._run(expression, **kwargs)
         self.assertEqual(out.returncode, 0, out.stderr[-600:])
         return json.loads(out.stdout.strip().splitlines()[-1])
+
+    def test_a_command_argument_named_test_does_not_switch_on_test_mode(self):
+        # M8 (audit 2026-11-16): `manage.py changepassword test` put the literal word
+        # `test` in argv, which used to enable the MD5 hasher and silence logging.
+        hashers = self._value("getattr(s, 'PASSWORD_HASHERS', [])", argv=('changepassword', 'test'))
+        self.assertNotIn('django.contrib.auth.hashers.MD5PasswordHasher', hashers)
+        self.assertEqual(self._value("getattr(s, 'LOGGING_CONFIG', 'default')", argv=('changepassword', 'test')), 'default')
+
+    def test_email_and_database_calls_have_timeouts(self):
+        # M5 (audit 2026-11-16): a dead SMTP socket or a lock wait must not hang a job forever.
+        self.assertEqual(self._value('s.EMAIL_TIMEOUT'), 30)
+        options = self._value("s.DATABASES['default']['OPTIONS']")
+        self.assertEqual(options['connect_timeout'], 10)
+        self.assertEqual(options['options'], '-c lock_timeout=30000')
 
     def test_logging_has_console_handler_on_root_at_info(self):
         logging_cfg = self._value('s.LOGGING')

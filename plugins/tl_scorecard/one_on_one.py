@@ -119,6 +119,7 @@ def next_slots(plans, *, today=None) -> dict:
         due, moved_from = next_due_slot(
             plan.cadence, plan.cadence_day_of_week, plan.cadence_nth_week, plan.effective_from,
             last.get((plan.leader_id, plan.employee_id)), blocked=holidays | leave,
+            max_days=LOOKAHEAD_DAYS,
         )
         reason = None
         if moved_from is not None:
@@ -186,6 +187,12 @@ def plan_payloads(leader, *, today=None) -> dict:
     }
 
 
+def _is_linked(employee, leader_id) -> bool:
+    # A user without a profile row is simply not linked; it must not break the job for everyone.
+    profile = getattr(employee, 'profile', None)
+    return profile is not None and leader_id in (profile.albanian_tl_id, profile.italian_tl_id)
+
+
 def process_one_on_one_reminders(today=None) -> int:
     """Tell each leader how many 1-on-1s are due or overdue (once a week). Returns leaders told.
 
@@ -202,7 +209,7 @@ def process_one_on_one_reminders(today=None) -> int:
     plans = [
         p for p in plans
         if p.leader.is_active and p.employee.is_active
-        and p.leader_id in (p.employee.profile.albanian_tl_id, p.employee.profile.italian_tl_id)
+        and _is_linked(p.employee, p.leader_id)
     ]
     due_by_leader = {}
     leader_of = {p.id: p.leader_id for p in plans}

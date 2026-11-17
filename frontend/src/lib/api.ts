@@ -18,6 +18,19 @@ export function isMaintenanceError(error: unknown): boolean {
   );
 }
 
+/**
+ * A refresh the server actively refused (401/403): the credentials are gone, so the session
+ * ends. Anything else (no response, timeout, 5xx, 429) is a transient failure and must keep
+ * the session and the offline queue, which holds work the user has not sent yet.
+ */
+export function isAuthRejection(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) return false;
+  const status = error.response?.status;
+  return status === 401 || status === 403;
+}
+
+const REFRESH_TIMEOUT_MS = 10_000;
+
 const MAINTENANCE_ACTIVE_EVENT = "maintenance:active";
 
 const announceMaintenance = () => {
@@ -107,16 +120,21 @@ async function performTokenRefresh(): Promise<string> {
   refreshPromise = (async () => {
     try {
       const { data } = await withRefreshLock(() =>
-        axios.post(`${API_BASE_URL}/auth/token/refresh/`, {}, { withCredentials: true })
+        axios.post(
+          `${API_BASE_URL}/auth/token/refresh/`,
+          {},
+          { withCredentials: true, timeout: REFRESH_TIMEOUT_MS }
+        )
       );
       accessToken = data.access;
       return data.access;
     } catch (error) {
       // Maintenance is not an auth failure: keep the session so it resumes
-      // when the platform reopens.
+      // when the platform reopens. The same holds for a network error, timeout,
+      // 5xx or 429: only a refused refresh (401/403) ends the session.
       if (isMaintenanceError(error)) {
         announceMaintenance();
-      } else {
+      } else if (isAuthRejection(error)) {
         clearAuthAndRedirect();
       }
       throw error;
@@ -150,12 +168,8 @@ api.interceptors.request.use(
         try {
           token = await performTokenRefresh();
         } catch (error) {
-          // Refresh failed. A maintenance 503 keeps the session (the gate
-          // shows the maintenance screen); anything else is an auth failure.
-          if (!isMaintenanceError(error)) {
-            clearAuthAndRedirect();
-            return Promise.reject(new Error("Token refresh failed"));
-          }
+          // Refresh failed. performTokenRefresh already ended the session when the
+          // server refused it; a transient failure keeps session and queue.
           return Promise.reject(error);
         }
       } else {
@@ -210,7 +224,7 @@ api.interceptors.response.use(
           }
           return api(originalRequest);
         } catch (refreshError) {
-          if (!isMaintenanceError(refreshError)) clearAuthAndRedirect();
+          if (isAuthRejection(refreshError)) clearAuthAndRedirect();
           return Promise.reject(refreshError);
         }
       }
@@ -222,7 +236,7 @@ api.interceptors.response.use(
         }
         return api(originalRequest);
       } catch (refreshError) {
-        if (!isMaintenanceError(refreshError)) clearAuthAndRedirect();
+        if (isAuthRejection(refreshError)) clearAuthAndRedirect();
         return Promise.reject(refreshError);
       }
     }

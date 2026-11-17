@@ -5,6 +5,7 @@ The stack has no Celery or cron container. ``manage.py run_scheduler`` (the
 in through ``BasePlugin.get_scheduled_jobs()``.
 """
 import logging
+import os
 import threading
 import time
 from dataclasses import dataclass
@@ -17,6 +18,10 @@ from django.utils.module_loading import import_string
 from core.plugins.registry import plugin_registry
 
 logger = logging.getLogger(__name__)
+
+# A single run longer than this is treated as hung (SMTP, a lock, a dead socket). The
+# longest legitimate job is a large export; raise SCHEDULER_JOB_TIMEOUT if one needs more.
+DEFAULT_JOB_TIMEOUT_SECONDS = 1800
 
 
 @dataclass(frozen=True)
@@ -53,8 +58,11 @@ class Scheduler:
         jobs_provider: Callable[[], Iterable[ScheduledJob]],
         clock: Callable[[], float] = time.monotonic,
         heartbeat_path: Optional[str] = None,
+        job_timeout: float = DEFAULT_JOB_TIMEOUT_SECONDS,
     ):
         self._jobs_provider = jobs_provider
+        self._job_timeout = job_timeout
+        self._running: Optional[tuple] = None  # (job name, started at), read by the watchdog thread
         self._clock = clock
         self._heartbeat_path = heartbeat_path
         self._next_run: Dict[str, float] = {}
@@ -80,15 +88,24 @@ class Scheduler:
             self._run(job)
         self._touch_heartbeat()
 
+    def stuck_job(self) -> Optional[str]:
+        """Name of the job that has been running longer than the limit, else None."""
+        running = self._running
+        if running and self._clock() - running[1] > self._job_timeout:
+            return running[0]
+        return None
+
     def _run(self, job: ScheduledJob) -> None:
         # A process that lives for weeks must not hold on to a connection the
         # database has already dropped.
         close_old_connections()
+        self._running = (job.name, self._clock())
         try:
             import_string(job.target)()
         except Exception:
             logger.exception('Scheduled job %s failed', job.name)
         finally:
+            self._running = None
             close_old_connections()
 
     def _touch_heartbeat(self) -> None:
@@ -100,25 +117,59 @@ class Scheduler:
             logger.warning('Could not touch scheduler heartbeat %s', self._heartbeat_path, exc_info=True)
 
 
+def _exit_process(job_name: str) -> None:
+    logger.critical('Scheduled job %s is stuck past its limit; exiting so the container restarts', job_name)
+    os._exit(70)
+
+
 class Heartbeat(threading.Thread):
     """Touches a file from its own thread, so a long job (a multi-GB export)
-    cannot make the compose healthcheck think the scheduler died."""
+    cannot make the compose healthcheck think the scheduler died.
 
-    def __init__(self, path: str, interval: float = 10.0):
+    It is also the watchdog: when ``stuck()`` names a job that has run past its limit the
+    thread stops touching the file and calls ``on_stuck`` (by default it ends the
+    process), so ``restart: unless-stopped`` recovers a scheduler that a hung job froze.
+    """
+
+    def __init__(
+        self,
+        path: str,
+        interval: float = 10.0,
+        stuck: Optional[Callable[[], Optional[str]]] = None,
+        on_stuck: Callable[[str], None] = _exit_process,
+    ):
         super().__init__(name='scheduler-heartbeat', daemon=True)
         self._path = path
         self._interval = interval
+        self._stuck = stuck
+        self._on_stuck = on_stuck
         self._stop_event = threading.Event()
 
     def run(self) -> None:
         while True:
-            try:
-                Path(self._path).touch()
-            except OSError:
-                logger.warning('Could not touch scheduler heartbeat %s', self._path, exc_info=True)
+            stuck_job = self._stuck() if self._stuck else None
+            if stuck_job:
+                self._on_stuck(stuck_job)
+                return
+            if self._path:
+                try:
+                    Path(self._path).touch()
+                except OSError:
+                    logger.warning('Could not touch scheduler heartbeat %s', self._path, exc_info=True)
             if self._stop_event.wait(self._interval):
                 return
 
     def stop(self) -> None:
         self._stop_event.set()
         self.join(timeout=5)
+
+
+# Housekeeping that belongs to no plugin (audit M9): it must run whichever plugins are on.
+CORE_JOBS = [
+    ScheduledJob('core.flush_expired_tokens', 86400, 'core.plugins.housekeeping.flush_expired_tokens'),
+]
+
+
+def collect_all_jobs() -> List[ScheduledJob]:
+    """Core jobs plus the jobs of the enabled plugins: what the scheduler process runs."""
+    return [*CORE_JOBS, *collect_jobs()]

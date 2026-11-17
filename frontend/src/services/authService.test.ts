@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import api from "@/lib/api";
 import { authService } from "./authService";
 
@@ -41,5 +41,60 @@ describe("authService URL contracts", () => {
     calls.forEach((args) => {
       expect(args[0]).not.toMatch(/^\/api\//);
     });
+  });
+});
+
+// Audit 2026-11-16 H4: a push notice must not outlive the sign-out on a shared browser profile.
+describe("logout and the browser push subscription", () => {
+  const unsubscribe = vi.fn().mockResolvedValue(true);
+  const subscription = { endpoint: "https://fcm.googleapis.com/fcm/send/abc", unsubscribe };
+
+  const stubServiceWorker = (sub: unknown) => {
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        getRegistration: vi.fn().mockResolvedValue({
+          pushManager: { getSubscription: vi.fn().mockResolvedValue(sub) },
+        }),
+      },
+    });
+    (window as unknown as { PushManager: unknown }).PushManager = function PushManager() {};
+  };
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, "serviceWorker");
+    Reflect.deleteProperty(window, "PushManager");
+  });
+
+  it("tells the server to stop pushing to this browser, then drops the local subscription", async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: {} } as any);
+    stubServiceWorker(subscription);
+
+    await authService.logout();
+
+    expect(api.post).toHaveBeenCalledWith("/plugins/notifications/notifications/unsubscribe/", {
+      endpoint: subscription.endpoint,
+    });
+    expect(unsubscribe).toHaveBeenCalled();
+    expect(api.post).toHaveBeenCalledWith("/auth/token/logout/");
+  });
+
+  it("still signs out when there is no subscription or the unsubscribe fails", async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: {} } as any);
+    stubServiceWorker(null);
+    await authService.logout();
+    expect(api.post).toHaveBeenCalledWith("/auth/token/logout/");
+
+    vi.mocked(api.post).mockImplementation(((url: string) =>
+      url.includes("unsubscribe") ? Promise.reject(new Error("offline")) : Promise.resolve({ data: {} })) as never);
+    stubServiceWorker(subscription);
+    await expect(authService.logout()).resolves.toBeUndefined();
+    expect(api.post).toHaveBeenCalledWith("/auth/token/logout/");
+  });
+
+  it("works in a browser without push support", async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: {} } as any);
+    await expect(authService.logout()).resolves.toBeUndefined();
+    expect(api.post).toHaveBeenCalledWith("/auth/token/logout/");
   });
 });

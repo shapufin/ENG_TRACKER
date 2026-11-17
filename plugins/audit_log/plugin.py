@@ -21,6 +21,10 @@ class AuditLogPlugin(BasePlugin):
     def version(self) -> str:
         return "1.0.0"
 
+    def get_scheduled_jobs(self):
+        # --if-configured: a no-op unless an admin set retention_days, so no trail is deleted by default.
+        return [('purge', 86400, 'plugins.audit_log.housekeeping.purge')]
+
     def get_urls(self):
         router = DefaultRouter()
         router.register(r'logs', AuditLogViewSet, basename='audit-log')

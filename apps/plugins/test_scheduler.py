@@ -190,7 +190,7 @@ class RunSchedulerCommandTests(SimpleTestCase):
 
     def test_once_runs_due_jobs_and_exits(self):
         jobs = [ScheduledJob('x.a', 60, 'apps.plugins.test_scheduler.record_a')]
-        with mock.patch('apps.plugins.management.commands.run_scheduler.collect_jobs', return_value=jobs), \
+        with mock.patch('apps.plugins.management.commands.run_scheduler.collect_all_jobs', return_value=jobs), \
                 mock.patch('core.plugins.scheduler.close_old_connections'):
             call_command('run_scheduler', '--once')
         self.assertEqual(CALLS, ['a'])
@@ -236,3 +236,97 @@ class HeartbeatTests(SimpleTestCase):
                 return
             time.sleep(0.005)
         raise AssertionError('condition not met in time')
+
+
+STATE = {}
+
+
+def block_past_the_limit():
+    """A job that hangs: the clock jumps past the limit while it is still running."""
+    scheduler, clock = STATE['scheduler'], STATE['clock']
+    STATE['before'] = scheduler.stuck_job()
+    clock.advance(STATE['advance'])
+    STATE['during'] = scheduler.stuck_job()
+
+
+class WatchdogTests(SimpleTestCase):
+    """M5 (audit 2026-11-16): a job stuck on SMTP, a lock or a dead socket must not keep the
+    healthcheck green forever while every later job waits behind it."""
+
+    def setUp(self):
+        self.clock = FakeClock()
+        patcher = mock.patch('core.plugins.scheduler.close_old_connections')
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        STATE.clear()
+
+    def _run_blocking_job(self, advance, timeout=600):
+        scheduler = Scheduler(
+            lambda: [ScheduledJob('x.hang', 60, 'apps.plugins.test_scheduler.block_past_the_limit')],
+            clock=self.clock, job_timeout=timeout,
+        )
+        STATE.update(scheduler=scheduler, clock=self.clock, advance=advance)
+        scheduler.run_due()
+        return scheduler
+
+    def test_nothing_is_stuck_when_no_job_runs(self):
+        scheduler = Scheduler(lambda: [], clock=self.clock, job_timeout=600)
+        self.assertIsNone(scheduler.stuck_job())
+
+    def test_a_job_past_its_limit_is_reported_while_it_runs(self):
+        scheduler = self._run_blocking_job(advance=601)
+        self.assertIsNone(STATE['before'])
+        self.assertEqual(STATE['during'], 'x.hang')
+        self.assertIsNone(scheduler.stuck_job())  # finished: nothing running any more
+
+    def test_a_long_job_inside_its_limit_is_not_stuck(self):
+        self._run_blocking_job(advance=599)
+        self.assertIsNone(STATE['during'])
+
+    def test_a_failing_job_does_not_stay_marked_as_running(self):
+        scheduler = Scheduler(
+            lambda: [ScheduledJob('x.boom', 60, 'apps.plugins.test_scheduler.explode')],
+            clock=self.clock, job_timeout=600,
+        )
+        scheduler.run_due()
+        self.clock.advance(10_000)
+        self.assertIsNone(scheduler.stuck_job())
+
+
+class HeartbeatWatchdogTests(SimpleTestCase):
+    def test_a_stuck_job_stops_the_heartbeat_and_ends_the_process(self):
+        from core.plugins.scheduler import Heartbeat
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'hb')
+            on_stuck = mock.Mock()
+            heartbeat = Heartbeat(path, interval=0.01, stuck=lambda: 'x.hang', on_stuck=on_stuck)
+            heartbeat.start()
+            heartbeat.join(timeout=2)
+
+            on_stuck.assert_called_once_with('x.hang')
+            self.assertFalse(heartbeat.is_alive())
+            self.assertFalse(os.path.exists(path))  # the healthcheck goes red as well
+
+    def test_a_healthy_scheduler_keeps_beating(self):
+        from core.plugins.scheduler import Heartbeat
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'hb')
+            on_stuck = mock.Mock()
+            heartbeat = Heartbeat(path, interval=0.01, stuck=lambda: None, on_stuck=on_stuck)
+            heartbeat.start()
+            try:
+                HeartbeatTests._wait_for(lambda: os.path.exists(path))
+            finally:
+                heartbeat.stop()
+            on_stuck.assert_not_called()
+
+    def test_the_watchdog_runs_even_without_a_heartbeat_file(self):
+        from core.plugins.scheduler import Heartbeat
+
+        on_stuck = mock.Mock()
+        heartbeat = Heartbeat('', interval=0.01, stuck=lambda: 'x.hang', on_stuck=on_stuck)
+        heartbeat.start()
+        heartbeat.join(timeout=2)
+        on_stuck.assert_called_once_with('x.hang')

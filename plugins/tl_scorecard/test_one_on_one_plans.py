@@ -106,6 +106,43 @@ class NextSlotTests(OneOnOneBase):
         self.assertEqual((slot.due_on, slot.moved_reason), (date(2026, 11, 25), 'leave'))
 
 
+class LongLeaveTests(OneOnOneBase):
+    """M3 (audit 2026-11-16): the slot must clear a long leave, not stop after six steps."""
+
+    def test_a_weekly_slot_lands_after_ten_weeks_of_leave(self):
+        plan = self.plan()  # Wednesdays from 2026-11-18
+        LeaveRequest.objects.create(
+            user=self.emp, request_type='vacation', start_date=date(2026, 11, 18),
+            end_date=date(2027, 1, 26), status='approved',
+        )
+        slot = one_on_one.next_slot(plan, today=self.start)
+        self.assertEqual(slot.due_on, date(2027, 1, 27))
+        self.assertEqual((slot.moved_from, slot.moved_reason), (date(2026, 11, 18), 'leave'))
+        self.assertEqual(slot.status, 'upcoming')
+
+    def test_a_leave_longer_than_the_lookahead_still_ends_the_search(self):
+        plan = self.plan()
+        LeaveRequest.objects.create(
+            user=self.emp, request_type='vacation', start_date=date(2026, 11, 18),
+            end_date=date(2028, 12, 31), status='approved',
+        )
+        slot = one_on_one.next_slot(plan, today=self.start)  # must terminate, not loop
+        self.assertGreater(slot.due_on, date(2027, 11, 1))
+
+
+class ReminderRobustnessTests(OneOnOneBase):
+    def test_one_employee_without_a_profile_row_does_not_stop_everyone_elses_reminder(self):
+        self.plan()
+        orphan = make_user('oo_orphan')
+        OneOnOnePlan.objects.create(
+            leader=self.lm, employee=orphan, cadence='weekly', cadence_day_of_week=2,
+            effective_from=self.start,
+        )
+        orphan.profile.delete()
+
+        one_on_one.process_one_on_one_reminders(today=date(2026, 12, 1))  # must not raise
+
+
 class SkipTests(OneOnOneBase):
     def test_skip_needs_a_reason(self):
         self.plan()

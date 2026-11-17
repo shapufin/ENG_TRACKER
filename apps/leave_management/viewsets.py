@@ -37,10 +37,10 @@ from .models.core import plain_days
 from .services.carry_over import (
     carry_over_expiry_for,
     ensure_year_end_rollover,
-    find_carry_balance,
     is_closed_year,
     move_request_days,
     plan_vacation_split,
+    reserve_vacation_days,
 )
 from .filters import LeaveRequestFilter
 try:
@@ -707,34 +707,7 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         its expiry, the rest comes from the current year. Both parts are reserved as
         pending and recorded on the request, so later moves stay exact.
         """
-        with transaction.atomic():
-            # Lock the carry row before planning, so the availability the plan reads is
-            # the committed value after any concurrent request has finished with it.
-            carry_lock = find_carry_balance(request_obj.user_id, request_obj.start_date)
-            if carry_lock is not None:
-                LeaveBalance.objects.select_for_update().filter(pk=carry_lock.pk).first()
-            plan = plan_vacation_split(
-                request_obj.user_id, request_obj.start_date, request_obj.end_date, request_obj.is_half_day
-            )
-            carry_days = plan['carry_days']
-            carry_row = None
-            if carry_days > 0:
-                carry_row = LeaveBalance.objects.select_for_update().get(pk=plan['carry_balance'].pk)
-                carry_row.pending_days += carry_days
-                carry_row.save(update_fields=['pending_days'])
-
-            current = LeaveBalance.objects.filter(
-                user_id=request_obj.user_id, leave_type='vacation', is_carry_over=False,
-                year=request_obj.start_date.year,
-            ).select_for_update().first()
-            if current and plan['current_days'] > 0:
-                current.pending_days += plan['current_days']
-                current.save(update_fields=['pending_days'])
-
-            request_obj.carry_balance = carry_row
-            request_obj.carry_days = carry_days
-            request_obj.balance = current
-            request_obj.save(update_fields=['carry_balance', 'carry_days', 'balance'])
+        reserve_vacation_days(request_obj)
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
@@ -762,10 +735,25 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         with transaction.atomic():
             locked = LeaveRequest.objects.select_for_update().get(pk=obj.pk)
             old_status = locked.status
-            if old_status == 'rejected' and locked.request_type == 'vacation' and is_closed_year(locked.start_date.year):
-                raise ValidationError(
-                    f'Year {locked.start_date.year} is closed: a rejected request cannot be re-approved.'
+            if old_status == 'approved':
+                # Already decided: a second approval must not rewrite who approved it or when.
+                obj.refresh_from_db()
+                return
+            if old_status == 'rejected':
+                # A rejected request released its dates and days; taking them back is a
+                # new claim, so it faces the same rules as creating the request (H3).
+                if locked.request_type == 'vacation' and is_closed_year(locked.start_date.year):
+                    raise ValidationError(
+                        f'Year {locked.start_date.year} is closed: a rejected request cannot be re-approved.'
+                    )
+                self._ensure_no_overlap(
+                    locked.user, locked.start_date, locked.end_date, exclude_request_id=locked.pk,
+                    is_half_day=locked.is_half_day, half_day_period=locked.half_day_period,
                 )
+                if locked.request_type == 'vacation':
+                    self._validate_vacation_request(
+                        locked.user, locked.start_date, locked.end_date, locked.is_half_day,
+                    )
             locked.status = 'approved'
             locked._skip_notifications = getattr(obj, '_skip_notifications', False)
             locked.approved_by = user

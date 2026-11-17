@@ -150,7 +150,7 @@ DATABASES = {
 # Detect test runs via the test runner's manage.py test command.
 # These settings make test runs 3-5x faster with zero impact on dev/prod.
 import sys as _sys  # noqa: E402  (mid-file: detect test runs before DATABASES override)
-_IS_TESTING = 'test' in _sys.argv or ('pytest' in _sys.argv[0] if _sys.argv else False)
+_IS_TESTING = _sys.argv[1:2] == ['test'] or ('pytest' in _sys.argv[0] if _sys.argv else False)
 
 if _IS_TESTING:
     # Use fast password hasher (PBKDF2 does ~100k iterations by default;
@@ -376,6 +376,11 @@ CACHE_VERSION = int(_cache_version)
 # `JWT_SECRET` env var given to the onlyoffice/documentserver container.
 ONLYOFFICE_DOCUMENT_SERVER_URL = os.getenv('ONLYOFFICE_DOCUMENT_SERVER_URL', '')
 ONLYOFFICE_JWT_SECRET = os.getenv('ONLYOFFICE_JWT_SECRET', '')
+
+# Web Push endpoints the server may POST to, beyond the built-in browser push
+# services (plugins/notifications/push_service.py `is_push_service_url`).
+# Comma-separated hostnames; empty by default.
+PUSH_ENDPOINT_EXTRA_HOSTS = [h.strip() for h in os.getenv('PUSH_ENDPOINT_EXTRA_HOSTS', '').split(',') if h.strip()]
 
 # Standardized cache timeout settings (in seconds)
 CACHE_TIMEOUT = {

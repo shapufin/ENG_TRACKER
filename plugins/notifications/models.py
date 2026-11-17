@@ -57,6 +57,8 @@ class PushSubscription(models.Model):
     p256dh_key = models.CharField(max_length=200)
     auth_key = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
+    # Consecutive transient send failures; reset by a success (audit M7).
+    failure_count = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

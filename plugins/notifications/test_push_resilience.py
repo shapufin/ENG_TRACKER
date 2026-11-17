@@ -9,7 +9,7 @@ from rest_framework.test import APIClient
 
 from apps.overtime.models import Client, OvertimeLog
 from plugins.notifications.models import Notification, PushSubscription
-from plugins.notifications.push_service import PUSH_TIMEOUT_SECONDS, send_push_notification
+from plugins.notifications.push_service import PUSH_MAX_FAILURES, PUSH_TIMEOUT_SECONDS, send_push_notification
 
 User = get_user_model()
 
@@ -39,7 +39,7 @@ class PushTimeoutTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='pt-user', password='x')
         PushSubscription.objects.create(
-            user=self.user, endpoint='https://push.example.test/abc', p256dh_key='k', auth_key='a',
+            user=self.user, endpoint='https://fcm.googleapis.com/fcm/send/abc', p256dh_key='k', auth_key='a',
         )
 
     @patch('plugins.notifications.push_service.get_private_key', return_value='key')
@@ -56,11 +56,34 @@ class PushTimeoutTests(TestCase):
         self.assertTrue(PushSubscription.objects.get(user=self.user).is_active)
 
     @patch('plugins.notifications.push_service.get_private_key', return_value='key')
+    @patch('plugins.notifications.push_service.webpush', side_effect=requests.exceptions.Timeout('slow'))
+    def test_a_dead_endpoint_is_deactivated_after_repeated_failures(self, _webpush, _key):
+        # M7 (audit 2026-11-16): a dead endpoint must not cost 5 s on every notice forever.
+        for _ in range(PUSH_MAX_FAILURES - 1):
+            send_push_notification(self.user, 't', 'm')
+        self.assertTrue(PushSubscription.objects.get(user=self.user).is_active)
+        send_push_notification(self.user, 't', 'm')
+        self.assertFalse(PushSubscription.objects.get(user=self.user).is_active)
+
+    @patch('plugins.notifications.push_service.get_private_key', return_value='key')
+    @patch('plugins.notifications.push_service.webpush')
+    def test_a_success_resets_the_failure_count(self, mock_webpush, _key):
+        mock_webpush.side_effect = requests.exceptions.Timeout('slow')
+        for _ in range(PUSH_MAX_FAILURES - 1):
+            send_push_notification(self.user, 't', 'm')
+        mock_webpush.side_effect = None
+        send_push_notification(self.user, 't', 'm')
+        mock_webpush.side_effect = requests.exceptions.Timeout('slow')
+        for _ in range(PUSH_MAX_FAILURES - 1):
+            send_push_notification(self.user, 't', 'm')
+        self.assertTrue(PushSubscription.objects.get(user=self.user).is_active)
+
+    @patch('plugins.notifications.push_service.get_private_key', return_value='key')
     @patch('plugins.notifications.push_service.webpush', side_effect=requests.exceptions.ConnectionError('down'))
     def test_approval_still_succeeds_when_the_push_service_times_out(self, _webpush, _key):
         employee = User.objects.create_user(username='pt-emp', password='x')
         PushSubscription.objects.create(
-            user=employee, endpoint='https://push.example.test/emp', p256dh_key='k', auth_key='a',
+            user=employee, endpoint='https://fcm.googleapis.com/fcm/send/emp', p256dh_key='k', auth_key='a',
         )
         staff = User.objects.create_user(username='pt-staff', password='x', is_staff=True)
         client_obj = Client.objects.create(name='PT Client', code='PTC')
@@ -85,7 +108,7 @@ class PushMisconfiguredTests(TestCase):
         user = User.objects.create_user(username='pm-user', password='x')
         for n in range(2):
             PushSubscription.objects.create(
-                user=user, endpoint=f'https://push.example.test/{n}', p256dh_key='k', auth_key='a',
+                user=user, endpoint=f'https://fcm.googleapis.com/fcm/send/{n}', p256dh_key='k', auth_key='a',
             )
         with patch('plugins.notifications.push_service.get_private_key', side_effect=ImproperlyConfigured('no keys')), \
                 patch('plugins.notifications.push_service.webpush') as mock_webpush:

@@ -35,6 +35,13 @@ class AnalyticsPlugin(BasePlugin):
         router.register(r'templates', ReportTemplateViewSet, basename='analytics-template')
         return router.urls
 
+    def get_scheduled_jobs(self):
+        # Hourly and idempotent: sends each due scheduled report once (M2, audit 2026-11-16).
+        return [
+            ('reports', 3600, 'plugins.analytics.scheduled_reports.run_due_reports'),
+            ('purge', 86400, 'plugins.analytics.scheduled_reports.purge_old_data'),
+        ]
+
     def get_permission_actions(self):
         return ["view", "manage", "export"]
 

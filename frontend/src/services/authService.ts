@@ -2,6 +2,26 @@ import api, { setAccessToken, withRefreshLock } from "@/lib/api";
 import type { LoginCredentials, AuthResponse, LoginResponse, MfaSetupData, User } from "@/types";
 import { clearOfflineUserData } from "@/lib/offline/offlineQueue";
 
+const UNSUBSCRIBE_PUSH = "/plugins/notifications/notifications/unsubscribe/";
+
+/**
+ * Stop push notices for this browser before the session ends. Without it the subscription
+ * outlives the sign-out and the next person on the same browser profile would receive the
+ * previous person's notices. Best effort: it never blocks or fails a logout.
+ */
+async function unsubscribePush(): Promise<void> {
+  try {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = await registration?.pushManager.getSubscription();
+    if (!subscription) return;
+    await api.post(UNSUBSCRIBE_PUSH, { endpoint: subscription.endpoint });
+    await subscription.unsubscribe();
+  } catch {
+    // The server also hands an endpoint to whoever subscribes next from this browser.
+  }
+}
+
 export const authService = {
   /** Tokens, or a second-factor challenge when the account needs one. */
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
@@ -54,9 +74,13 @@ export const authService = {
     return data;
   },
 
-  logout() {
+  /** Resolves once the push subscription is released; callers may ignore the promise. */
+  async logout(): Promise<void> {
+    // Started first so its request leaves with the still-valid access token.
+    const pushReleased = unsubscribePush();
     void api.post("/auth/token/logout/").catch(() => undefined);
     clearOfflineUserData();
     localStorage.removeItem("user");
+    await pushReleased;
   },
 };

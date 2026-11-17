@@ -152,6 +152,23 @@ class ProtectedMediaAuthorizationTests(TestCase):
             with self.subTest(path=rel):
                 self.assertEqual(self._get(rel, employee).status_code, 403)
 
+    def test_anonymous_visitor_can_read_the_branding_logo_only(self):
+        # M1 (audit 2026-11-16): the app signs in with bearer tokens, not Django sessions,
+        # and the login and maintenance pages are anonymous, so the logo must be public.
+        from django.contrib.auth.models import AnonymousUser
+
+        anonymous = AnonymousUser()
+        self.assertEqual(self._get("branding/logo.png", anonymous).status_code, 200)
+        for rel in (
+            "backups/backup_20260101_000000.zip",
+            "kpi_evidence/2026/03/cert.pdf",
+            "onboarding/2026/03/doc.pdf",
+            "something_new/file.bin",
+            "branding/../backups/backup_20260101_000000.zip",
+        ):
+            with self.subTest(path=rel):
+                self.assertEqual(self._get(rel, anonymous).status_code, 403)
+
     def test_regular_user_can_read_branding_logo(self):
         employee = self._user("media_employee2")
         self.assertEqual(self._get("branding/logo.png", employee).status_code, 200)

@@ -58,6 +58,21 @@ describe("AuthContext bootstrap during maintenance", () => {
     expect(authService.logout).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["a network error", { isAxiosError: true, code: "ERR_NETWORK" }],
+    ["a 502 from a proxy or captive portal", { isAxiosError: true, response: { status: 502, data: "" } }],
+    ["a 429", { isAxiosError: true, response: { status: 429, data: {} } }],
+  ])("keeps the stored session after %s, even when the browser says it is online", async (_n, error) => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+    vi.mocked(authService.refreshToken).mockRejectedValue(error);
+
+    renderProvider();
+
+    await waitFor(() => expect(screen.getByTestId("loading")).toHaveTextContent("false"));
+    expect(screen.getByTestId("user")).toHaveTextContent("employee");
+    expect(authService.logout).not.toHaveBeenCalled();
+  });
+
   it("still clears a genuinely invalid session", async () => {
     vi.mocked(authService.refreshToken).mockRejectedValue({
       isAxiosError: true,

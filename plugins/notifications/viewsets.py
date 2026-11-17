@@ -18,6 +18,7 @@ from core.mixins.permissions import (
     is_hr_only,
 )
 from .types.base import REGISTRY, get_all_types
+from .push_service import is_push_service_url
 from .vapid_utils import get_public_key
 
 
@@ -229,14 +230,29 @@ class NotificationViewSet(PluginEnabledMixin, viewsets.ModelViewSet):
     def subscribe(self, request):
         """Register a browser push subscription for the current user."""
         endpoint = request.data.get('endpoint')
-        p256dh_key = request.data.get('keys', {}).get('p256dh')
-        auth_key = request.data.get('keys', {}).get('auth')
+        keys = request.data.get('keys')
+        keys = keys if isinstance(keys, dict) else {}
+        p256dh_key = keys.get('p256dh')
+        auth_key = keys.get('auth')
 
         if not endpoint or not p256dh_key or not auth_key:
             return Response(
                 {'error': 'endpoint, keys.p256dh, and keys.auth are required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        if not isinstance(p256dh_key, str) or not isinstance(auth_key, str):
+            return Response({'error': 'keys must be strings'}, status=status.HTTP_400_BAD_REQUEST)
+        if not is_push_service_url(endpoint):
+            return Response(
+                {'error': 'endpoint must be an https URL of a browser push service'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # An endpoint identifies one browser profile: when another person signs in
+        # there and subscribes, the previous owner stops receiving its pushes.
+        PushSubscription.objects.filter(endpoint=endpoint, is_active=True).exclude(
+            user=request.user
+        ).update(is_active=False)
 
         # Upsert — if this endpoint already exists for this user, update keys
         subscription, created = PushSubscription.objects.update_or_create(

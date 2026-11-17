@@ -129,6 +129,34 @@ def _resolve_work_calendar(config: PayrollConfiguration, year: int) -> Optional[
     ).first()
 
 
+def ensure_calendar_covers_holidays(config: PayrollConfiguration, year: int, month: int) -> None:
+    """Refuse a draft that would price a public holiday as a normal day (audit M4).
+
+    Payroll reads holidays only from the work calendar. If HR has a global holiday in
+    the month that the active calendar does not mark (no calendar for the year, or the
+    holiday was never synced), the weekday fallback would freeze a wrong number.
+    """
+    from apps.leave_management.models.core import global_holiday_dates
+
+    start, end = _get_month_range(year, month)
+    holidays = global_holiday_dates(start, end)
+    if not holidays:
+        return
+    calendar = _resolve_work_calendar(config, year)
+    if calendar is None:
+        raise ValidationError(
+            f'No active work calendar for {year}, but public holidays exist in {year}-{month:02d}. '
+            f'Create or seed the {year} work calendar first.'
+        )
+    marked = set(calendar.workdays.filter(date__in=holidays, is_holiday=True).values_list('date', flat=True))
+    missing = sorted(holidays - marked)
+    if missing:
+        raise ValidationError(
+            f'The {year} work calendar does not mark these public holidays: '
+            f'{", ".join(d.isoformat() for d in missing)}. Sync the calendar first.'
+        )
+
+
 def _get_month_workdays(config: PayrollConfiguration, year: int, month: int) -> dict:
     """Return working-days info for the month.
 
@@ -457,9 +485,11 @@ def generate_draft_run(run: PayrollRun, users, replace_user_ids=None) -> list[Pa
     ``replace_user_ids=None`` replaces every draft line and entry of the run.
     A set of user ids replaces only those users' draft lines and entries, so a
     scoped regenerate leaves other users' lines untouched. Totals are always
-    recomputed from the lines that remain. Raises unless the run is a draft.
+    recomputed from the lines that remain. Raises unless the run is a draft, or when the
+    work calendar does not cover the month's public holidays.
     """
     config = PayrollConfiguration.get_singleton()
+    ensure_calendar_covers_holidays(config, run.year, run.month)
 
     with transaction.atomic():
         locked_run = PayrollRun.objects.select_for_update().select_related('rule_set').get(pk=run.pk)
@@ -907,6 +937,11 @@ def create_automatic_draft_run(year: int, month: int) -> Optional[PayrollRun]:
             generate_draft_run(run, users)
     except IntegrityError:
         return None  # another worker created it first
+    except ValidationError as exc:
+        # The calendar does not cover this month's holidays; nothing is created and the
+        # next tick retries once HR fixes the calendar.
+        logger.error('Automatic payroll draft %s-%02d skipped: %s', year, month, '; '.join(exc.messages))
+        return None
     return run
 
 

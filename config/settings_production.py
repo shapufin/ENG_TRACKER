@@ -154,6 +154,11 @@ DATABASES = {
         # (managed DBs like RDS/Azure Postgres). Set via DB_SSL_MODE env var.
         'OPTIONS': {
             'sslmode': os.getenv('DB_SSL_MODE', 'prefer'),
+            # M5 (audit 2026-11-16): bound a dead connection and a lock wait so a request or a
+            # scheduler job fails instead of hanging for good. Not statement_timeout: a
+            # large export legitimately runs long queries.
+            'connect_timeout': int(os.getenv('DB_CONNECT_TIMEOUT', '10')),
+            'options': f"-c lock_timeout={int(os.getenv('DB_LOCK_TIMEOUT_MS', '30000'))}",
         },
     }
 }
@@ -181,6 +186,8 @@ CSRF_TRUSTED_ORIGINS = [_frontend_url]
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+# Without a timeout a dead SMTP socket blocks the sending process forever (audit 2026-11-16 M5).
+EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '30'))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')

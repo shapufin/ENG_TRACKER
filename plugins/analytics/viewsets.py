@@ -913,13 +913,10 @@ class ScheduledReportViewSet(PluginPermissionMixin, viewsets.ModelViewSet):
                 email.attach(filename, report_data, content_type)
                 email.send()
 
+            from .scheduled_reports import next_run_after
+
             report.last_run_at = timezone.now()
-            if report.schedule_type == 'daily':
-                report.next_run_at = timezone.now() + timedelta(days=1)
-            elif report.schedule_type == 'weekly':
-                report.next_run_at = timezone.now() + timedelta(weeks=1)
-            elif report.schedule_type == 'monthly':
-                report.next_run_at = timezone.now() + timedelta(days=30)
+            report.next_run_at = next_run_after(report.schedule_type, report.last_run_at) or report.next_run_at
             report.save()
             return Response({'detail': f'Report "{report.name}" sent successfully to {len(report.recipients)} recipient(s).'})
         except Exception as e:
