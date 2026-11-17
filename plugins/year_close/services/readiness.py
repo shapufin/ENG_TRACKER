@@ -80,22 +80,25 @@ def check_year_readiness(year: int) -> dict:
                 f'{draft_runs} draft payroll run(s) of {year} must be finalized or cancelled.'
             )
 
-        for model, kind, label in (
-            (OvertimeLog, 'overtime', 'overtime'),
-            (StandbyLog, 'standby', 'standby'),
-        ):
-            unreferenced = model.objects.filter(
+        unpaid_rows: list[tuple[str, int, date]] = []
+        for model, kind in ((OvertimeLog, 'overtime'), (StandbyLog, 'standby')):
+            for user_id, day, period in model.objects.filter(
                 date__gte=first_day, date__lte=last_day, status='approved', is_deleted=False,
             ).exclude(
                 id__in=PayrollRunEntry.objects.filter(
                     source_kind=kind, run__status='finalized',
                 ).values('source_id')
-            ).count()
-            if unreferenced:
+            ).values_list('user_id', 'date', 'resolved_settlement_period'):
+                unpaid_rows.append((kind, user_id, period or day))
+        blocking, excluded = _split_by_payroll_subject(unpaid_rows)
+        for label in ('overtime', 'standby'):
+            if blocking[label]:
                 blockers.append(
-                    f'{unreferenced} approved {label} entr(y/ies) of {year} are not in any '
+                    f'{blocking[label]} approved {label} entr(y/ies) of {year} are not in any '
                     f'finalized payroll run.'
                 )
+        if excluded:
+            warnings.append(_unpaid_warning(year, excluded))
 
     for model, label in ((OvertimeLog, 'overtime'), (StandbyLog, 'standby')):
         pending = model.objects.filter(
@@ -111,11 +114,50 @@ def check_year_readiness(year: int) -> dict:
     if pending_leave:
         blockers.append(f'{pending_leave} leave request(s) overlapping {year} are still pending.')
 
-    from .archive_sets import december_snapshot_blockers
+    from .archive_sets import december_snapshot_state
 
-    blockers.extend(december_snapshot_blockers(year))
+    december_blockers, december_warnings = december_snapshot_state(year)
+    blockers.extend(december_blockers)
+    warnings.extend(december_warnings)
     warnings.extend(_warning_list(year, first_day, last_day))
     return {'blockers': blockers, 'warnings': warnings}
+
+
+def _split_by_payroll_subject(rows):
+    """Split unpaid approved rows: payroll subjects block, everyone else is a warning.
+
+    Owner decision D1 (audit 2026-11-17 H2): payroll never pays superusers, Managers,
+    deactivated people or people without a wage, so their approved rows can never reach
+    a finalized run and must not block the close forever.
+    """
+    from plugins.payroll.services.payroll_service import payroll_exclusion_reasons
+
+    periods = [(user_id, when.year, when.month) for _kind, user_id, when in rows]
+    reasons = payroll_exclusion_reasons({user_id for user_id, _, _ in periods}, periods)
+    blocking = {'overtime': 0, 'standby': 0}
+    excluded: dict[str, dict] = {}
+    for kind, user_id, when in rows:
+        reason = reasons.get((user_id, when.year, when.month))
+        if reason is None:
+            blocking[kind] += 1
+            continue
+        group = excluded.setdefault(reason, {'rows': 0, 'users': set()})
+        group['rows'] += 1
+        group['users'].add(user_id)
+    return blocking, excluded
+
+
+def _unpaid_warning(year: int, excluded: dict) -> str:
+    rows = sum(group['rows'] for group in excluded.values())
+    people = len(set().union(*(group['users'] for group in excluded.values())))
+    parts = ', '.join(
+        f"{group['rows']} of {len(group['users'])} {reason}"
+        for reason, group in sorted(excluded.items())
+    )
+    return (
+        f'{rows} approved overtime or standby entr(y/ies) of {year} belong to {people} '
+        f'person(s) payroll never pays ({parts}); they are archived but were never paid.'
+    )
 
 
 def _warning_list(year: int, first_day: date, last_day: date) -> list[str]:

@@ -85,17 +85,13 @@ def managed_member_ids_bulk(leader_ids) -> dict[int, set[int]]:
 def candidate_pairs() -> list[tuple[int, int]]:
     """Deterministic ``(leader_id, team_id)`` pairs: teams led, plus teams of
     managed members, for active leaders and for deactivated team leaders."""
-    from apps.users.models import Team, TeamMembership, UserProfile
+    from apps.users.models import Team, TeamMembership
+    from apps.users.services.leader_ownership import leader_user_ids
 
-    profiles = list(UserProfile.objects.filter(user__is_active=True))
-
-    # Role codes are a denormalised JSON column, so this stays one query: never
-    # call the ``is_team_leader`` property in a loop (up to 3 queries each).
-    leader_ids: set[int] = {
-        profile.user_id for profile in profiles
-        if profile.italian_tl_id or profile.albanian_tl_id
-        or {'italian_tl', 'albanian_tl'} & set(profile.role_codes or [])
-    }
+    # The one definition of a leader (one query). Having a leader link does not make
+    # someone a leader: that test once put every employee into a self-named bundle
+    # (audit 2026-11-17 H5). Never call ``is_team_leader`` in a loop here.
+    leader_ids: set[int] = set(leader_user_ids())
 
     led = {}
     for team_id, leader_id in Team.objects.filter(is_deleted=False).exclude(
@@ -300,7 +296,7 @@ def bundles_for_year(year: int) -> list[dict]:
             'member_ids': orphans,
             'ot_ids': unowned_rows,
         })
-    return bundles
+    return assign_filenames(bundles)
 
 
 def completeness_gap(year: int, bundles: list[dict]) -> set[int]:
@@ -325,10 +321,33 @@ def completeness_gap(year: int, bundles: list[dict]) -> set[int]:
     return gap
 
 
-def bundle_filename(bundle: dict) -> str:
+def _readable_filename(bundle: dict) -> str:
     if bundle['kind'] == 'unassigned':
         return f'{UNASSIGNED_LABEL}.zip'
     return f"{_safe_component(bundle['leader_name'])}__{_safe_component(bundle['team_name'])}.zip"
+
+
+def assign_filenames(bundles: list[dict]) -> list[dict]:
+    """Give every bundle a unique file name, stored on the bundle as ``filename``.
+
+    ``_safe_component`` maps ``@``, spaces and ``/`` to ``_``, so two pairs can clean to
+    the same text. Two bundles sharing a name share one file row: the second was never
+    built and the set still looked complete (audit 2026-11-17 M3). Only colliding names
+    get the ids, so ordinary names stay readable and stable.
+    """
+    from collections import Counter
+
+    readable = [_readable_filename(bundle) for bundle in bundles]
+    seen = Counter(readable)
+    for bundle, name in zip(bundles, readable):
+        if seen[name] > 1 and bundle['kind'] == 'team':
+            name = f"{name[:-4]}__{bundle['leader_id']}-{bundle['team_id']}.zip"
+        bundle['filename'] = name
+    return bundles
+
+
+def bundle_filename(bundle: dict) -> str:
+    return bundle.get('filename') or _readable_filename(bundle)
 
 
 # ------------------------------------------------------------------ builders
@@ -364,7 +383,7 @@ def _finalized_lines(year: int, member_ids: list[int]):
 
     entries = PayrollRunEntry.objects.filter(
         run__year=year, run__status='finalized', user_id__in=member_ids, status='finalized',
-    ).select_related('line').distinct()
+    ).select_related('line__run', 'line__user').distinct()
     seen, lines = set(), []
     for entry in entries:
         if entry.line_id not in seen:
@@ -374,9 +393,16 @@ def _finalized_lines(year: int, member_ids: list[int]):
 
 
 def _payslip_name(line) -> str:
-    """A payslip an operator can identify: the person, not a row id."""
+    """One file per person AND month: ``payslips/<username>/<year>-<month>.pdf``.
+
+    The month is part of the name because a person has up to twelve finalized lines a
+    year; a name per person alone kept only the last one (audit 2026-11-17 H1).
+    """
     username = getattr(getattr(line, 'user', None), 'username', None)
-    return f"payslips/{_safe_component(username or line.pk)}.pdf"
+    return (
+        f"payslips/{_safe_component(username or line.pk)}/"
+        f"{line.run.year}-{int(line.run.month):02d}.pdf"
+    )
 
 
 def _write_zip(target: Path, members: dict[str, bytes]) -> None:
@@ -433,7 +459,10 @@ def build_bundle(year: int, bundle: dict, warnings: list[str]) -> tuple[Path, di
 
         for line in _finalized_lines(year, bundle['member_ids']):
             stream = generate_payslip_pdf(line)
-            files[_payslip_name(line)] = stream.read() if hasattr(stream, 'read') else bytes(stream)
+            name = _payslip_name(line)
+            if name in files:
+                raise ValueError(f'Two payslips would share the name {name}.')
+            files[name] = stream.read() if hasattr(stream, 'read') else bytes(stream)
             payslips += 1
     counts['payslips'] = payslips
 

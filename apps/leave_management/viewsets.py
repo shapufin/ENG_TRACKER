@@ -383,27 +383,36 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
             return replay.response
 
     def perform_update(self, serializer):
-        """Revalidate balances when leave requests change."""
-        instance = self.get_object()
+        """Revalidate balances when leave requests change.
+
+        Same order as create (audit 2026-11-17 M9): person lock, then the request row,
+        then every check, all in the writing transaction. The row is re-read under the
+        lock, so a concurrent approve or reject is seen and its days are released by
+        the status they really have.
+        """
         incoming = serializer.validated_data
-        target_user = incoming.get('user', instance.user)
-        request_type = incoming.get('request_type', instance.request_type)
-        start_date = incoming.get('start_date', instance.start_date)
-        end_date = incoming.get('end_date', instance.end_date)
-
-        is_half_day = incoming.get('is_half_day', instance.is_half_day)
-        half_day_period = incoming.get('half_day_period', instance.half_day_period)
-
-        self._ensure_no_overlap(
-            target_user, start_date, end_date, exclude_request_id=instance.id,
-            is_half_day=is_half_day, half_day_period=half_day_period,
-        )
-        self._ensure_year_open(instance.start_date, start_date)
-        if instance.status == 'cancelled':
-            # Its days were released; saving an edit would reserve them for a request that is not live.
-            raise ValidationError('A cancelled request cannot be edited. Create a new request instead.')
-
         with transaction.atomic():
+            stale = self.get_object()
+            lock_person(stale.user_id)
+            instance = LeaveRequest.objects.select_for_update().get(pk=stale.pk)
+            serializer.instance = instance
+            target_user = incoming.get('user', instance.user)
+            request_type = incoming.get('request_type', instance.request_type)
+            start_date = incoming.get('start_date', instance.start_date)
+            end_date = incoming.get('end_date', instance.end_date)
+
+            is_half_day = incoming.get('is_half_day', instance.is_half_day)
+            half_day_period = incoming.get('half_day_period', instance.half_day_period)
+
+            self._ensure_no_overlap(
+                target_user, start_date, end_date, exclude_request_id=instance.id,
+                is_half_day=is_half_day, half_day_period=half_day_period,
+            )
+            self._ensure_year_open(instance.start_date, start_date)
+            if instance.status == 'cancelled':
+                # Its days were released; saving an edit would reserve them for a request that is not live.
+                raise ValidationError('A cancelled request cannot be edited. Create a new request instead.')
+
             # Release the old reservation before validating the new dates, so the
             # check sees the balance the edit really has. If validation fails, the
             # release is rolled back with the rest of this transaction.

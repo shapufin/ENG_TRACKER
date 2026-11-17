@@ -46,6 +46,22 @@ export const leaveService = {
     return data;
   },
 
+  /**
+   * Every request the caller may see, page by page. The leave page counts and exports
+   * this list, so it must never stop at one page (audit 2026-11-17 M5: 1000 rows).
+   */
+  async getAllRequests(params?: { ignore_date_filter?: string }): Promise<LeaveRequest[]> {
+    const rows: LeaveRequest[] = [];
+    for (let page = 1; ; page += 1) {
+      const { data } = await api.get<PaginatedResponse<LeaveRequest>>(
+        "/leave-management/requests/",
+        { params: { ...params, page_size: 1000, page } }
+      );
+      rows.push(...(data.results ?? []));
+      if (!data.next) return rows;
+    }
+  },
+
   async getRequest(id: number): Promise<LeaveRequest> {
     const { data } = await api.get<LeaveRequest>(`/leave-management/requests/${id}/`);
     return data;

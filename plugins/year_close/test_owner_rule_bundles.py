@@ -95,3 +95,27 @@ class YearCloseOwnerRuleTests(TestCase):
         self.assertTrue(
             any('Unassigned' in warning and '2' in warning for warning in warnings), warnings,
         )
+
+
+class EmployeesAreNotLeadersTests(TestCase):
+    """Having a leader does not make someone a leader (audit 2026-11-17 H5)."""
+
+    def test_an_employee_older_than_their_leader_files_with_the_leader(self):
+        from apps.leave_management.models import LeaveRequest
+        from plugins.year_close.services.builder import bundle_filename, candidate_pairs
+
+        early = User.objects.create_user(username='aa_early_employee', password='x')
+        leader = _lm('zz_new_leader')
+        self.assertLess(early.id, leader.id)
+        team = Team.objects.create(name='YC Early', code='YCE', team_leader=leader)
+        change_user_teams(early.profile, [team.id])
+        early.profile.albanian_tl = leader
+        early.profile.save()
+        LeaveRequest.objects.create(
+            user=early, start_date=date(YEAR, 6, 10), end_date=date(YEAR, 6, 11),
+            request_type='vacation', status='approved', days_counted=2,
+        )
+
+        self.assertNotIn(early.id, {leader_id for leader_id, _ in candidate_pairs()})
+        owning = [b for b in bundles_for_year(YEAR) if early.id in b['member_ids']]
+        self.assertEqual([bundle_filename(b) for b in owning], ['zz_new_leader__YCE.zip'])

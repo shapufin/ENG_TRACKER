@@ -17,6 +17,23 @@ vi.mock("./bulkActionHelpers", () => ({
 
 beforeEach(() => vi.clearAllMocks());
 
+describe("leaveService.getAllRequests (audit 2026-11-17 M5)", () => {
+  it("follows every page, so a list over one page is never cut", async () => {
+    const page = (start: number, size: number) =>
+      Array.from({ length: size }, (_, i) => ({ id: start + i }));
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({ data: { results: page(0, 1000), count: 1500, next: "p2" } } as any)
+      .mockResolvedValueOnce({ data: { results: page(1000, 500), count: 1500, next: null } } as any);
+
+    const rows = await leaveService.getAllRequests({ ignore_date_filter: "true" });
+
+    expect(rows).toHaveLength(1500);
+    expect(api.get).toHaveBeenNthCalledWith(2, "/leave-management/requests/", {
+      params: { ignore_date_filter: "true", page_size: 1000, page: 2 },
+    });
+  });
+});
+
 describe("leaveService URL contracts", () => {
   it("getRequests calls /leave-management/requests/", async () => {
     vi.mocked(api.get).mockResolvedValue({ data: { results: [], count: 0 } } as any);

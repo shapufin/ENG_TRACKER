@@ -45,6 +45,8 @@ export interface ArchiveCategory {
   removable: boolean;
   purged_at: string | null;
   notice_sent_on: string | null;
+  /** Why the category must stay past its date (e.g. finalized payroll still points at it). */
+  hold?: string | null;
 }
 
 export interface ArchiveEntry {
@@ -53,6 +55,8 @@ export interface ArchiveEntry {
   version: number;
   completed_at: string | null;
   total_bytes: number;
+  /** The set was rebuilt after a reopen; a superuser must confirm it before any removal. */
+  needs_confirmation?: boolean;
   categories: ArchiveCategory[];
   files: YearSnapshotFile[];
 }

@@ -141,3 +141,22 @@ class HolidayRecountTests(TestCase):
         call_command('recount_leave_days', '--from', '2026-12-01', '--to', '2026-12-31', '--apply', stdout=StringIO())
         leave.refresh_from_db()
         self.assertEqual(float(leave.days_counted), 4.0)
+
+    def test_dates_changed_after_the_scan_are_the_ones_counted(self):
+        """The recount counts the dates the LOCKED row has (audit 2026-11-17 M10)."""
+        from unittest.mock import patch
+
+        from apps.leave_management.services import holiday_recount
+
+        leave = self._request()
+        PublicHoliday.objects.create(name='Late holiday', date=TUESDAY)  # on_commit not run here
+        real_apply = holiday_recount._apply
+
+        def edit_then_apply(request_id, *args):
+            LeaveRequest.objects.filter(pk=request_id).update(end_date=date(2026, 12, 9))
+            return real_apply(request_id, *args)
+
+        with patch.object(holiday_recount, '_apply', side_effect=edit_then_apply):
+            recount_leave_days(date_from=TUESDAY, date_to=TUESDAY, today=EARLY, apply=True)
+        leave.refresh_from_db()
+        self.assertEqual(float(leave.days_counted), 2.0)  # Mon + Wed; Tuesday is the holiday

@@ -56,18 +56,46 @@ def _lock_snapshot(year: int, retry: bool) -> tuple[YearSnapshot, bool]:
     return snapshot, created
 
 
+def supersede_if_reopened(year: int) -> bool:
+    """Retire a ready set whose year is no longer frozen (audit 2026-11-17 C1).
+
+    ``_finalize`` freezes the year right after the set turns ready, so a ready set
+    without a ``ClosedYear`` row means ``reopen_year`` ran since: its files no longer
+    describe the data. Marking it superseded makes the next close build version N+1
+    from scratch. Read straight from the database, never through the 60-second
+    closed-year cache, and kept here (not in a reopen receiver) so it also works when
+    the plugin was disabled while the year was reopened.
+    """
+    from apps.users.models import ClosedYear
+
+    if ClosedYear.objects.filter(year=year).exists():
+        return False
+    if not YearSnapshot.objects.filter(year=year, status='ready').exists():
+        return False
+    YearSnapshot.objects.filter(year=year).exclude(status='superseded').update(
+        status='superseded', updated_at=timezone.now(),
+    )
+    logger.info('Year %s was reopened: its archive set is superseded.', year)
+    return True
+
+
 def close_year(year: int, *, actor=None, retry: bool = False) -> YearSnapshot:
     """Build (or retry) the snapshot set for ``year``.
 
-    Idempotent: a ready year is returned untouched. ``retry`` rebuilds only the
-    files that failed.
+    Idempotent: a ready, frozen year is returned untouched. A ready set of a year
+    that was reopened is superseded and rebuilt as a new version. ``retry``
+    rebuilds only the files that failed.
     """
     if not is_year_eligible(year):
-        snapshot, _ = _lock_snapshot(year, retry=False)
-        snapshot.readiness = check_year_readiness(year)
-        snapshot.status = 'blocked'
-        snapshot.save(update_fields=['readiness', 'status', 'updated_at'])
+        # select_for_update needs a transaction (PostgreSQL raises outside one; audit M1).
+        with transaction.atomic():
+            snapshot, _ = _lock_snapshot(year, retry=False)
+            snapshot.readiness = check_year_readiness(year)
+            snapshot.status = 'blocked'
+            snapshot.save(update_fields=['readiness', 'status', 'updated_at'])
         return snapshot
+
+    supersede_if_reopened(year)
 
     # The snapshot must record post-rollover balances, so roll over first.
     apply_year_end_rollover()
@@ -77,14 +105,23 @@ def close_year(year: int, *, actor=None, retry: bool = False) -> YearSnapshot:
         snapshot, should_build = _lock_snapshot(year, retry=retry)
         if not should_build:
             return snapshot
+        unchanged = (
+            snapshot.status == 'blocked'
+            and (snapshot.readiness or {}).get('blockers') == readiness['blockers']
+        )
         snapshot.readiness = readiness
         if readiness['blockers']:
             snapshot.status = 'blocked'
             snapshot.save(update_fields=['readiness', 'status', 'updated_at'])
-            record_year_event(
-                actor, 'UPDATE', year, 'year_close_blocked',
-                extra={'blockers': readiness['blockers'], 'version': snapshot.version},
-            )
+            if not unchanged:
+                # The scheduler retries hourly: log and announce a change, not every tick (H4).
+                record_year_event(
+                    actor, 'UPDATE', year, 'year_close_blocked',
+                    extra={'blockers': readiness['blockers'], 'version': snapshot.version},
+                )
+                transaction.on_commit(
+                    lambda: notify_attention(year, 'blocked', readiness['blockers'])
+                )
             return snapshot
         snapshot.status = 'building'
         snapshot.started_at = timezone.now()
@@ -112,6 +149,7 @@ def _build(snapshot: YearSnapshot, warnings: list[str], *, retry: bool) -> None:
         }
         snapshot.save(update_fields=['status', 'readiness', 'updated_at'])
         logger.error('Year %s close failed: %s users uncovered', year, len(gap))
+        notify_attention(year, 'failed', [snapshot.readiness['error']])
         return
 
     plan = [
@@ -121,7 +159,14 @@ def _build(snapshot: YearSnapshot, warnings: list[str], *, retry: bool) -> None:
     # A structure change (team deleted, members reassigned) leaves rows behind
     # that the current plan no longer produces; they would keep the set looking
     # complete and end up in the manifest as evidence that was never built now.
-    planned = {f'{year}/{builder.bundle_filename(bundle)}' for _, bundle in plan}
+    names = [f'{year}/{builder.bundle_filename(bundle)}' for _, bundle in plan]
+    if len(names) != len(set(names)):  # assign_filenames makes them unique; never trust it blindly
+        snapshot.status = 'failed'
+        snapshot.readiness = {**(snapshot.readiness or {}), 'error': 'Two bundles share a file name.'}
+        snapshot.save(update_fields=['status', 'readiness', 'updated_at'])
+        notify_attention(year, 'failed', [snapshot.readiness['error']])
+        return
+    planned = set(names)
     planned |= {f'{year}/company_{year}.zip', f'{year}/MANIFEST.json'}
     for row in snapshot.files.exclude(relative_path__in=planned):
         (builder.snapshot_root() / row.relative_path).unlink(missing_ok=True)
@@ -138,10 +183,8 @@ def _build(snapshot: YearSnapshot, warnings: list[str], *, retry: bool) -> None:
                 'team_name': bundle['team_name'],
             },
         )
-        if file_row.status == 'ready' and not retry:
-            continue
-        if retry and file_row.status == 'ready':
-            continue
+        if file_row.status == 'ready':
+            continue  # with or without --retry, only failed or new files are built
         _build_file(file_row, lambda b=bundle: builder.build_bundle(year, b, warnings))
 
     company_row, _ = YearSnapshotFile.objects.get_or_create(
@@ -216,6 +259,33 @@ def _company_counts(year: int) -> dict:
         return json.loads(archive.read('MANIFEST.json')).get('counts', {})
 
 
+def _count_drift(snapshot: YearSnapshot, files) -> str:
+    """Reason text when the bundles no longer hold what the database holds, else ''.
+
+    Bundles are disjoint by user and by row, so their counts must add up to the live
+    year counts. Checked last, right before the freeze, because nothing locks the year's
+    rows while the set is built (audit 2026-11-17 M4).
+    """
+    import json
+    import zipfile
+
+    from .readiness import pending_counts
+
+    totals = {'overtime': 0, 'standby': 0, 'leave': 0}
+    for row in files:
+        if row.kind not in ('team', 'unassigned'):
+            continue
+        with zipfile.ZipFile(builder.snapshot_root() / row.relative_path) as archive:
+            counts = json.loads(archive.read('MANIFEST.json')).get('counts', {})
+        for key in totals:
+            totals[key] += counts.get(key, 0)
+    live = pending_counts(snapshot.year)
+    differ = [f'{key} {totals[key]} archived vs {live[key]} now' for key in totals if totals[key] != live[key]]
+    if not differ:
+        return ''
+    return 'Rows changed while the set was built (' + ', '.join(differ) + '); it is rebuilt on the next run.'
+
+
 def _finalize(snapshot: YearSnapshot, actor) -> YearSnapshot:
     snapshot.refresh_from_db()
     # ``_build`` can abort before writing any file (completeness gap); that is a
@@ -233,6 +303,20 @@ def _finalize(snapshot: YearSnapshot, actor) -> YearSnapshot:
         snapshot.status = 'failed'
         snapshot.completed_at = timezone.now()
         snapshot.save(update_fields=['status', 'completed_at', 'updated_at'])
+        notify_attention(snapshot.year, 'failed', sorted(
+            f'{row.relative_path}: {row.error[:200]}' for row in failed
+        ))
+        return snapshot
+
+    drift = _count_drift(snapshot, files)
+    if drift:
+        # Rows changed while the set was built: rebuild every bundle on the next run (M4).
+        snapshot.files.filter(kind__in=('team', 'unassigned')).update(status='pending', error=drift)
+        snapshot.status = 'failed'
+        snapshot.readiness = {**(snapshot.readiness or {}), 'error': drift}
+        snapshot.completed_at = timezone.now()
+        snapshot.save(update_fields=['status', 'readiness', 'completed_at', 'updated_at'])
+        notify_attention(snapshot.year, 'failed', [drift])
         return snapshot
 
     snapshot.status = 'ready'
@@ -245,12 +329,44 @@ def _finalize(snapshot: YearSnapshot, actor) -> YearSnapshot:
     return snapshot
 
 
+def notify_attention(year: int, status: str, reasons: list[str]) -> None:
+    """Tell superusers a due year is blocked or failed (H4). Never blocks the close."""
+    try:
+        from ..notification_types import YearCloseAttentionNotice
+    except ImportError:  # notifications plugin not installed
+        return
+    try:
+        YearCloseAttentionNotice().dispatch({'year': year, 'status': status, 'reasons': reasons})
+    except Exception:  # noqa: BLE001 - a notice must never fail the close itself
+        logger.exception('Year-close notice for %s failed', year)
+
+
+def years_to_process() -> list[int]:
+    """Last year, plus any older year the scheduler already started and did not finish.
+
+    A year that was never started stays a deliberate ``manage.py close_year --year``
+    decision; one that was started (blocked, failed, reopened) is not abandoned on
+    1 January (H4).
+    """
+    from apps.users.models import ClosedYear
+
+    years = {business_today().year - 1}
+    years |= set(
+        YearSnapshot.objects.exclude(status__in=('ready', 'superseded'))
+        .values_list('year', flat=True)
+    )
+    years |= set(
+        YearSnapshot.objects.filter(status='ready')
+        .exclude(year__in=ClosedYear.objects.values('year'))
+        .values_list('year', flat=True)
+    )
+    return sorted(year for year in years if is_year_eligible(year))
+
+
 def process_close_year() -> None:
-    """Scheduler entry: close last year when it is due. Cheap when nothing to do."""
-    year = business_today().year - 1
-    if not is_year_eligible(year):
-        return
-    existing = latest_snapshot(year)
-    if existing is not None and existing.status == 'ready':
-        return
-    close_year(year)
+    """Scheduler entry: close every due year. Cheap when nothing to do."""
+    for year in years_to_process():
+        existing = latest_snapshot(year)
+        if existing is not None and existing.status == 'ready' and not supersede_if_reopened(year):
+            continue
+        close_year(year)

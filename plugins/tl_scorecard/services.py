@@ -11,9 +11,11 @@ from __future__ import annotations
 
 import copy
 import math
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 
 from django.utils import timezone
+
+from core.utils.timezone_local import business_tz
 
 from core.utils.timezone_local import business_today
 
@@ -54,16 +56,27 @@ def _month_bounds(month: date) -> tuple[date, date]:
 
 
 def _business_days_elapsed(start, end) -> int:
-    """Business days between two datetimes, 0 if decided the same day."""
+    """Business days between two datetimes, 0 if decided the same day (Tirane dates)."""
     if start is None or end is None:
         return 0
-    return max(count_business_days(start.date(), end.date()) - 1, 0)
+    return max(count_business_days(_local_date(start), _local_date(end)) - 1, 0)
 
 
 def _local_date(value):
-    """The calendar date a stored datetime falls on in the app's time zone,
-    which is how a ``submitted_at__gte=<date>`` filter reads it."""
-    return timezone.localtime(value).date()
+    """The Europe/Tirane calendar date of a stored datetime (audit 2026-11-17 M8, D2).
+
+    Same calendar as ``_starts`` and as engagement's ``month_bounds``.
+    """
+    return timezone.localtime(value, business_tz()).date()
+
+
+def _starts(day):
+    """Midnight of ``day`` in Europe/Tirane: the bound for a ``submitted_at`` filter.
+
+    A plain date in a datetime filter is read as UTC midnight (``TIME_ZONE='UTC'``), which
+    put a request submitted at 00:30 on the 1st into the previous month.
+    """
+    return datetime.combine(day, time.min, tzinfo=business_tz())
 
 
 def away_all_month(leave_ranges, holidays, month_start, month_end) -> set:
@@ -108,15 +121,15 @@ class TrendWindow:
         self.first_month = first_month
         self.end = end
         self.leave = list(LeaveRequest.objects.filter(
-            user_id__in=team_member_ids, submitted_at__gte=first_month, submitted_at__lt=end,
+            user_id__in=team_member_ids, submitted_at__gte=_starts(first_month), submitted_at__lt=_starts(end),
         ))
         self.pending_leave = [
             _local_date(submitted) for submitted in LeaveRequest.objects.filter(
-                user_id__in=team_member_ids, status='pending', submitted_at__lt=end,
+                user_id__in=team_member_ids, status='pending', submitted_at__lt=_starts(end),
             ).values_list('submitted_at', flat=True)
         ]
         self.overtime = list(OvertimeLog.objects.filter(
-            owned_by_leader_q(leader.id), submitted_at__gte=first_month, submitted_at__lt=end,
+            owned_by_leader_q(leader.id), submitted_at__gte=_starts(first_month), submitted_at__lt=_starts(end),
         ))
         self.meetings = list(Meeting.objects.filter(
             organizer=leader, occurred_on__gte=first_month, occurred_on__lt=end,
@@ -164,7 +177,7 @@ def leave_sla_metrics(team_member_ids, month: date, window: TrendWindow | None =
         rows = window.leave_in(month_start, month_end)
     else:
         rows = LeaveRequest.objects.filter(
-            user_id__in=team_member_ids, submitted_at__gte=month_start, submitted_at__lt=month_end,
+            user_id__in=team_member_ids, submitted_at__gte=_starts(month_start), submitted_at__lt=_starts(month_end),
         )
 
     decided = [r for r in rows if r.status in ('approved', 'rejected') and r.approved_at]
@@ -175,7 +188,7 @@ def leave_sla_metrics(team_member_ids, month: date, window: TrendWindow | None =
         pending_at_month_end = window.pending_leave_before(month_end)
     else:
         pending_at_month_end = LeaveRequest.objects.filter(
-            user_id__in=team_member_ids, status='pending', submitted_at__lt=month_end,
+            user_id__in=team_member_ids, status='pending', submitted_at__lt=_starts(month_end),
         ).count()
 
     return {
@@ -198,7 +211,7 @@ def ot_turnaround_metrics(leader_id: int, month: date, window: TrendWindow | Non
         rows = window.overtime_in(month_start, month_end)
     else:
         rows = OvertimeLog.objects.filter(
-            owned_by_leader_q(leader_id), submitted_at__gte=month_start, submitted_at__lt=month_end,
+            owned_by_leader_q(leader_id), submitted_at__gte=_starts(month_start), submitted_at__lt=_starts(month_end),
         )
     decided = [r for r in rows if r.status in ('approved', 'rejected') and r.approved_at]
     if not decided:
@@ -576,12 +589,12 @@ def escalation_candidates(leader, subject_ids=None, include_leave=True) -> list[
         if include_leave else []
     )
     for r in pending_leave:
-        elapsed = count_business_days(r.submitted_at.date(), today) - 1 if r.submitted_at else 0
+        elapsed = count_business_days(_local_date(r.submitted_at), today) - 1 if r.submitted_at else 0
         if elapsed > ESCALATION_LEAVE_SLA_DAYS:
             candidates.append({
                 'kind': 'leave_pending', 'subject_id': r.user_id, 'subject_name': str(r.user),
                 'detail': f'Leave request pending {elapsed} business days (SLA: {ESCALATION_LEAVE_SLA_DAYS}).',
-                'since': r.submitted_at.date(),
+                'since': _local_date(r.submitted_at),
             })
 
     stale_cutoff = today - timedelta(weeks=ESCALATION_IDLE_STALE_WEEKS)

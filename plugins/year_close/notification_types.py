@@ -46,3 +46,36 @@ class ArchiveRemovalNotice(NotificationType):
             f"archive-removal:{context['year']}:{context['group']}:"
             f"{context['days']}:user:{user.id}"
         )
+
+
+class YearCloseAttentionNotice(NotificationType):
+    """A year that is due to close is blocked or failed (audit 2026-11-17 H4).
+
+    Sent once per year and set of reasons: the scheduler retries hourly, so the
+    dedupe key carries a hash of the reasons and a new reason is announced again.
+    """
+    event_type = 'year_close_attention'
+    label = 'Year close needs attention'
+    description = 'Sent to superusers when closing a year is blocked or a file failed to build.'
+    category = 'oversight'
+    notification_type = 'warning'
+    push_by_default = False
+    link = '/admin/archives'
+
+    def recipients(self, context):
+        return User.objects.filter(is_superuser=True, is_active=True)
+
+    def title(self, context):
+        return f"Closing {context['year']} needs attention"
+
+    def message(self, context):
+        reasons = context.get('reasons') or []
+        first = reasons[0] if reasons else 'See the Archives page.'
+        more = f' (+{len(reasons) - 1} more)' if len(reasons) > 1 else ''
+        return f"{context['year']} is {context['status']}: {first}{more}"
+
+    def dedupe_key(self, context, user):
+        import hashlib
+
+        digest = hashlib.sha256('|'.join(context.get('reasons') or []).encode()).hexdigest()[:16]
+        return f"year-close:{context['year']}:{context['status']}:{digest}:user:{user.id}"

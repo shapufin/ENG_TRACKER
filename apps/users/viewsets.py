@@ -1323,8 +1323,10 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         try:
             target_user_ids = profile.get_team_member_ids()
         except (DatabaseError, OperationalError) as e:
+            # Logged, never returned: the text can name tables and columns (audit 2026-11-17 L6).
+            logger.error('Database error retrieving team members: %s', e, exc_info=True)
             return Response(
-                {'error': f'Database error retrieving team members: {str(e)}'},
+                {'error': 'Could not load team members. Please try again.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -1379,8 +1381,10 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
             serializer = UserProfileSerializer(members, many=True)
             return Response(serializer.data)
         except (DatabaseError, OperationalError) as e:
+            # Logged, never returned: the text can name tables and columns (audit 2026-11-17 L6).
+            logger.error('Database error retrieving team members: %s', e, exc_info=True)
             return Response(
-                {'error': f'Database error retrieving team members: {str(e)}'},
+                {'error': 'Could not load team members. Please try again.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 

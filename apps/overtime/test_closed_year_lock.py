@@ -275,6 +275,14 @@ class ClosedYearWriteLockTests(APITestCase):
         response = self.client.post('/api/overtime/logs/', self._ot_payload(), format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
 
+    def test_reopen_command_refuses_a_blank_reason_cleanly(self):
+        """A CommandError, not a traceback (audit 2026-11-17 L1)."""
+        from django.core.management.base import CommandError
+
+        with self.assertRaises(CommandError):
+            call_command('reopen_year', year=self.year, reason='   ')
+        self.assertTrue(is_year_closed(self.year))
+
     def test_reopen_command_refuses_an_open_year(self):
         call_command('reopen_year', year=self.year, reason='x')
         with self.assertRaises(Exception):

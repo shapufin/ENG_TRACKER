@@ -40,7 +40,7 @@ export const useLeaveQueries = (options: UseLeaveQueriesOptions) => {
 
   const { data, isLoading: requestsLoading } = useQuery({
     queryKey: ["vacations", options.userId, "requests"],
-    queryFn: () => leaveService.getRequests({ page_size: 1000, ignore_date_filter: "true" }),
+    queryFn: () => leaveService.getAllRequests({ ignore_date_filter: "true" }),
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
@@ -93,7 +93,7 @@ export const useLeaveQueries = (options: UseLeaveQueriesOptions) => {
   });
 
   return {
-    requests: data?.results ?? [],
+    requests: data ?? [],
     balances,
     requestsLoading,
     balancesLoading,

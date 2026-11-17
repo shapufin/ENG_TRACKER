@@ -636,6 +636,16 @@ class StandbyLogExportTests(TestCase):
         # StandbyLogSerializer uses user.get_full_name() for user_name.
         self.assertIn('Export Employee', body)
 
+    def test_export_names_a_user_without_a_full_name_by_username(self):
+        """Never a blank User cell (audit 2026-11-17 L5)."""
+        nameless = User.objects.create_user(username='sb_nameless', password='x')
+        StandbyLog.objects.create(user=nameless, date=date(2026, 6, 1), hours=4, status='approved')
+        self.client.force_authenticate(user=self.staff)
+        body = _streaming_body(self.client.get(
+            '/api/standby/logs/export/', {'ignore_date_filter': 'true'},
+        ))
+        self.assertIn('sb_nameless,01/06/2026', body)
+
     def test_export_neutralises_spreadsheet_formulas(self):
         StandbyLog.objects.create(
             user=self.employee, date=date(2026, 6, 1),

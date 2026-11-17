@@ -288,6 +288,9 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
         from core.utils.time_overlap import find_overlapping_entry
 
         obj = self.get_object()
+        # Person lock first, as on create (audit 2026-11-17 M9), so a concurrent create or
+        # edit of the same person cannot pass the overlap check at the same time.
+        lock_person(obj.user_id)
         # Same row lock as delete (audit L5): a payroll finalize cannot slip in between the check and the save.
         OvertimeLog.objects.select_for_update().get(pk=obj.pk)
         self._ensure_not_in_finalized_payroll(obj)

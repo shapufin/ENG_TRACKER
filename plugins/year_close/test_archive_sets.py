@@ -91,3 +91,33 @@ class ArchiveSetsTests(YearCloseFixture):
             self.assertEqual(snapshot.status, 'ready', snapshot.readiness)
             with self._company(snapshot) as archive:
                 self.assertNotIn('scorecard/epr.xlsx', archive.namelist())
+
+
+class DecemberRuleTests(YearCloseFixture):
+    """Only leaders the freeze job can still snapshot are required (audit 2026-11-17 H3)."""
+
+    def test_a_former_leader_is_a_warning_not_a_blocker(self):
+        from django.utils import timezone
+        from plugins.tl_scorecard.models import ScorecardMonthSnapshot
+        from plugins.tl_scorecard.snapshots import freeze_scorecard_months
+        from plugins.year_close.services.readiness import check_year_readiness
+
+        former = User.objects.create_user(username='yc_former_leader', password='x')
+        ScorecardMonthSnapshot.objects.create(
+            leader=former, month=date(self.year, 6, 1), member_ids=[], payload={},
+            computed_at=timezone.now())
+        freeze_scorecard_months(month=date(self.year, 12, 1))
+        readiness = check_year_readiness(self.year)
+        self.assertFalse(any('December' in b for b in readiness['blockers']), readiness['blockers'])
+        self.assertTrue(any('former leader' in w for w in readiness['warnings']), readiness['warnings'])
+
+    def test_a_current_leader_without_december_still_blocks(self):
+        from django.utils import timezone
+        from plugins.tl_scorecard.models import ScorecardMonthSnapshot
+        from plugins.year_close.services.readiness import check_year_readiness
+
+        ScorecardMonthSnapshot.objects.create(
+            leader=self.tl, month=date(self.year, 6, 1), member_ids=[], payload={},
+            computed_at=timezone.now())
+        blockers = check_year_readiness(self.year)['blockers']
+        self.assertTrue(any('December' in b for b in blockers), blockers)
