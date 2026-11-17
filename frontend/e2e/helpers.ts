@@ -200,5 +200,9 @@ export async function logoutViaUI(page: Page): Promise<void> {
     logoutBtn.click();
   });
 
+  // With unsent offline changes the app asks first (audit H1); a test that logs out on purpose confirms.
+  const confirm = page.getByRole("button", { name: "Log out anyway" });
+  if (await confirm.isVisible({ timeout: 1_500 }).catch(() => false)) await confirm.click();
+
   await page.waitForURL(/\/login/, { timeout: 10_000 });
 }

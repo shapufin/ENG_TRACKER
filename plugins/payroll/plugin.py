@@ -38,6 +38,8 @@ class PayrollPlugin(BasePlugin):
         # Hourly and idempotent: month-end draft, urgent reminders, early and cutoff finalize.
         return [
             ('lifecycle', 3600, 'plugins.payroll.services.payroll_service.payroll_lifecycle_tick'),
+            # Daily; from 1 November a weekly notice to HR and administrators while next year is not set up.
+            ('year_start', 86400, 'plugins.payroll.services.year_start.year_start_notice_tick'),
         ]
 
     def get_permission_actions(self):

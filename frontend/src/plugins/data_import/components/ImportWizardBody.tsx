@@ -8,8 +8,6 @@ import React from "react";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { Progress } from "@/components/ui/progress";
 import { DataTable } from "@/components/ui/DataTable";
-import { GlassCard } from "@/components/ui/GlassCard";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ImportTarget, ImportStep, PreviewResult, CommitResult } from "../types/dataImport";
 import type { useDataImportWizard } from "../pages/hooks/useDataImportWizard";
 import type { useImportProfiles } from "../pages/hooks/useImportProfiles";
@@ -123,19 +121,19 @@ export const ImportWizardBody: React.FC<ImportWizardBodyProps> = ({
       <div className="space-y-4">
         <ImportSummaryCards summary={commit.summary} mode="commit" />
         {commit.row_errors.length > 0 && (
-          <GlassCard>
-            <CardHeader>
-              <CardTitle>{commit.row_errors.length} row(s) could not be imported</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <section className="space-y-3">
+            <h3 className="text-base font-semibold">
+              {commit.row_errors.length} row(s) could not be imported
+            </h3>
+            <div>
               <DataTable
                 columns={rowErrorColumns}
                 data={commit.row_errors}
                 pageSize={5}
                 emptyMessage="No row errors."
               />
-            </CardContent>
-          </GlassCard>
+            </div>
+          </section>
         )}
       </div>
     );

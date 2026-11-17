@@ -151,3 +151,33 @@ class HrPayrollAutoFinalizeFailedNotification(NotificationType):
 
     def dedupe_key(self, context, user):
         return f'hr-payroll-auto-failed:{context["run"].pk}:user:{user.id}'
+
+
+class HrYearStartNotification(NotificationType):
+    event_type = 'hr_year_start'
+    label = 'Next year is not set up yet'
+    description = (
+        'Sent weekly to HR and administrators from 1 November while next year still lacks public holidays '
+        'or a payroll work calendar, so leave booked for January is counted right and payroll can be drafted.'
+    )
+    category = 'hr'
+    notification_type = 'warning'
+    link = '/dashboard'
+
+    def recipients(self, context):
+        return (
+            get_user_model().objects.filter(is_active=True)
+            .filter(_IS_HR | Q(is_staff=True) | Q(is_superuser=True))
+            .distinct()
+        )
+
+    def title(self, context):
+        return f'Set up {context["year"]}: holidays and payroll calendar'
+
+    def message(self, context):
+        problems = ' '.join(f'{check}: {detail}' for check, detail in context['failures'])
+        return f'{context["year"]} is not ready. {problems}'
+
+    def dedupe_key(self, context, user):
+        iso = context['today'].isocalendar()
+        return f'hr-year-start:{context["year"]}:{iso[0]}-W{iso[1]:02d}:user:{user.id}'

@@ -2,11 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildFacets, matchingUserIds, toggleFacet } from "./calendarFacets";
 import type { User } from "@/types";
 
-const person = (
-  id: number,
-  clients: [number, string][] = [],
-  techs: [number, string][] = []
-) =>
+const person = (id: number, clients: [number, string][] = [], techs: [number, string][] = []) =>
   ({
     id,
     clients_detail: clients.map(([cid, name]) => ({ id: cid, name, code: name })),
@@ -15,7 +11,14 @@ const person = (
 
 const users = [
   person(1, [[10, "Acme"]], [[20, "DB"]]),
-  person(2, [[10, "Acme"], [11, "Beta"]], [[21, "Infra"]]),
+  person(
+    2,
+    [
+      [10, "Acme"],
+      [11, "Beta"],
+    ],
+    [[21, "Infra"]]
+  ),
   person(3, [[11, "Beta"]], [[20, "DB"]]),
   person(4),
 ];

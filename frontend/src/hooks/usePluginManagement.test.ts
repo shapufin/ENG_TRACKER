@@ -3,6 +3,8 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { usePluginManagement } from "./usePluginManagement";
 import { pluginService } from "@/services/pluginService";
 import type { PluginRecord } from "@/services/pluginService";
+import { goToPath } from "@/lib/pageNavigation";
+vi.mock("@/lib/pageNavigation", () => ({ goToPath: vi.fn(), reloadPage: vi.fn() }));
 
 const mockRefresh = vi.fn();
 
@@ -87,13 +89,11 @@ describe("usePluginManagement", () => {
   });
 
   it("handles plugin link with known route", async () => {
-    const originalHref = window.location.href;
-    Object.defineProperty(window, "location", { value: { href: originalHref }, writable: true });
     vi.mocked(pluginService.getPlugins).mockResolvedValue([]);
     const { result } = renderHook(() => usePluginManagement());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     act(() => result.current.handlePluginLink({ id: 1, name: "analytics" } as any));
-    expect(window.location.href).toBe("/admin/analytics");
+    expect(goToPath).toHaveBeenCalledWith("/admin/analytics");
   });
 
   it("handles plugin link with unknown route", async () => {

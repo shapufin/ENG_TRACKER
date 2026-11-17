@@ -94,6 +94,7 @@ describe("TeamTab 1-on-1 schedule", () => {
       data: [member(1, "Ana Planned", PLAN), member(2, "Bora Unplanned", null)],
     });
     (tlScorecardService.setOneOnOnePlans as ReturnType<typeof vi.fn>).mockResolvedValue({});
+    (tlScorecardService.createMeeting as ReturnType<typeof vi.fn>).mockResolvedValue({});
     (tlScorecardService.skipOneOnOne as ReturnType<typeof vi.fn>).mockResolvedValue({});
     (tlScorecardService.clearOneOnOnePlans as ReturnType<typeof vi.fn>).mockResolvedValue({});
   });
@@ -107,15 +108,38 @@ describe("TeamTab 1-on-1 schedule", () => {
 
   it("saves a schedule for the people ticked in the dialog", async () => {
     renderTab();
-    fireEvent.click(await screen.findByRole("button", { name: /1-on-1 schedule/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /set recurring 1-on-1/i }));
     // Dialog opens with everyone ticked; pick a cadence and save.
     fireEvent.click(await screen.findByRole("combobox", { name: /meeting cadence/i }));
     fireEvent.click(await screen.findByRole("option", { name: /^weekly$/i }));
-    fireEvent.click(screen.getByRole("button", { name: /save schedule/i }));
+    fireEvent.click(screen.getByRole("button", { name: /save recurring 1-on-1/i }));
     await waitFor(() => expect(tlScorecardService.setOneOnOnePlans).toHaveBeenCalled());
     const body = (tlScorecardService.setOneOnOnePlans as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(body.employee_ids).toEqual([1, 2]);
     expect(body.cadence).toBe("weekly");
+  });
+
+  it("logs a meeting straight from the row, without opening the detail panel", async () => {
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: "Log meeting with Bora Unplanned" }));
+    // A person with no schedule can be logged too; the dialog is a 1-on-1 with them, dated today.
+    expect(await screen.findByRole("dialog", { name: /log a meeting/i })).toBeInTheDocument();
+    expect(screen.queryByText("Schedule")).not.toBeInTheDocument(); // detail panel stayed closed
+    fireEvent.click(screen.getByRole("button", { name: /^log meeting$/i }));
+    await waitFor(() => expect(tlScorecardService.createMeeting).toHaveBeenCalled());
+    const body = (tlScorecardService.createMeeting as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(body.counterparty).toBe(2);
+    expect(body.meeting_type).toBe("one_on_one");
+  });
+
+  it("a planned person's row log is dated on the due slot", async () => {
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: "Log meeting with Ana Planned" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^log meeting$/i }));
+    await waitFor(() => expect(tlScorecardService.createMeeting).toHaveBeenCalled());
+    const body = (tlScorecardService.createMeeting as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(body.counterparty).toBe(1);
+    expect(body.occurred_on).toBe("2026-11-18");
   });
 
   it("will not skip without a reason, then sends it", async () => {
@@ -136,6 +160,35 @@ describe("TeamTab 1-on-1 schedule", () => {
         reason: "On a client site",
       })
     );
+  });
+
+  it("skips every overdue slot at once when the box is ticked", async () => {
+    renderTab();
+    fireEvent.click(await screen.findByText("Ana Planned"));
+    fireEvent.click(await screen.findByRole("button", { name: "Skip" }));
+    fireEvent.change(await screen.findByLabelText(/reason/i), { target: { value: "Crunch" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: /skip all overdue/i }));
+    fireEvent.click(screen.getByRole("button", { name: /skip 1-on-1/i }));
+    await waitFor(() =>
+      expect(tlScorecardService.skipOneOnOne).toHaveBeenCalledWith({
+        employee: 1,
+        reason: "Crunch",
+        all_due: true,
+      })
+    );
+  });
+
+  it("offers the skip-all box only for an overdue slot", async () => {
+    (tlScorecardService.getTeamMembers as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: [
+        member(1, "Ana Planned", { ...PLAN, status: "due", moved_from: null, moved_reason: null }),
+      ],
+    });
+    renderTab();
+    fireEvent.click(await screen.findByText("Ana Planned"));
+    fireEvent.click(await screen.findByRole("button", { name: "Skip" }));
+    await screen.findByLabelText(/reason/i);
+    expect(screen.queryByRole("checkbox", { name: /skip all overdue/i })).not.toBeInTheDocument();
   });
 
   it("offers no Skip for a slot that is not due yet", async () => {

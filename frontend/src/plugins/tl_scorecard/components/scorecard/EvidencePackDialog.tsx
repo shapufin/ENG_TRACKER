@@ -115,8 +115,7 @@ const PackBody: React.FC<{ pack: YearEndEvidencePack }> = ({ pack }) => (
       </p>
       <p className="text-muted-foreground mt-0.5 text-xs">
         {cadenceLabel(pack.assignment.cadence)}
-        {pack.assignment.cadence && " cadence"} · since{" "}
-        {formatDate(pack.assignment.effective_from)}
+        {pack.assignment.cadence && " cadence"} · since {formatDate(pack.assignment.effective_from)}
         {pack.assignment.effective_to && ` · ended ${formatDate(pack.assignment.effective_to)}`}
       </p>
       <p className="text-muted-foreground mt-0.5 text-xs">

@@ -8,8 +8,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { GlassCard } from "@/components/ui/GlassCard";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ImportField } from "../types/dataImport";
 
 interface ColumnMappingFormProps {
@@ -72,18 +70,18 @@ export const ColumnMappingForm: React.FC<ColumnMappingFormProps> = ({
   };
 
   return (
-    <GlassCard>
-      <CardHeader>
-        <CardTitle>Column Mapping</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <section className="space-y-4" aria-labelledby="column-mapping-title">
+      <h3 id="column-mapping-title" className="text-base font-semibold">
+        Column mapping
+      </h3>
+      <div className="space-y-3">
         {missingRequired.length > 0 && (
           <p className="text-destructive text-sm">
             Missing required fields:{" "}
             {missingRequired.map((k) => fields.find((f) => f.key === k)?.label).join(", ")}
           </p>
         )}
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <div className="space-y-2">
           {fields
             .filter((field) => field.key !== "password")
             .map((field) => {
@@ -92,13 +90,13 @@ export const ColumnMappingForm: React.FC<ColumnMappingFormProps> = ({
               return (
                 <div
                   key={field.key}
-                  className={`space-y-2 rounded-lg border p-4 ${
+                  className={`grid gap-3 rounded-lg border p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] sm:items-start ${
                     field.required && isSkipped && !defaultValues[field.key]
                       ? "border-destructive/50"
                       : ""
                   }`}
                 >
-                  <div>
+                  <div className="min-w-0">
                     <Label className="flex items-center gap-1">
                       {field.label}
                       {field.required && <span className="text-destructive">*</span>}
@@ -107,26 +105,29 @@ export const ColumnMappingForm: React.FC<ColumnMappingFormProps> = ({
                       <p className="text-muted-foreground text-xs">{field.help_text}</p>
                     )}
                   </div>
-                  <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-[2fr_1fr]">
-                    <Select
-                      value={mappedValue}
-                      onValueChange={(value) =>
-                        onFieldMappingChange(field.key, value === SKIP_VALUE ? null : value)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a column" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={SKIP_VALUE}>— Skip / leave empty —</SelectItem>
-                        {detectedColumns.map((col) => (
-                          <SelectItem key={col} value={col}>
-                            {col}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex flex-col gap-1">
+                  <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <Label className="text-muted-foreground text-xs">File column</Label>
+                      <Select
+                        value={mappedValue}
+                        onValueChange={(value) =>
+                          onFieldMappingChange(field.key, value === SKIP_VALUE ? null : value)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a column" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={SKIP_VALUE}>— Skip / leave empty —</SelectItem>
+                          {detectedColumns.map((col) => (
+                            <SelectItem key={col} value={col}>
+                              {col}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex min-w-0 flex-col gap-1">
                       <Label className="text-muted-foreground text-xs">Default value</Label>
                       {renderDefaultInput(field)}
                     </div>
@@ -135,7 +136,7 @@ export const ColumnMappingForm: React.FC<ColumnMappingFormProps> = ({
               );
             })}
         </div>
-      </CardContent>
-    </GlassCard>
+      </div>
+    </section>
   );
 };

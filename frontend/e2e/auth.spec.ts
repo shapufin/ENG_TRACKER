@@ -277,6 +277,35 @@ test.describe("Authenticated offline queue integration", () => {
     expect(queueAfter).toBeNull();
   });
 
+  test("logout asks first while changes are unsent, and Cancel keeps the session and the queue", async ({
+    page,
+  }) => {
+    const user = await loginAsUser(page, E2E_CREDENTIALS.employeeA);
+    await injectQueuedMutation(page, user.id, {
+      url: "/overtime/logs/",
+      method: "POST",
+      body: { client: 1, date: uniqueFutureDate(), hours: 1 },
+      description: "Overtime (pending)",
+    });
+
+    await page.evaluate(() => {
+      const logoutBtn = Array.from(document.querySelectorAll("button")).find((b) =>
+        b.textContent?.includes("Logout")
+      );
+      logoutBtn?.click();
+    });
+    const dialog = page.getByRole("dialog", { name: /unsent change/i });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("1 unsent change");
+
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page).not.toHaveURL(/\/login/);
+    expect(await getQueuedMutations(page, user.id)).toHaveLength(1);
+
+    await logoutViaUI(page); // now confirm: discards the queue and signs out
+  });
+
   test("user B's queue is empty after user A logs out (account isolation)", async ({ page }) => {
     const userA = await loginAsUser(page, E2E_CREDENTIALS.employeeA);
 

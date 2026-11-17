@@ -257,7 +257,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
     @staticmethod
     def _employees(leader, body):
         ids = body.get('employee_ids')
-        if not isinstance(ids, list) or not ids or not all(isinstance(i, int) for i in ids):
+        if not isinstance(ids, list) or not ids or not all(isinstance(i, int) and not isinstance(i, bool) for i in ids):
             raise ValidationError({'employee_ids': 'Give a list of employee ids.'})
         users = {u.id: u for u in User.objects.filter(id__in=ids)}
         if len(users) != len(set(ids)):
@@ -310,12 +310,20 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         if employee is None:
             raise ValidationError({'employee': 'Unknown employee.'})
         try:
-            skip = one_on_one.skip_slot(
-                leader, employee, reason=request.data.get('reason'), recorded_by=request.user,
-            )
+            if request.data.get('all_due') is True:
+                skips = one_on_one.skip_all_due(
+                    leader, employee, reason=request.data.get('reason'), recorded_by=request.user,
+                )
+            else:
+                skips = [one_on_one.skip_slot(
+                    leader, employee, reason=request.data.get('reason'), recorded_by=request.user,
+                )]
         except DjangoValidationError as exc:
             return Response(exc.message_dict, status=status.HTTP_400_BAD_REQUEST)
-        return Response({'id': skip.id, 'slot_date': skip.slot_date}, status=status.HTTP_201_CREATED)
+        return Response(
+            {'id': skips[0].id, 'slot_date': skips[0].slot_date, 'skipped': len(skips)},
+            status=status.HTTP_201_CREATED,
+        )
 
     @action(detail=False, methods=['get'], url_path='epr-progress')
     def epr_progress(self, request):

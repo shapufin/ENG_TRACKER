@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarClock, ShieldAlert, Target, UserMinus, Users } from "lucide-react";
+import { NotebookPen, Repeat, ShieldAlert, Target, UserMinus, Users } from "lucide-react";
 import { UserCell } from "@/components/admin/UserCell";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -105,11 +105,15 @@ const EprStepper: React.FC<{ member: TeamMemberSummary }> = ({ member }) => {
 const TEAM_CARD: DataTableCardSpec = {
   title: "full_name",
   meta: ["leave_available", "epr", "next_one_on_one", "governance", "wage"],
+  actions: "actions",
 };
 
-const buildColumns = (): AppColumnDef<TeamMemberSummary>[] => [
+const buildColumns = (
+  onLogMeeting: (member: TeamMemberSummary) => void
+): AppColumnDef<TeamMemberSummary>[] => [
   {
     id: "full_name",
+    size: 200,
     accessorKey: "full_name",
     header: "Employee",
     cell: ({ row }) => (
@@ -128,7 +132,8 @@ const buildColumns = (): AppColumnDef<TeamMemberSummary>[] => [
   },
   {
     id: "leave_available",
-    header: "Leave available",
+    size: 90,
+    header: "Leave",
     cell: ({ row }) => {
       const days = toDays(row.original.leave.available_days);
       return <span className="tabular-nums">{days === null ? "—" : `${days} d`}</span>;
@@ -136,21 +141,25 @@ const buildColumns = (): AppColumnDef<TeamMemberSummary>[] => [
   },
   {
     id: "epr",
+    size: 110,
     header: "EPR",
     cell: ({ row }) => <EprStepper member={row.original} />,
   },
   {
     id: "next_one_on_one",
+    size: 160,
     header: "Next 1:1",
     cell: ({ row }) => <NextOneOnOne member={row.original} />,
   },
   {
     id: "governance",
+    size: 120,
     header: "Governance",
     cell: ({ row }) => <GovernanceBadges member={row.original} />,
   },
   {
     id: "wage",
+    size: 100,
     header: "Wage",
     cell: ({ row }) => {
       const text = formatWage(row.original.wage.gross_monthly);
@@ -162,6 +171,28 @@ const buildColumns = (): AppColumnDef<TeamMemberSummary>[] => [
         </span>
       );
     },
+  },
+  {
+    // Always visible (not the hover pill): logging a 1-on-1 is the leader's most common action here.
+    id: "actions",
+    header: () => <span className="sr-only">Actions</span>,
+    meta: { actionsDisplay: "column" },
+    cell: ({ row }) => (
+      <Button
+        type="button"
+        variant="outline"
+        size="control-sm"
+        className="whitespace-nowrap"
+        aria-label={`Log meeting with ${row.original.full_name}`}
+        onClick={(event) => {
+          event.stopPropagation();
+          onLogMeeting(row.original);
+        }}
+      >
+        <NotebookPen className="mr-1.5 h-4 w-4" aria-hidden="true" />
+        Log meeting
+      </Button>
+    ),
   },
 ];
 
@@ -180,7 +211,7 @@ export const TeamTab: React.FC = () => {
     queryKey: ["tl-scorecard", "team-members", "self"],
     queryFn: async () => (await tlScorecardService.getTeamMembers()).data,
   });
-  const columns = useMemo(() => buildColumns(), []);
+  const columns = useMemo(() => buildColumns(setLogFor), []);
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "team-members"] });
@@ -190,7 +221,7 @@ export const TeamTab: React.FC = () => {
   const scheduleMutation = useMutation({
     mutationFn: tlScorecardService.setOneOnOnePlans,
     onSuccess: () => {
-      toast.success("1-on-1 schedule saved");
+      toast.success("Recurring 1-on-1 saved");
       refresh();
     },
     onError: notifyError,
@@ -198,17 +229,18 @@ export const TeamTab: React.FC = () => {
   const clearMutation = useMutation({
     mutationFn: (id: number) => tlScorecardService.clearOneOnOnePlans([id]),
     onSuccess: () => {
-      toast.success("1-on-1 schedule removed");
+      toast.success("Recurring 1-on-1 removed");
       setClearFor(null);
       refresh();
     },
     onError: notifyError,
   });
   const skipMutation = useMutation({
-    mutationFn: (data: { employee: number; reason: string }) =>
+    mutationFn: (data: { employee: number; reason: string; all_due?: boolean }) =>
       tlScorecardService.skipOneOnOne(data),
-    onSuccess: () => {
-      toast.success("1-on-1 skipped");
+    onSuccess: (response) => {
+      const skipped = (response?.data as { skipped?: number } | undefined)?.skipped ?? 1;
+      toast.success(skipped > 1 ? `${skipped} 1-on-1s skipped` : "1-on-1 skipped");
       refresh();
     },
     onError: notifyError,
@@ -278,12 +310,11 @@ export const TeamTab: React.FC = () => {
       <div className="flex justify-end">
         <Button
           type="button"
-          variant="outline"
           size="control"
           onClick={() => setScheduleIds(members.map((m) => m.id))}
         >
-          <CalendarClock className="mr-2 h-4 w-4" aria-hidden="true" />
-          1-on-1 schedule
+          <Repeat className="mr-2 h-4 w-4" aria-hidden="true" />
+          Set recurring 1-on-1
         </Button>
       </div>
 
@@ -320,13 +351,13 @@ export const TeamTab: React.FC = () => {
           }}
         />
       )}
-      {logFor && logFor.meetings.plan && (
+      {logFor && (
         <LogMeetingDialog
           open
           onOpenChange={(open) => !open && setLogFor(null)}
           prefill={{
             counterparty: logFor.id,
-            occurredOn: logFor.meetings.plan.next_due_on,
+            occurredOn: logFor.meetings.plan?.next_due_on,
           }}
           onCreate={async (data) => {
             await logMutation.mutateAsync(data);
@@ -339,15 +370,20 @@ export const TeamTab: React.FC = () => {
           onOpenChange={(open) => !open && setSkipFor(null)}
           employeeName={skipFor.full_name}
           dueOn={skipFor.meetings.plan.next_due_on}
-          onSkip={async (reason) => {
-            await skipMutation.mutateAsync({ employee: skipFor.id, reason });
+          overdue={skipFor.meetings.plan.status === "overdue"}
+          onSkip={async (reason, allDue) => {
+            await skipMutation.mutateAsync({
+              employee: skipFor.id,
+              reason,
+              ...(allDue ? { all_due: true } : {}),
+            });
           }}
         />
       )}
       <ConfirmDialog
         open={clearFor !== null}
         onOpenChange={(open) => !open && setClearFor(null)}
-        title="Remove 1-on-1 schedule?"
+        title="Remove recurring 1-on-1?"
         description={`${clearFor?.full_name ?? "This person"} will no longer have a recurring 1-on-1. Skips and logged 1-on-1s are kept.`}
         confirmLabel="Remove"
         variant="destructive"

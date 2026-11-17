@@ -154,7 +154,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                       {STEPS.map((s) => (
                         <div
                           key={s}
-                          className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${
+                          className={`rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap ${
                             state.step === s
                               ? "bg-primary text-primary-foreground"
                               : "bg-muted text-muted-foreground"

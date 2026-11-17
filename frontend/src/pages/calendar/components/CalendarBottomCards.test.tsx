@@ -24,6 +24,18 @@ describe("CalendarBottomCards", () => {
     expect(screen.getByRole("button", { name: "Vacation balance" })).toHaveTextContent("22d total");
   });
 
+  it("says how much has accrued so far while the year is not fully accrued", () => {
+    render(
+      <CalendarBottomCards
+        {...baseProps}
+        vacationSummary={{ remainingDays: 6, totalDays: 22, accruedDays: 9 }}
+      />
+    );
+    const card = screen.getByRole("button", { name: "Vacation balance" });
+    expect(card).toHaveTextContent("9d of 22d accrued");
+    expect(card).not.toHaveTextContent("22d total");
+  });
+
   it("coerces decimal-string balances from the API before printing them", () => {
     render(
       <CalendarBottomCards

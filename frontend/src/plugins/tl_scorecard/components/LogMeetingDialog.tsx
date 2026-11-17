@@ -33,7 +33,7 @@ interface LogMeetingDialogProps {
   mode?: "create" | "edit";
   initial?: Meeting;
   /** Create mode: start as a 1-on-1 with this person on this date (a due 1-on-1 slot). */
-  prefill?: { counterparty: number; occurredOn: string };
+  prefill?: { counterparty: number; occurredOn?: string };
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10);

@@ -318,6 +318,10 @@ class LeaveRequestViewSetTests(TestCase):
         response = self.client.get('/api/leave-management/balances/team_balances/')
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
 
+        # L2: a non-numeric year is a 400, not a 500
+        response = self.client.get('/api/leave-management/balances/team_balances/', {'year': 'abc'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+
         # team_balances with workspace also works
         response = self.client.get('/api/leave-management/balances/team_balances/', {'workspace_ids': str(self.workspace.id)})
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)

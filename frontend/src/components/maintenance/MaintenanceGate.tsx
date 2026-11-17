@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { MAINTENANCE_ACTIVE_EVENT, useMaintenanceStatus } from "@/hooks/useMaintenanceStatus";
+import { reloadPage } from "@/lib/pageNavigation";
 import { MaintenancePage } from "./MaintenancePage";
 
 /**
@@ -53,7 +54,7 @@ export const MaintenanceGate: React.FC<{ children: React.ReactNode }> = ({ child
     // reloading itself.
     if (wasShowing.current && !exempt) {
       wasShowing.current = false;
-      window.location.reload();
+      reloadPage();
     }
   }, [showing, exempt]);
 

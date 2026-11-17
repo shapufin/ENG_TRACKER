@@ -141,14 +141,13 @@ export const tlScorecardService = {
   getTeamMembers: (leaderId?: number) =>
     api.get<TeamMemberSummary[]>(`${BASE}/team-members/`, { params: leaderParams(leaderId) }),
 
-  setOneOnOnePlans: (data: OneOnOneSchedulePayload) =>
-    api.post(`${BASE}/one-on-one-plans/`, data),
+  setOneOnOnePlans: (data: OneOnOneSchedulePayload) => api.post(`${BASE}/one-on-one-plans/`, data),
 
   clearOneOnOnePlans: (employeeIds: number[]) =>
     api.post(`${BASE}/one-on-one-plans/clear/`, { employee_ids: employeeIds }),
 
   /** Skip the 1-on-1 that is due now; a reason is required and it is not a held meeting. */
-  skipOneOnOne: (data: { employee: number; reason: string }) =>
+  skipOneOnOne: (data: { employee: number; reason: string; all_due?: boolean }) =>
     api.post(`${BASE}/one-on-one-plans/skip/`, data),
 
   getEscalations: (leaderId?: number) =>

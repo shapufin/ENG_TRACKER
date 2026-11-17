@@ -47,7 +47,7 @@ export const ConflictCard: React.FC<ConflictCardProps> = ({ conflict }) => (
             : `${conflict.users.length} member${conflict.users.length !== 1 ? "s" : ""}`}
         </Badge>
       </div>
-      <div className="mb-3 -mt-1">
+      <div className="-mt-1 mb-3">
         <p className="text-muted-foreground text-xs">{conflict.description}</p>
       </div>
       <Separator className="bg-border dark:bg-line-subtle mb-3" />

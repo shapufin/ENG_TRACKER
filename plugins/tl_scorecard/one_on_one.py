@@ -156,6 +156,29 @@ def skip_slot(leader, employee, *, reason, recorded_by=None, today=None) -> OneO
         raise ValidationError({'slot': 'This 1-on-1 was already skipped.'})
 
 
+# A backlog longer than this is a plan that was forgotten, not a busy month: stop and let the leader look.
+MAX_SKIP_ALL = 60
+
+
+def skip_all_due(leader, employee, *, reason, recorded_by=None, today=None) -> list:
+    """Skip every slot that is due or overdue, with one reason; one skip record per slot.
+
+    Same rules as ``skip_slot`` (reason required, only a due slot, never a held meeting),
+    repeated until the next slot is in the future. Atomic: either all are recorded or none.
+    """
+    today = today or business_today()
+    skips = []
+    with transaction.atomic():
+        skips.append(skip_slot(leader, employee, reason=reason, recorded_by=recorded_by, today=today))
+        plan = OneOnOnePlan.objects.get(leader=leader, employee=employee)
+        while len(skips) < MAX_SKIP_ALL:
+            slot = next_slot(plan, today=today)
+            if slot.due_on > today:
+                break
+            skips.append(skip_slot(leader, employee, reason=reason, recorded_by=recorded_by, today=today))
+    return skips
+
+
 def cadence_label(plan) -> str:
     from apps.users.models.hbpr import NTH_WEEK_NAMES, WEEKDAY_NAMES
 

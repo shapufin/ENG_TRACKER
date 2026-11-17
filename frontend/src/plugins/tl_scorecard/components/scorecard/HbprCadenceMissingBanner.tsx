@@ -5,7 +5,10 @@ import { InfoCallout } from "@/components/ui/InfoCallout";
 import type { HbprPartnershipAssignment } from "../../types/tlScorecard";
 
 interface HbprCadenceMissingBannerProps {
-  assignment: Pick<HbprPartnershipAssignment, "cadence_missing" | "can_edit_cadence"> | null | undefined;
+  assignment:
+    | Pick<HbprPartnershipAssignment, "cadence_missing" | "can_edit_cadence">
+    | null
+    | undefined;
   onSetUp: () => void;
 }
 

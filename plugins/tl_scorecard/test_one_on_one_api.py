@@ -47,6 +47,17 @@ class PlanWriteTests(OneOnOneApiBase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(OneOnOnePlan.objects.count(), 0)
 
+    def test_booleans_are_not_employee_ids(self):
+        # R6: True == 1 in Python, so [True] used to be read as employee id 1.
+        from django.contrib.auth import get_user_model
+        from rest_framework.exceptions import ValidationError
+
+        from .viewsets.scorecard import TLScorecardViewSet
+
+        get_user_model().objects.get_or_create(pk=1, defaults={'username': 'user_one'})
+        with self.assertRaises(ValidationError):
+            TLScorecardViewSet._employees(self.tl, {'employee_ids': [True]})
+
     def test_an_invalid_schedule_is_a_400_not_a_500(self):
         response = self._post(
             self.tl, 'one_on_one_plans',
@@ -71,6 +82,26 @@ class SkipApiTests(OneOnOneApiBase):
     def test_an_hbpr_cannot_skip(self):
         response = self._post(self.hbpr, 'one_on_one_skip', {'employee': self.member.id, 'reason': 'x'})
         self.assertEqual(response.status_code, 403)
+
+
+    def test_skip_all_due_over_the_api_returns_how_many_slots_were_skipped(self):
+        from datetime import timedelta
+
+        from core.utils.timezone_local import business_today
+
+        # Weekly plan that started three weeks ago: several slots are overdue today.
+        started = business_today() - timedelta(weeks=3)
+        self._post(
+            self.tl, 'one_on_one_plans',
+            {'employee_ids': [self.member.id], 'cadence': 'weekly', 'cadence_day_of_week': started.weekday()},
+        )
+        from .models import OneOnOnePlan
+        OneOnOnePlan.objects.filter(employee=self.member).update(effective_from=started)
+        response = self._post(
+            self.tl, 'one_on_one_skip', {'employee': self.member.id, 'reason': 'Crunch', 'all_due': True},
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertGreaterEqual(response.data['skipped'], 3)
 
 
 class TeamRowTests(OneOnOneApiBase):

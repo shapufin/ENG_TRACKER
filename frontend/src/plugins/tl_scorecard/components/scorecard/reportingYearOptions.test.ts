@@ -12,7 +12,9 @@ describe("reportingYearOptions", () => {
 
   it("never offers a year before the platform launch (2026)", () => {
     expect(reportingYearOptions(2026, 2026)).toEqual([2026, 2027]);
-    expect(reportingYearOptions(2026, 2026)).not.toEqual(expect.arrayContaining([2023, 2024, 2025]));
+    expect(reportingYearOptions(2026, 2026)).not.toEqual(
+      expect.arrayContaining([2023, 2024, 2025])
+    );
   });
 
   it("keeps the three-year window once the platform is older than three years", () => {

@@ -16,7 +16,7 @@ const toBalanceDetailFromBalance = (balance: LeaveBalance): BalanceDetail => ({
   isCarryOver: Boolean(balance.is_carry_over),
   expiresAt: balance.expires_at ?? undefined,
   accrualStartDate: balance.accrual_start_date ?? undefined,
-  monthlyAccruedDays: undefined,
+  monthlyAccruedDays: balance.accrued_days == null ? undefined : toNum(balance.accrued_days),
   year: balance.year,
 });
 
@@ -65,6 +65,8 @@ const buildBreakdown = (
     usedDays: sumProp(current, carryOver, "usedDays"),
     pendingDays: sumProp(current, carryOver, "pendingDays"),
     totalDays: sumProp(current, carryOver, "totalDays"),
+    accruedDays:
+      toNum(current?.monthlyAccruedDays ?? current?.totalDays) + toNum(carryOver?.totalDays),
     year: resolveYear(current, carryOver),
     current: current ?? undefined,
     carryOver: carryOver ?? undefined,

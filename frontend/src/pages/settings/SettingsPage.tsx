@@ -18,7 +18,7 @@ import { PasswordRow } from "./components/PasswordRow";
 import { TwoFactorSection } from "./components/TwoFactorSection";
 
 export const SettingsPage: React.FC = () => {
-  const { user, logout, refreshUser } = useAuth();
+  const { user, requestLogout, refreshUser } = useAuth();
   const {
     isCRUser,
     isCRAdmin,
@@ -38,10 +38,7 @@ export const SettingsPage: React.FC = () => {
   const notificationsActive = activePlugins.some((plugin) => plugin.name === "notifications");
   const showAssignment = isTeamLeader && !isCRScoped;
   const navigate = useNavigate();
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
+  const handleLogout = () => requestLogout(() => navigate("/login"));
 
   const getRoleBadges = (): string[] => {
     const badges: string[] = [];

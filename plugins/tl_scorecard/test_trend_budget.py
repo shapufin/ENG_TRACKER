@@ -147,4 +147,5 @@ class TrendWindowedMetricsTests(TestCase):
         scoreable_member_ids(self.leader)
         with CaptureQueriesContext(connection) as ctx:
             scorecard_trend(self.leader, 6, date(2026, 9, 1))
-        self.assertLessEqual(len(ctx), 20, [q['sql'][:80] for q in ctx.captured_queries])
+        # 20 -> 22 on purpose (R7, 2026-11-17): approved leave and holidays are read once for the whole window.
+        self.assertLessEqual(len(ctx), 22, [q['sql'][:80] for q in ctx.captured_queries])

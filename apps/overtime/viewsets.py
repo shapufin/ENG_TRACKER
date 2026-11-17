@@ -8,6 +8,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db import transaction
+from core.utils.row_lock import lock_person
 from django.db.models import Count
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
@@ -235,17 +236,19 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
         date = serializer.validated_data.get('date')
         start_time = serializer.validated_data.get('start_time')
         end_time = serializer.validated_data.get('end_time')
-        if date and start_time and end_time:
-            overlap = find_overlapping_entry(
-                OvertimeLog.objects.all(),
-                target_user.id, date, start_time, end_time,
-            )
-            if overlap:
-                raise ValidationError(
-                    f'Time range overlaps an existing overtime entry on {overlap.date} '
-                    f'({overlap.start_time}–{overlap.end_time}).'
+        with transaction.atomic():
+            lock_person(target_user.pk)  # lock first, then check and write (audit M6)
+            if date and start_time and end_time:
+                overlap = find_overlapping_entry(
+                    OvertimeLog.objects.all(),
+                    target_user.id, date, start_time, end_time,
                 )
-        instance = serializer.save(user=target_user)
+                if overlap:
+                    raise ValidationError(
+                        f'Time range overlaps an existing overtime entry on {overlap.date} '
+                        f'({overlap.start_time}–{overlap.end_time}).'
+                    )
+            instance = serializer.save(user=target_user)
         if impersonated:
             log_action(
                 self.request.user,
@@ -278,12 +281,15 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
         ):
             raise PermissionDenied("Team leaders cannot edit a team member's overtime entry.")
 
+    @transaction.atomic
     def perform_update(self, serializer):
         """Reset status to pending if record was approved and is being modified."""
         from rest_framework.exceptions import ValidationError
         from core.utils.time_overlap import find_overlapping_entry
 
         obj = self.get_object()
+        # Same row lock as delete (audit L5): a payroll finalize cannot slip in between the check and the save.
+        OvertimeLog.objects.select_for_update().get(pk=obj.pk)
         self._ensure_not_in_finalized_payroll(obj)
         date = serializer.validated_data.get('date', obj.date)
         start_time = serializer.validated_data.get('start_time', obj.start_time)

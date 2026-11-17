@@ -197,25 +197,16 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        # Time, level and logger on every line (audit L1): docker logs had none of them.
+        'standard': {'format': '%(asctime)s %(levelname)s %(name)s %(message)s'},
+    },
     'handlers': {
         # DEP-03: stdout/stderr so `docker logs` shows application logs.
         'console': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
-        },
-        'file': {
-            'level': 'ERROR',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),  # noqa: F405
-            'maxBytes': 1024 * 1024 * 5,  # 5 MB
-            'backupCount': 5,
-        },
-        'security_file': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs', 'security.log'),  # noqa: F405
-            'maxBytes': 1024 * 1024 * 5,  # 5 MB
-            'backupCount': 10,
+            'formatter': 'standard',
         },
     },
     'root': {
@@ -223,8 +214,8 @@ LOGGING = {
         'level': 'INFO',
     },
     'loggers': {
+        # Errors propagate to the root console handler: docker logs is the one log sink.
         'django': {
-            'handlers': ['file'],
             'level': 'ERROR',
             'propagate': True,
         },
@@ -236,12 +227,12 @@ LOGGING = {
         # P2-1: security events — auth failures, permission denied,
         # suspicious requests, etc.
         'django.security': {
-            'handlers': ['security_file', 'console'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
         'engtracker.security': {
-            'handlers': ['security_file', 'console'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },

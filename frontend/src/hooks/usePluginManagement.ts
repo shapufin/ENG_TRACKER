@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { pluginService, type PluginRecord } from "@/services/pluginService";
 import { toast } from "sonner";
 import { usePlugins } from "@/context/PluginContext";
+import { goToPath } from "@/lib/pageNavigation";
 
 const ADMIN_ROUTE_MAP: Record<string, string> = {
   analytics: "/admin/analytics",
@@ -96,7 +97,7 @@ export const usePluginManagement = (): UsePluginManagementReturn => {
   const handlePluginLink = useCallback((plugin: PluginRecord) => {
     const path = ADMIN_ROUTE_MAP[plugin.name];
     if (path) {
-      window.location.href = path;
+      goToPath(path);
     } else {
       toast.error("No admin page found for this plugin");
     }

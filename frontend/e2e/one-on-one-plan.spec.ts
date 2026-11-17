@@ -61,12 +61,12 @@ test("a leader schedules the team, skips with a reason, and removes a schedule",
   await expect(page.getByText("Not set").first()).toBeVisible();
 
   // Schedule everyone weekly from the toolbar.
-  await page.getByRole("button", { name: "1-on-1 schedule" }).click();
-  const dialog = page.getByRole("dialog", { name: "1-on-1 schedule" });
+  await page.getByRole("button", { name: "Set recurring 1-on-1" }).click();
+  const dialog = page.getByRole("dialog", { name: "Set recurring 1-on-1" });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("combobox", { name: "Meeting cadence" }).click();
   await page.getByRole("option", { name: "Weekly", exact: true }).click();
-  await dialog.getByRole("button", { name: "Save schedule" }).click();
+  await dialog.getByRole("button", { name: "Save recurring 1-on-1" }).click();
   await expect(dialog).toHaveCount(0);
 
   // After: a date and a status replace "Not set" in every row.
@@ -85,8 +85,16 @@ test("a leader schedules the team, skips with a reason, and removes a schedule",
   await expect(log.getByLabel("Date")).not.toHaveValue("");
   await log.getByRole("button", { name: "Cancel" }).click();
 
+  // The row itself logs a meeting too, without opening the panel.
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: `Log meeting with ${firstName}`, exact: true }).click();
+  const rowLog = page.getByRole("dialog", { name: /log a meeting/i });
+  await expect(rowLog).toBeVisible();
+  await rowLog.getByRole("button", { name: "Cancel" }).click();
+  await page.getByText(firstName, { exact: true }).first().click();
+
   // Remove the schedule for this member through the confirm dialog.
-  await panel.getByRole("button", { name: "Remove schedule" }).click();
+  await panel.getByRole("button", { name: "Remove recurring 1-on-1" }).click();
   await page.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(page.getByText("Not set").first()).toBeVisible();
 

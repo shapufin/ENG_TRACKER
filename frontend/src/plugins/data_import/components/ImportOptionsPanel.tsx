@@ -18,8 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { GlassCard } from "@/components/ui/GlassCard";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { ImportOption } from "../types/dataImport";
 
@@ -63,11 +61,9 @@ export const ImportOptionsPanel: React.FC<ImportOptionsPanelProps> = ({
   if (visibleOptions.length === 0 && !needsPasswordColumn) return null;
 
   return (
-    <GlassCard>
-      <CardHeader>
-        <CardTitle>Import Options</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <section className="space-y-4">
+      <h3 className="text-base font-semibold">Import Options</h3>
+      <div className="Import Options">
         {visibleOptions.map((option) => {
           const id = `import-option-${option.key}`;
           const value = effectiveValues[option.key];
@@ -193,7 +189,7 @@ export const ImportOptionsPanel: React.FC<ImportOptionsPanelProps> = ({
             </Select>
           </div>
         )}
-      </CardContent>
-    </GlassCard>
+      </div>
+    </section>
   );
 };

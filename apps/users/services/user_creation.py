@@ -10,6 +10,7 @@ from typing import Optional
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.dispatch import Signal
 
 from apps.users.models import Team, TeamMembership, UserProfile
 from apps.users.services.team_lifecycle import archived_error_for_refs
@@ -325,6 +326,12 @@ def leader_link_error(user_id, field, leader_id) -> str | None:
     return None
 
 
+# Sent right after a leader link changes, inside the caller's transaction. Plugins hold
+# per-leader configuration (for example a recurring 1-on-1 plan) and react to it; core
+# never imports them (plugin removal safety).
+leader_link_changed = Signal()
+
+
 def record_leader_link_change(request, profile, field, old_id, new_id, *, actor=None, source='') -> None:
     """Audit one leader-link change (who moved an employee, from whom, to whom)."""
     if old_id == new_id:
@@ -334,6 +341,9 @@ def record_leader_link_change(request, profile, field, old_id, new_id, *, actor=
     record_lifecycle_event(
         request, profile.user, 'user', 'UPDATE', 'leader_link_changed',
         old={field: old_id}, new={field: new_id}, extra={'field': field, 'source': source}, actor=actor,
+    )
+    leader_link_changed.send(
+        sender=type(profile), employee_id=profile.user_id, field=field, old_id=old_id, new_id=new_id,
     )
 
 
@@ -366,6 +376,9 @@ def clear_lm_link_on_promotion(profile, *, request=None, actor=None) -> bool:
         request, profile.user, 'user', 'UPDATE', 'tl_link_cleared',
         old={'albanian_tl': old}, new={'albanian_tl': None},
         extra={'reason': 'promoted_to_line_manager'}, actor=actor,
+    )
+    leader_link_changed.send(
+        sender=type(profile), employee_id=profile.user_id, field='albanian_tl', old_id=old, new_id=None,
     )
     return True
 

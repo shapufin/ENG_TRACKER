@@ -73,6 +73,10 @@ class LeaveBalanceSerializer(serializers.ModelSerializer):
         source='get_effective_available_days',
         max_digits=5, decimal_places=1, read_only=True
     )
+    # Earned so far (1.8 days per month, rounded up); the whole allowance when there is no accrual.
+    accrued_days = serializers.DecimalField(
+        source='get_accrued_days', max_digits=5, decimal_places=1, read_only=True
+    )
 
     class Meta:
         model = LeaveBalance
@@ -80,7 +84,7 @@ class LeaveBalanceSerializer(serializers.ModelSerializer):
             'id', 'user', 'user_name', 'leave_type', 'year',
             'total_days', 'used_days', 'pending_days', 'available_days',
             'effective_available_days', 'is_carry_over', 'expires_at',
-            'accrual_start_date',
+            'accrual_start_date', 'accrued_days',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

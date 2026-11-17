@@ -19,6 +19,17 @@ describe("CalendarSnapshotCard", () => {
     expect(screen.getByText("73% left")).toBeInTheDocument();
   });
 
+  it("shows what has accrued so far until the whole allowance is accrued", () => {
+    const { rerender } = render(
+      <CalendarSnapshotCard summary={{ ...baseSummary, accruedDays: 9 }} formatDays={formatDays} />
+    );
+    expect(screen.getByText(/accrued so far/i)).toHaveTextContent("Accrued so far: 9 of 22d");
+    rerender(
+      <CalendarSnapshotCard summary={{ ...baseSummary, accruedDays: 22 }} formatDays={formatDays} />
+    );
+    expect(screen.queryByText(/accrued so far/i)).not.toBeInTheDocument();
+  });
+
   it("renders segmented bar widths for remaining/pending/used", () => {
     const { container } = render(
       <CalendarSnapshotCard summary={baseSummary} formatDays={formatDays} />

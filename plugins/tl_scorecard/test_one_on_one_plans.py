@@ -166,6 +166,31 @@ class SkipTests(OneOnOneBase):
         with self.assertRaises(ValidationError):
             one_on_one.skip_slot(self.lm, self.emp, reason='Again', today=date(2026, 11, 18))
 
+    def test_skip_all_due_clears_every_overdue_slot_with_one_reason(self):
+        # R3 (owner ruling 2026-11-17): one button, one reason, one skip record per slot.
+        plan = self.plan()  # Wednesdays from 2026-11-18
+        today = date(2026, 12, 3)  # 11/18, 11/25 and 12/02 are all overdue
+        skips = one_on_one.skip_all_due(self.lm, self.emp, reason='Project crunch', today=today)
+        self.assertEqual(
+            [s.slot_date for s in skips], [date(2026, 11, 18), date(2026, 11, 25), date(2026, 12, 2)],
+        )
+        self.assertEqual({s.reason for s in skips}, {'Project crunch'})
+        slot = one_on_one.next_slot(plan, today=today)
+        self.assertEqual((slot.due_on, slot.status), (date(2026, 12, 9), 'upcoming'))
+        self.assertEqual(Meeting.objects.count(), 0)
+
+    def test_skip_all_due_needs_a_reason_and_a_due_slot(self):
+        self.plan()
+        with self.assertRaises(ValidationError):
+            one_on_one.skip_all_due(self.lm, self.emp, reason=' ', today=date(2026, 12, 3))
+        with self.assertRaises(ValidationError):
+            one_on_one.skip_all_due(self.lm, self.emp, reason='Too early', today=self.start)
+
+    def test_skip_all_due_with_one_overdue_slot_is_a_single_skip(self):
+        self.plan()
+        skips = one_on_one.skip_all_due(self.lm, self.emp, reason='Sick', today=date(2026, 11, 19))
+        self.assertEqual(len(skips), 1)
+
     def test_skip_requires_a_plan(self):
         with self.assertRaises(ValidationError):
             one_on_one.skip_slot(self.lm, self.emp, reason='Reason', today=self.start)
@@ -211,6 +236,40 @@ class ComplianceTests(OneOnOneBase):
     def test_a_skip_in_another_month_does_not_excuse_this_one(self):
         self._held(self.emp)
         self._skip(self.emp2, day=date(2026, 10, 12))
+        self.assertEqual(self._pct(), 50.0)
+
+    def _leave(self, user, start, end, status='approved', **kw):
+        LeaveRequest.objects.create(
+            user=user, request_type='vacation', start_date=start, end_date=end, status=status, **kw,
+        )
+
+    def test_a_member_on_approved_leave_all_month_is_not_a_miss(self):
+        # R7 (owner ruling 2026-11-17): away the whole month leaves the denominator.
+        self._held(self.emp)
+        self._leave(self.emp2, date(2026, 11, 2), date(2026, 11, 30))
+        self.assertEqual(self._pct(), 100.0)
+
+    def test_partial_leave_is_still_a_miss(self):
+        self._held(self.emp)
+        self._leave(self.emp2, date(2026, 11, 2), date(2026, 11, 27))  # misses the 30th
+        self.assertEqual(self._pct(), 50.0)
+
+    def test_pending_leave_does_not_excuse(self):
+        self._held(self.emp)
+        self._leave(self.emp2, date(2026, 11, 2), date(2026, 11, 30), status='pending')
+        self.assertEqual(self._pct(), 50.0)
+
+    def test_public_holidays_do_not_break_a_full_month_of_leave(self):
+        PublicHoliday.objects.create(name='H', date=date(2026, 11, 26))
+        self._held(self.emp)
+        self._leave(self.emp2, date(2026, 11, 2), date(2026, 11, 25))
+        self._leave(self.emp2, date(2026, 11, 27), date(2026, 11, 30))
+        self.assertEqual(self._pct(), 100.0)
+
+    def test_leave_all_month_but_a_meeting_held_still_counts_as_held(self):
+        self._held(self.emp)
+        self._leave(self.emp, date(2026, 11, 2), date(2026, 11, 30))
+        # emp held a meeting (compliant, stays in the denominator); emp2 is the one miss.
         self.assertEqual(self._pct(), 50.0)
 
     def test_a_blank_reason_never_excuses(self):

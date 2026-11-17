@@ -6,6 +6,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count
 from django.utils import timezone
 from django.db.models.functions import TruncMonth
+from django.db import transaction
+from core.utils.row_lock import lock_person
 from core.pagination import LargeResultsPagination
 from core.mixins.cache import CacheInvalidationMixin
 from core.mixins.permissions import (
@@ -135,25 +137,27 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
         date = serializer.validated_data.get('date')
         start_time = serializer.validated_data.get('start_time')
         end_time = serializer.validated_data.get('end_time')
-        if date and start_time and end_time:
-            overlap = find_overlapping_entry(
-                StandbyLog.objects.all(),
-                target_user.id, date, start_time, end_time,
-            )
-            if overlap:
-                raise ValidationError(
-                    f'Time range overlaps an existing standby entry on {overlap.date} '
-                    f'({overlap.start_time}–{overlap.end_time}).'
+        with transaction.atomic():
+            lock_person(target_user.pk)  # lock first, then check and write (audit M6)
+            if date and start_time and end_time:
+                overlap = find_overlapping_entry(
+                    StandbyLog.objects.all(),
+                    target_user.id, date, start_time, end_time,
                 )
-        if date and not (start_time and end_time):
-            self._ensure_untimed_day_cap(target_user.id, date, serializer.validated_data['hours'])
-        instance = serializer.save(user=target_user)
-        # Attach M2M clients if provided — read from serializer.validated_data
-        # which has been validated by validate_client_ids (existence check).
-        # serializer.save() passes a copy to create(), so validated_data is intact.
-        client_ids = serializer.validated_data.get('client_ids')
-        if client_ids:
-            instance.clients.set(client_ids)
+                if overlap:
+                    raise ValidationError(
+                        f'Time range overlaps an existing standby entry on {overlap.date} '
+                        f'({overlap.start_time}–{overlap.end_time}).'
+                    )
+            if date and not (start_time and end_time):
+                self._ensure_untimed_day_cap(target_user.id, date, serializer.validated_data['hours'])
+            instance = serializer.save(user=target_user)
+            # Attach M2M clients if provided — read from serializer.validated_data
+            # which has been validated by validate_client_ids (existence check).
+            # serializer.save() passes a copy to create(), so validated_data is intact.
+            client_ids = serializer.validated_data.get('client_ids')
+            if client_ids:
+                instance.clients.set(client_ids)
         if impersonated:
             log_action(
                 self.request.user,

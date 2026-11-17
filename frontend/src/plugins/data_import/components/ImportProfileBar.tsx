@@ -37,7 +37,7 @@ export const ImportProfileBar: React.FC<ImportProfileBarProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border bg-muted/50 p-4 sm:flex-row sm:items-center">
+    <div className="bg-muted/50 flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center">
       <div className="flex-1 space-y-2">
         <label className="text-sm font-medium">Load saved mapping</label>
         <Select

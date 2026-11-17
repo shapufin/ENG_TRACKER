@@ -63,7 +63,12 @@ def raw_next_due(cadence, day_of_week, nth_week, effective_from, last_meeting_on
         year, month = year + 1, 1
     else:
         month += 1
-    return date(year, month, min(anchor.day, calendar.monthrange(year, month)[1]))
+    day = anchor.day
+    if day == calendar.monthrange(anchor.year, anchor.month)[1]:
+        # The anchor sits on a month end that may have been clamped (31 Jan -> 28 Feb):
+        # return to the plan's day instead of drifting to the 28th for good.
+        day = max(day, effective_from.day)
+    return date(year, month, min(day, calendar.monthrange(year, month)[1]))
 
 
 def next_due_slot(cadence, day_of_week, nth_week, effective_from, last_meeting_on, *, blocked, max_days=None):

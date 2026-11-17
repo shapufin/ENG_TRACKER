@@ -112,6 +112,8 @@ class TlScorecardPlugin(BasePlugin):
         return metadata
 
     def ready(self):
+        from . import leader_moves
+        leader_moves.connect()
         from . import signals
         try:
             signals.connect()
@@ -119,5 +121,7 @@ class TlScorecardPlugin(BasePlugin):
             pass  # notifications plugin not installed: the scorecard works without it
 
     def disable(self):
+        from . import leader_moves
+        leader_moves.disconnect()
         from . import signals
         signals.disconnect()

@@ -256,6 +256,12 @@ class LeaveBalance(BaseModel):
         rounded = accrued.quantize(Decimal('1'), rounding=ROUND_UP)
         return rounded  # Return Decimal for consistency
 
+    def get_accrued_days(self):
+        """Days earned so far this year: the monthly accrual for vacation, else the whole allowance."""
+        if self.leave_type == 'vacation' and self.accrual_start_date and not self.is_carry_over:
+            return self.get_monthly_accrued_days()
+        return self.total_days
+
     def get_effective_available_days(self):
         """
         Return available days considering carry-over expiry and accrual.

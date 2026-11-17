@@ -18,6 +18,7 @@ from django.utils import timezone
 from core.utils.timezone_local import business_today
 
 from apps.leave_management.models import LeaveRequest, count_business_days
+from apps.leave_management.models.core import global_holiday_dates
 from apps.overtime.models.core import OvertimeLog
 from apps.users.services.leader_ownership import owned_by_leader_q
 
@@ -65,6 +66,36 @@ def _local_date(value):
     return timezone.localtime(value).date()
 
 
+def away_all_month(leave_ranges, holidays, month_start, month_end) -> set:
+    """Employee ids on approved whole-day leave for every working day of the month.
+
+    ``leave_ranges`` is ``(employee id, start, end)`` of approved, non-half-day leave;
+    ``holidays`` the global public-holiday dates. A month with no working day excuses nobody.
+    """
+    days = []
+    day = month_start
+    while day < month_end:
+        if day.weekday() < 5 and day not in holidays:
+            days.append(day)
+        day += timedelta(days=1)
+    if not days:
+        return set()
+    by_user = {}
+    for employee_id, start, end in leave_ranges:
+        by_user.setdefault(employee_id, []).append((start, end))
+    return {
+        employee_id for employee_id, ranges in by_user.items()
+        if all(any(start <= d <= end for start, end in ranges) for d in days)
+    }
+
+
+def _approved_leave_ranges(member_ids, first, end):
+    return list(LeaveRequest.objects.filter(
+        user_id__in=member_ids, status='approved', is_half_day=False, is_deleted=False,
+        start_date__lt=end, end_date__gte=first,
+    ).values_list('user_id', 'start_date', 'end_date'))
+
+
 class TrendWindow:
     """Leave, overtime and meeting rows for every month of a trend, read once.
 
@@ -90,6 +121,9 @@ class TrendWindow:
         self.meetings = list(Meeting.objects.filter(
             organizer=leader, occurred_on__gte=first_month, occurred_on__lt=end,
         ).prefetch_related('attendees'))
+        # Approved whole-day leave and global holidays, for "away all month" (ruling R7).
+        self.leave_ranges = _approved_leave_ranges(team_member_ids, first_month, end)
+        self.holidays = global_holiday_dates(first_month, end)
         # (employee id, slot date) of every 1-on-1 skipped with a reason: not a miss (ruling R1).
         self.skips = [
             (employee_id, slot_date) for employee_id, slot_date, reason in OneOnOneSkip.objects.filter(
@@ -109,6 +143,9 @@ class TrendWindow:
 
     def pending_leave_before(self, month_end) -> int:
         return sum(1 for submitted in self.pending_leave if submitted < month_end)
+
+    def away_in(self, month_start, month_end) -> set:
+        return away_all_month(self.leave_ranges, self.holidays, month_start, month_end)
 
     def skipped_in(self, month_start, month_end) -> set:
         return {e for e, day in self.skips if month_start <= day < month_end}
@@ -186,7 +223,12 @@ def meeting_compliance_metrics(leader, team_member_ids, month: date, window: Tre
         tl_sync_count = len(window.meetings_in('tl_sync', month_start, month_end))
         team_meetings = window.meetings_in('team_meeting', month_start, month_end)
         skipped = window.skipped_in(month_start, month_end)
+        away = window.away_in(month_start, month_end)
     else:
+        away = away_all_month(
+            _approved_leave_ranges(team_member_ids, month_start, month_end),
+            global_holiday_dates(month_start, month_end), month_start, month_end,
+        )
         skipped = {
             e for e, reason in OneOnOneSkip.objects.filter(
                 leader=leader, slot_date__gte=month_start, slot_date__lt=month_end,
@@ -205,7 +247,8 @@ def meeting_compliance_metrics(leader, team_member_ids, month: date, window: Tre
     compliant_members = len(members_with_one_on_one & members)
     # A member whose 1-on-1 was skipped with a reason is not a miss: they leave the
     # denominator unless a 1-on-1 was held anyway (ruling R1, item 84).
-    eligible = len(members - (skipped - members_with_one_on_one))
+    # Approved leave for the whole month excuses the same way (ruling R7, 2026-11-17).
+    eligible = len(members - ((skipped | away) - members_with_one_on_one))
     one_on_one_pct = round((compliant_members / eligible) * 100, 1) if eligible else None
     # `.attendees.all()`, not `.filter(...)` — the latter bypasses the
     # prefetch_related cache above and re-queries per meeting (N+1).

@@ -26,7 +26,7 @@ interface ConflictEntry {
 }
 
 interface CalendarBottomCardsProps {
-  vacationSummary?: { remainingDays?: number; totalDays?: number } | null;
+  vacationSummary?: { remainingDays?: number; totalDays?: number; accruedDays?: number } | null;
   carryOverAndBalance: CarryOverData;
   metricBars: Metric[];
   conflictEntries: ConflictEntry[];
@@ -83,6 +83,8 @@ export const CalendarBottomCards: React.FC<CalendarBottomCardsProps> = ({
 }) => {
   const remaining = vacationSummary?.remainingDays ?? 0;
   const total = vacationSummary?.totalDays ?? 0;
+  const accrued = vacationSummary?.accruedDays;
+  const stillAccruing = accrued !== undefined && accrued < total;
 
   // Used and pending are the filled part; whatever is left is the remainder.
   const usedPct = Math.min(100, Math.max(0, metricBars[1]?.progress ?? 0));
@@ -107,7 +109,9 @@ export const CalendarBottomCards: React.FC<CalendarBottomCardsProps> = ({
           onClick={onOpenBalanceModal}
           trailing={
             <span className="text-muted-foreground font-mono text-xs">
-              {formatDays(total)}d total
+              {stillAccruing
+                ? `${formatDays(accrued)}d of ${formatDays(total)}d accrued`
+                : `${formatDays(total)}d total`}
             </span>
           }
         >

@@ -430,6 +430,8 @@ export interface LeaveBalance {
   pending_days: number;
   available_days: number;
   effective_available_days?: number;
+  /** Earned so far this year (monthly accrual, rounded up); the whole allowance without accrual. */
+  accrued_days?: number;
   is_carry_over?: boolean;
   expires_at?: string | null;
   accrual_start_date?: string | null;

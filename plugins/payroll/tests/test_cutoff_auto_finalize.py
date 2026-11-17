@@ -123,6 +123,6 @@ class CutoffAutoFinalizeTests(TestCase):
         )
 
     def test_plugin_registers_the_hourly_job(self):
-        ((name, interval, target),) = PayrollPlugin().get_scheduled_jobs()
+        name, interval, target = next(j for j in PayrollPlugin().get_scheduled_jobs() if j[0] == 'lifecycle')
         self.assertEqual((name, interval), ('lifecycle', 3600))
         self.assertIs(import_string(target), payroll_lifecycle_tick)

@@ -14,7 +14,8 @@ export const CalendarSnapshotCard: React.FC<CalendarSnapshotCardProps> = ({
   onShowUserModal,
 }) => {
   if (!summary) return null;
-  const { remainingDays, usedDays, pendingDays, totalDays } = summary;
+  const { remainingDays, usedDays, pendingDays, totalDays, accruedDays } = summary;
+  const stillAccruing = accruedDays !== undefined && accruedDays < totalDays;
   const pct = (n: number) => (totalDays > 0 ? Math.min(100, Math.round((n / totalDays) * 100)) : 0);
   return (
     <section
@@ -64,6 +65,12 @@ export const CalendarSnapshotCard: React.FC<CalendarSnapshotCardProps> = ({
           </span>
         </div>
       </div>
+
+      {stillAccruing && (
+        <p className="text-muted-foreground mt-0.5 font-mono text-xs">
+          Accrued so far: {formatDays(accruedDays)} of {formatDays(totalDays)}d
+        </p>
+      )}
 
       <div
         role="img"

@@ -7,8 +7,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { GlassCard } from "@/components/ui/GlassCard";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ImportField } from "../types/dataImport";
 
 interface ValueTransformPanelProps {
@@ -46,11 +44,9 @@ export const ValueTransformPanel: React.FC<ValueTransformPanelProps> = ({
   }
 
   return (
-    <GlassCard>
-      <CardHeader>
-        <CardTitle>Value Transforms</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <section className="space-y-4">
+      <h3 className="text-base font-semibold">Value Transforms</h3>
+      <div className="Value Transforms">
         <p className="text-muted-foreground text-sm">
           Map raw spreadsheet values to the canonical values recognised by the system.
         </p>
@@ -104,7 +100,7 @@ export const ValueTransformPanel: React.FC<ValueTransformPanelProps> = ({
             </div>
           );
         })}
-      </CardContent>
-    </GlassCard>
+      </div>
+    </section>
   );
 };

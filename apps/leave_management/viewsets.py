@@ -33,6 +33,7 @@ from core.mixins.permissions import (
     resolve_target_user,
 )
 from .models import LeaveBalance, LeaveRequest, GlobalSettings, count_leave_days
+from core.utils.row_lock import lock_person
 from .models.core import plain_days
 from .services.carry_over import (
     carry_over_expiry_for,
@@ -181,7 +182,8 @@ class LeaveBalanceViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserPer
         year = request.query_params.get('year')
         leave_type = request.query_params.get('leave_type')
         if year:
-            queryset = queryset.filter(year=year)
+            from core.utils.admin_logs import parse_int_param
+            queryset = queryset.filter(year=parse_int_param(year, 'year'))
         if leave_type:
             queryset = queryset.filter(leave_type=leave_type)
 
@@ -391,6 +393,9 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
             is_half_day=is_half_day, half_day_period=half_day_period,
         )
         self._ensure_year_open(instance.start_date, start_date)
+        if instance.status == 'cancelled':
+            # Its days were released; saving an edit would reserve them for a request that is not live.
+            raise ValidationError('A cancelled request cannot be edited. Create a new request instead.')
 
         with transaction.atomic():
             # Release the old reservation before validating the new dates, so the
@@ -403,11 +408,13 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
                 self._validate_vacation_request(target_user, start_date, end_date, is_half_day)
 
             update_kwargs = {}
-            if instance.status == 'approved':
+            if instance.status in ('approved', 'rejected'):
+                # An edit of a decided request resubmits it (as overtime does). Staying rejected would
+                # leave its freshly reserved days pending forever (found by test_balance_reconciliation).
                 # A resubmission restarts the SLA clock; the old deadline is not the TL's fault.
                 update_kwargs = {
                     'status': 'pending', 'approved_by': None, 'approved_at': None,
-                    'submitted_at': timezone.now(),
+                    'rejection_reason': '', 'submitted_at': timezone.now(),
                 }
 
             updated_obj = serializer.save(**update_kwargs)
@@ -608,15 +615,17 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
         end_date = serializer.validated_data.get('end_date')
 
         is_half_day = serializer.validated_data.get('is_half_day', False)
-        self._ensure_no_overlap(
-            target_user, start_date, end_date,
-            is_half_day=is_half_day, half_day_period=serializer.validated_data.get('half_day_period'),
-        )
-        if request_type == 'vacation':
-            self._ensure_year_open(start_date)
-            self._validate_vacation_request(target_user, start_date, end_date, is_half_day)
-
         with transaction.atomic():
+            # Lock first, then validate and write (audit M6): two concurrent requests for the same
+            # person can no longer both pass the overlap and balance checks.
+            lock_person(target_user.pk)
+            self._ensure_no_overlap(
+                target_user, start_date, end_date,
+                is_half_day=is_half_day, half_day_period=serializer.validated_data.get('half_day_period'),
+            )
+            if request_type == 'vacation':
+                self._ensure_year_open(start_date)
+                self._validate_vacation_request(target_user, start_date, end_date, is_half_day)
             obj = serializer.save(user=target_user)
             if request_type == 'vacation':
                 self._deduct_balance(obj)

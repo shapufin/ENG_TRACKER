@@ -49,6 +49,20 @@ No subagents. Nothing is committed until the owner asks.
 
 - **M4 follow-up** `plugins/payroll` `check_year_start --year` (read-only checklist) and a runbook year-start checklist replace the admin notice; the in-app notice is not built (needs a browser pass).
 
+## Phase 5 (2026-11-17, branch feat/team-tab-log-meeting)
+
+- **Team tab** row-level "Log meeting" button, "Set recurring 1-on-1" wording (see workflow-invariants item 84). Browser click-through done with the e2e spec on desktop and mobile, plus a desktop screenshot.
+- **R2** `leader_link_changed` signal + `plugins/tl_scorecard/leader_moves.py`. **R4** month-end clamp. **R6** booleans. **L1** log formatter. **L2** `year` 400. **L5** overtime update row lock. **R5** not real (no `is_deleted` on `Meeting`).
+- Left: R3 and R7 (owner decision D3), L3 (decide soft-delete guard), L4 (measure first), L7 (vitest pool), L8 (owner deletes scratch files), L9 (lock file), M6 (PostgreSQL job), logout confirm dialog, in-app M4 notice, rotating log files (L1 second half: drop or mount `logs/`).
+
+## Phase 6 (2026-11-17, owner rulings D3 and L1/L3)
+
+R3 skip-all-overdue, R7 whole-month leave, L1 stdout-only logs, L3 guard test, L4 measured and pinned, L7 vmThreads, H1 logout confirm, M4 weekly notice (`year_start` job), M6 `lock_person` + PostgreSQL-only race test. Details: workflow-invariants item 87 (k)-(s). **Not verified here:** the PostgreSQL race test (skipped on SQLite) runs only in CI `backend-postgres`; no browser pass on the logout dialog or the skip-all checkbox (unit-tested only). **Left:** L9 lock file (runbook recipe, needs the Linux 3.12 image), L8 scratch files (owner).
+
+## Verification on 2026-11-17 (before merge)
+
+Backend 4,882 tests, frontend 4,393 with coverage, a 5-seed balance reconciliation walk (also found and fixed: editing a rejected leave request left phantom pending days) and a year-rollover simulation all pass. Full desktop e2e: 7 of the 9 spec files that failed in the batch pass in isolation (shared seeded data between files). **Known failing on main too, not caused by this work:** `e2e/role-workflows.spec.ts` "B: visibility is scoped" (line 234) and "E: team views are scoped per team" (line 483); the 8 specs after them do not run. Needs its own look (the specs read leave ids created by an earlier step; check them against the 2026-10-20 team-confidentiality ruling).
+
 ## Still open (not started)
 
 M6 (PostgreSQL-only concurrency test), R3 to R7, section 5 lows (L1 to L9), handover section 7. Docs synced: `docs/workflow-invariants.md` item 87, `CLAUDE.md` hot invariant, runbook 5.4.

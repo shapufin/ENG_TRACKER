@@ -300,6 +300,7 @@ Jobs it owns (the table is the output of every plugin's `get_scheduled_jobs()` p
 | `purge` | audit_log | daily | `purge_audit_logs --if-configured`: a no-op unless an admin set `retention_days`. |
 | `flush_expired_tokens` | core | daily | Deletes expired refresh-token rows; runs whichever plugins are enabled. |
 | `lifecycle` | payroll | hourly | Month-end draft, urgent reminders, early and cutoff finalize. |
+| `year_start` | payroll | daily | From 1 November, a weekly notice to HR and administrators while next year lacks holidays, a work calendar or a rule set. |
 | `freeze_scorecard_months` | tl_scorecard | hourly | Freezes finished scorecard months. |
 | `cadence_reminders` | tl_scorecard | hourly | HBPR cadence reminders. |
 | `one_on_one_reminders` | tl_scorecard | hourly | Recurring 1-on-1 reminders. |
@@ -409,3 +410,13 @@ Do this in November or December, before people book leave for the new year:
 2. Add the holidays in HR > Holidays. A holiday added, moved or deleted later recounts open future vacation and its balances automatically; `python manage.py recount_leave_days --from <date> --to <date>` (dry run, add `--apply`) repairs a past change.
 3. Create or seed the work calendar for the year; `python manage.py sync_payroll_holidays` mirrors HR holidays into it. Payroll refuses a draft whose month has a holiday the calendar does not mark.
 4. Leave carry-over rolls over on the first leave read of the year; the year close and its retention notices run from the scheduler.
+
+## Logs and dependency lock (audit 2026-11-16 L1, L9)
+
+- Logs: the backend writes only to stdout/stderr with a time, level and logger name on every line; read them with `docker compose logs`. There are no log files and no `logs/` volume to mount.
+- Locked dependencies (not done yet): `requirements.txt` pins direct packages only. To produce a hashed lock for the production image, run this inside the production Python 3.12 Linux image (a Windows or 3.14 environment resolves different wheels):
+
+      pip install pip-tools
+      pip-compile --generate-hashes -o requirements.lock requirements.txt requirements-production.txt
+
+  Commit `requirements.lock`, then change the Dockerfile to `pip install --require-hashes -r requirements.lock` and rebuild in CI before deploying. Do not switch the Dockerfile before the lock exists.

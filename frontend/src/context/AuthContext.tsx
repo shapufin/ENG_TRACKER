@@ -2,13 +2,18 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { isMfaChallenge, type AuthResponse, type User, type LoginCredentials } from "@/types";
 import { authService } from "@/services/authService";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { isAuthRejection, setAccessToken } from "@/lib/api";
+import { getQueueCount } from "@/lib/offline/offlineQueue";
 import { AuthContext, type AuthContextType } from "./auth-context-base";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
+  const [pendingLogout, setPendingLogout] = useState<{ unsent: number; after?: () => void } | null>(
+    null
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -104,6 +109,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     queryClient.clear();
   }, [queryClient]);
 
+  // A manual log out discards the offline queue (it belongs to this person's session), so ask
+  // first when something has not been sent. Session expiry never asks: it keeps the queue (H1).
+  const requestLogout = useCallback(
+    (after?: () => void) => {
+      const unsent = getQueueCount();
+      if (unsent === 0) {
+        logout();
+        after?.();
+        return;
+      }
+      setPendingLogout({ unsent, after });
+    },
+    [logout]
+  );
+
   const refreshUser = useCallback(async () => {
     try {
       const currentUser = await authService.getCurrentUser();
@@ -122,12 +142,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     startLoginSetup,
     finishLoginSetup,
     logout,
+    requestLogout,
     refreshUser,
     isAuthenticated: !!user,
     isLoading,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <ConfirmDialog
+        open={pendingLogout !== null}
+        onOpenChange={(open) => !open && setPendingLogout(null)}
+        title="You have unsent changes"
+        description={`${pendingLogout?.unsent ?? 0} unsent ${pendingLogout?.unsent === 1 ? "change" : "changes"} made while offline will be lost if you log out now. Stay signed in and reconnect to send them.`}
+        confirmLabel="Log out anyway"
+        variant="destructive"
+        onConfirm={() => {
+          const after = pendingLogout?.after;
+          setPendingLogout(null);
+          logout();
+          after?.();
+        }}
+      />
+    </AuthContext.Provider>
+  );
 };
 
 // eslint-disable-next-line react-refresh/only-export-components

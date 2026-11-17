@@ -12,6 +12,8 @@ export interface AuthContextType {
   /** Confirm the first code of a required enrolment; signs in and returns the backup codes. */
   finishLoginSetup: (mfaToken: string, code: string) => Promise<AuthResponse>;
   logout: () => void;
+  /** Manual log out: asks first when changes made offline have not been sent yet. */
+  requestLogout: (after?: () => void) => void;
   /** Re-fetch the current user from `/users/me/` and update context state. */
   refreshUser: () => Promise<User | null>;
   isAuthenticated: boolean;

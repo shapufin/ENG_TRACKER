@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { ValueTransformPanel } from "./ValueTransformPanel";
 
 describe("Data import panel modernization", () => {
-  it("renders transform content on the shared GlassCard surface", () => {
+  it("renders transform content as a flat section inside the dialog (no third card surface)", () => {
     const { container } = render(
       <ValueTransformPanel
         fields={[
@@ -22,6 +22,7 @@ describe("Data import panel modernization", () => {
       />
     );
 
-    expect(container.querySelector(".shadow-card")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Value Transforms" })).toBeInTheDocument();
+    expect(container.querySelector(".shadow-card")).not.toBeInTheDocument();
   });
 });

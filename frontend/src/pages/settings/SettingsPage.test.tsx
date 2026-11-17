@@ -6,7 +6,7 @@ import * as usePermissions from "@/context/PermissionContext";
 import * as usePlugins from "@/context/PluginContext";
 
 const navigate = vi.fn();
-const logout = vi.fn();
+const logout = vi.fn((after?: () => void) => after?.());
 const refreshUser = vi.fn().mockResolvedValue({});
 
 vi.mock("@/context/AuthContext", () => ({ useAuth: vi.fn() }));
@@ -53,7 +53,7 @@ beforeEach(() => {
 describe("SettingsPage", () => {
   it("does not request notification preferences when the plugin is inactive", () => {
     vi.mocked(usePlugins.usePlugins).mockReturnValue({ activePlugins: [] } as any);
-    vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
+    vi.mocked(useAuth.useAuth).mockReturnValue({ user, requestLogout: logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
 
     render(<SettingsPage />);
@@ -62,7 +62,7 @@ describe("SettingsPage", () => {
   });
 
   it("renders profile and badges", () => {
-    vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
+    vi.mocked(useAuth.useAuth).mockReturnValue({ user, requestLogout: logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
     render(<SettingsPage />);
     expect(screen.getByText("alice")).toBeInTheDocument();
@@ -74,7 +74,7 @@ describe("SettingsPage", () => {
   it("renders user badge when no roles", () => {
     vi.mocked(useAuth.useAuth).mockReturnValue({
       user: { username: "bob" },
-      logout,
+      requestLogout: logout,
       refreshUser,
     } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
@@ -83,7 +83,7 @@ describe("SettingsPage", () => {
   });
 
   it("logs out", () => {
-    vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
+    vi.mocked(useAuth.useAuth).mockReturnValue({ user, requestLogout: logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
     render(<SettingsPage />);
     fireEvent.click(screen.getByText("Log Out"));
@@ -92,7 +92,7 @@ describe("SettingsPage", () => {
   });
 
   it("shows password and two-factor inside the profile card", () => {
-    vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
+    vi.mocked(useAuth.useAuth).mockReturnValue({ user, requestLogout: logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
     render(<SettingsPage />);
     const security = screen.getByRole("group", { name: "Security" });
@@ -153,7 +153,7 @@ describe("SettingsPage", () => {
 
     vi.mocked(useAuth.useAuth).mockReturnValue({
       user: { username: "lediana", has_control_room_access: true },
-      logout,
+      requestLogout: logout,
       refreshUser,
     } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue({ isCRUser: true } as any);
@@ -209,7 +209,7 @@ describe("SettingsPage", () => {
 
     vi.mocked(useAuth.useAuth).mockReturnValue({
       user: { username: "lediana", has_control_room_access: true },
-      logout,
+      requestLogout: logout,
       refreshUser,
     } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue({ isCRUser: true } as any);
@@ -231,7 +231,7 @@ describe("SettingsPage", () => {
 
     vi.mocked(useAuth.useAuth).mockReturnValue({
       user: { username: "lediana", has_control_room_access: true },
-      logout,
+      requestLogout: logout,
       refreshUser,
     } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue({ isCRUser: true } as any);
@@ -242,7 +242,7 @@ describe("SettingsPage", () => {
   });
 
   it("non-CR user: shows My Clients section, no CR Scope card", () => {
-    vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
+    vi.mocked(useAuth.useAuth).mockReturnValue({ user, requestLogout: logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
     render(<SettingsPage />);
     expect(screen.getByTestId("my-clients")).toBeInTheDocument();
@@ -253,7 +253,7 @@ describe("SettingsPage", () => {
   it("CR admin: hides My Clients, notification preferences, and CR Scope card", () => {
     vi.mocked(useAuth.useAuth).mockReturnValue({
       user: { username: "cr-admin", is_cr_admin: true },
-      logout,
+      requestLogout: logout,
       refreshUser,
     } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue({
@@ -276,7 +276,7 @@ describe("SettingsPage", () => {
   });
 
   it("team leader: shows the Client Assignment card", () => {
-    vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
+    vi.mocked(useAuth.useAuth).mockReturnValue({ user, requestLogout: logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue({
       isTeamLeader: true,
       isCRUser: false,
@@ -286,14 +286,14 @@ describe("SettingsPage", () => {
   });
 
   it("non-TL: hides the Client Assignment card", () => {
-    vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
+    vi.mocked(useAuth.useAuth).mockReturnValue({ user, requestLogout: logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue(defaultPermissions as any);
     render(<SettingsPage />);
     expect(screen.queryByTestId("client-assignment")).not.toBeInTheDocument();
   });
 
   it("HBPR: shows the HBPR badge and no My Clients or Client Assignment card", () => {
-    vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
+    vi.mocked(useAuth.useAuth).mockReturnValue({ user, requestLogout: logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue({
       isHBPR: true,
       isHBPROnly: true,
@@ -305,7 +305,7 @@ describe("SettingsPage", () => {
   });
 
   it("HBPR who is also a team leader keeps My Clients", () => {
-    vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
+    vi.mocked(useAuth.useAuth).mockReturnValue({ user, requestLogout: logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue({
       isHBPR: true,
       isTeamLeader: true,
@@ -315,7 +315,7 @@ describe("SettingsPage", () => {
   });
 
   it("CR-scoped TL: hides the Client Assignment card", () => {
-    vi.mocked(useAuth.useAuth).mockReturnValue({ user, logout, refreshUser } as any);
+    vi.mocked(useAuth.useAuth).mockReturnValue({ user, requestLogout: logout, refreshUser } as any);
     vi.mocked(usePermissions.usePermissions).mockReturnValue({
       isTeamLeader: true,
       isCRUser: true,

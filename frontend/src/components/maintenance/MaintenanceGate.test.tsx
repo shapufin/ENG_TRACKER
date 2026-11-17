@@ -41,7 +41,8 @@ const renderGate = (path = "/dashboard") =>
     </MemoryRouter>
   );
 
-const reload = vi.fn();
+const reload = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/pageNavigation", () => ({ reloadPage: reload, goToPath: vi.fn() }));
 
 beforeEach(() => {
   auth.user = null;
@@ -50,7 +51,6 @@ beforeEach(() => {
   maintenance.isError = false;
   maintenance.refetch.mockClear();
   reload.mockClear();
-  vi.stubGlobal("location", { ...window.location, reload });
 });
 
 afterEach(() => {

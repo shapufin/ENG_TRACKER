@@ -2,10 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./useAuth";
 
 export const useLogout = () => {
-  const { logout } = useAuth();
+  const { requestLogout } = useAuth();
   const navigate = useNavigate();
-  return () => {
-    logout();
-    navigate("/login");
-  };
+  return () => requestLogout(() => navigate("/login"));
 };

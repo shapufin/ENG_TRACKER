@@ -67,6 +67,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    // Each file still gets its own VM context, but jsdom is not rebuilt per file: 768 s -> 62 s (audit L7).
+    // Tests must not redefine window.location (see src/lib/pageNavigation.ts).
+    pool: 'vmThreads',
     setupFiles: ['./src/setupTests.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     exclude: ['**/e2e/**', 'node_modules/**', 'dist/**'],

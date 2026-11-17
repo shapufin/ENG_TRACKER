@@ -41,7 +41,7 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
 
   if (isEditing) {
     return (
-      <div className="mb-6 border-t border-border pt-4 dark:border-line-subtle">
+      <div className="border-border dark:border-line-subtle mb-6 border-t pt-4">
         <EventEditForm
           event={event}
           onCancel={onEditCancel}
@@ -54,7 +54,7 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
 
   if (showApprovalActions) {
     return (
-      <div className="mb-6 border-t border-border pt-4 dark:border-line-subtle">
+      <div className="border-border dark:border-line-subtle mb-6 border-t pt-4">
         <EventApprovalActions
           onApprove={onApprove}
           onReject={onReject}
@@ -85,7 +85,7 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
             variant="outline"
             onClick={onRemove}
             disabled={isSubmitting}
-            className="flex items-center gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive flex items-center gap-1"
           >
             <Trash2 className="h-3 w-3" /> {isSubmitting ? "Deleting..." : "Delete"}
           </Button>
@@ -95,7 +95,7 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
   }
 
   return (
-    <p className="text-sm text-muted-foreground">
+    <p className="text-muted-foreground text-sm">
       {isHoliday ? "Holiday records are read-only." : "No actions available for this record."}
     </p>
   );

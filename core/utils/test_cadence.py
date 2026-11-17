@@ -24,6 +24,18 @@ class RawNextDueTests(SimpleTestCase):
             date(2026, 2, 28),
         )
 
+    def test_monthly_without_a_pattern_returns_to_the_start_day_after_a_short_month(self):
+        # R4: 31 Jan -> 28 Feb must not become 28 Mar and 28 Apr; the plan day is the 31st.
+        start = date(2026, 1, 31)
+        feb = raw_next_due('monthly', None, None, start, date(2026, 1, 31))
+        self.assertEqual(feb, date(2026, 2, 28))
+        self.assertEqual(raw_next_due('monthly', None, None, start, feb), date(2026, 3, 31))
+
+    def test_monthly_without_a_pattern_keeps_a_late_meeting_as_the_anchor(self):
+        self.assertEqual(
+            raw_next_due('monthly', None, None, date(2026, 11, 5), date(2026, 11, 20)), date(2026, 12, 20),
+        )
+
     def test_monthly_nth_weekday_moves_to_the_next_month(self):
         # 2nd Tuesday of December 2026 is the 8th.
         self.assertEqual(

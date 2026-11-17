@@ -729,18 +729,28 @@ class ProductionSettingsHardeningTests(SimpleTestCase):
         self.assertEqual(options['connect_timeout'], 10)
         self.assertEqual(options['options'], '-c lock_timeout=30000')
 
+    def test_every_log_handler_has_a_formatter_with_time_and_level(self):
+        # L1 (audit 2026-11-16): bare console lines had no timestamp or level.
+        logging_cfg = self._value('s.LOGGING')
+        fmt = logging_cfg['formatters']['standard']['format']
+        self.assertIn('%(asctime)s', fmt)
+        self.assertIn('%(levelname)s', fmt)
+        for name, handler in logging_cfg['handlers'].items():
+            self.assertEqual(handler.get('formatter'), 'standard', name)
+
     def test_logging_has_console_handler_on_root_at_info(self):
         logging_cfg = self._value('s.LOGGING')
         self.assertEqual(logging_cfg['root']['level'], 'INFO')
         self.assertIn('console', logging_cfg['root']['handlers'])
         self.assertEqual(logging_cfg['handlers']['console']['class'], 'logging.StreamHandler')
 
-    def test_logging_django_request_is_warning_and_security_file_handler_kept(self):
+    def test_logging_security_events_go_to_the_console_and_no_file_handler_exists(self):
         logging_cfg = self._value('s.LOGGING')
         self.assertEqual(logging_cfg['loggers']['django.request']['level'], 'WARNING')
         for name in ('django.security', 'engtracker.security'):
-            self.assertIn('security_file', logging_cfg['loggers'][name]['handlers'])
-            self.assertIn('console', logging_cfg['loggers'][name]['handlers'])
+            self.assertEqual(logging_cfg['loggers'][name]['handlers'], ['console'])
+        # L1 (audit 2026-11-16): rotating files shared by three workers raced and vanished on recreate.
+        self.assertEqual(set(logging_cfg['handlers']), {'console'})
 
     def test_db_connections_are_persistent_and_health_checked(self):
         db = self._value("s.DATABASES['default']", drop=('DB_CONN_MAX_AGE',))

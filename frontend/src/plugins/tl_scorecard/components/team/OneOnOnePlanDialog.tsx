@@ -70,11 +70,11 @@ export const OneOnOnePlanDialog: React.FC<OneOnOnePlanDialogProps> = ({
       open={open}
       onOpenChange={onOpenChange}
       size="md"
-      title="1-on-1 schedule"
-      description="How often you meet each selected person. Nothing is logged for you: when a 1-on-1 is due you log it or skip it with a reason."
+      title="Set recurring 1-on-1"
+      description="Pick the people and how often you meet them. Nothing is logged for you: when a 1-on-1 is due you log it or skip it with a reason."
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting}
-      submitLabel="Save schedule"
+      submitLabel="Save recurring 1-on-1"
       submitDisabled={!schedule.cadence || selected.length === 0}
     >
       <div className="space-y-4">

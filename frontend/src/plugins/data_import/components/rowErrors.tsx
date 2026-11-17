@@ -15,7 +15,7 @@ export const rowErrorColumns: AppColumnDef<RowError>[] = [
     accessorKey: "errors",
     header: "Reason",
     cell: ({ row }) => (
-      <ul className="list-disc pl-4 text-xs text-destructive">
+      <ul className="text-destructive list-disc pl-4 text-xs">
         {row.original.errors.map((e, i) => (
           <li key={i}>{e}</li>
         ))}

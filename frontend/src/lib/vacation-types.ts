@@ -3,6 +3,8 @@ export interface VacationBalanceBreakdown {
   usedDays: number;
   pendingDays: number;
   totalDays: number;
+  /** Days earned so far (1.8 per month, rounded up); equals totalDays when fully accrued. */
+  accruedDays?: number;
   year?: number;
   current?: BalanceDetail;
   carryOver?: BalanceDetail;

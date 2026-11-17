@@ -378,7 +378,7 @@ export const TeamMemberDetailPanel: React.FC<TeamMemberDetailPanelProps> = ({
                     variant="outline"
                     onClick={() => onSchedule?.(member)}
                   >
-                    Change schedule
+                    Change recurring 1-on-1
                   </Button>
                   <Button
                     type="button"
@@ -386,7 +386,7 @@ export const TeamMemberDetailPanel: React.FC<TeamMemberDetailPanelProps> = ({
                     variant="ghost"
                     onClick={() => onClearSchedule?.(member)}
                   >
-                    Remove schedule
+                    Remove recurring 1-on-1
                   </Button>
                 </div>
               </>
@@ -398,7 +398,7 @@ export const TeamMemberDetailPanel: React.FC<TeamMemberDetailPanelProps> = ({
                   variant="outline"
                   onClick={() => onSchedule?.(member)}
                 >
-                  Set 1-on-1 schedule
+                  Set recurring 1-on-1
                 </Button>
               </div>
             )}
