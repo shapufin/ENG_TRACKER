@@ -115,6 +115,15 @@ def _window_filters(start_date, end_date, teams, users, statuses, end_exclusive=
         leave_filters &= Q(status__in=statuses)
         overtime_filters &= Q(status__in=statuses)
         standby_filters &= Q(status__in=statuses)
+    else:
+        # Rejected overtime and standby are not hours worked: without ?status= they stay out
+        # of every hours total, as in the analytics export (`reports.py`, workflow-invariants
+        # 87(x)). The overview once counted them (audit 2026-11-17). Leave here is a COUNT of
+        # requests by status (the trend chart stacks approved/pending/rejected), so it keeps
+        # every status.
+        open_statuses = Q(status__in=['pending', 'approved'])
+        overtime_filters &= open_statuses
+        standby_filters &= open_statuses
 
     return leave_filters, overtime_filters, standby_filters
 

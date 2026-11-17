@@ -43,3 +43,22 @@ class OverviewFigureTests(TestCase):
         row = self.api.get(URL).json()['recent_snapshots'][0]
         self.assertEqual(row['standby_completed'], 3)
         self.assertNotIn('standby_hours', row)
+
+    def test_rejected_hours_are_not_counted_without_a_status_filter(self):
+        """The overview totals equal the source rows, with the export's status rule (money)."""
+        from apps.standby.models import StandbyLog
+
+        self.log(self.alice, 3, 2)                       # approved
+        OvertimeLog.objects.create(user=self.alice, client=self.client_row, hours=5,
+                                   date=self.today - timedelta(days=4), status='rejected')
+        OvertimeLog.objects.create(user=self.bob, client=self.client_row, hours=1,
+                                   date=self.today - timedelta(days=4), status='pending')
+        StandbyLog.objects.create(user=self.alice, date=self.today - timedelta(days=2),
+                                  hours=4, status='approved')
+        StandbyLog.objects.create(user=self.bob, date=self.today - timedelta(days=2),
+                                  hours=6, status='rejected')
+        data = self.api.get(URL).json()
+        self.assertEqual(self.metric(data, 'Overtime Hours')['value'], 3.0)   # 2 approved + 1 pending
+        self.assertEqual(self.metric(data, 'Standby Hours')['value'], 4.0)
+        rejected = self.api.get(URL, {'status': 'rejected'}).json()
+        self.assertEqual(self.metric(rejected, 'Overtime Hours')['value'], 5.0)

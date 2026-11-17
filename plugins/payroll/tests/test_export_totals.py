@@ -133,6 +133,31 @@ class PayrollExportTotalsTests(TestCase):
         self.assertEqual(response['Content-Type'], 'application/pdf')
         self.assertTrue(b''.join(response.streaming_content).startswith(b'%PDF'))
 
+    def test_each_payslip_prints_the_amounts_of_its_payroll_line(self):
+        """The PDF people are paid by carries the line's numbers (audit 2026-11-17, money)."""
+        from pypdf import PdfReader
+
+        from plugins.payroll.services.export_service import _money, generate_payslip_pdf
+
+        for line in PayrollLine.objects.filter(run=self.payrun).select_related('user', 'run'):
+            text = ' '.join(
+                page.extract_text() for page in PdfReader(generate_payslip_pdf(line)).pages
+            )
+            for label, amount in (
+                ('wage', line.gross_monthly_wage), ('gross', line.total_gross),
+                ('income tax', line.income_tax), ('deductions', line.total_employee_deductions),
+                ('net pay', line.net_pay),
+            ):
+                self.assertIn(_money(amount), text, f'{line.user.username}: {label}')
+            if line.overtime_amount:
+                self.assertIn(_money(line.overtime_amount), text, f'{line.user.username}: overtime')
+            # Every field is rounded on its own (calculator step 10), so net pay can differ from the
+            # printed gross minus deductions by one unit. Owner/accountant decision D4 (open).
+            self.assertLessEqual(
+                abs(line.total_gross - line.total_employee_deductions - line.net_pay), Decimal('1'),
+                line.user.username,
+            )
+
 
 class CarriedOverEntriesTests(TestCase):
     """An entry approved after its month was finalized is paid in the next run: once, and it shows everywhere."""
