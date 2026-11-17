@@ -50,9 +50,9 @@ class BalanceReconciliationTests(TestCase):
             if leave.carry_balance_id:
                 expected['car'][leave.status] += carry_part
         rows = '; '.join(
-            f'#{l.pk} {l.status} {l.start_date}..{l.end_date} counted={l.days_counted} bal={l.balance_id} '
-            f'carry_bal={l.carry_balance_id} carry={l.carry_days}'
-            for l in LeaveRequest.objects.filter(user=self.emp)
+            f'#{leave_row.pk} {leave_row.status} {leave_row.start_date}..{leave_row.end_date} counted={leave_row.days_counted} bal={leave_row.balance_id} '
+            f'carry_bal={leave_row.carry_balance_id} carry={leave_row.carry_days}'
+            for leave_row in LeaveRequest.objects.filter(user=self.emp)
         )
         where = f'after {step} [{rows}]'
         self.assertEqual(self.current.pending_days, expected['cur']['pending'], f'current pending {where}')

@@ -120,6 +120,12 @@ class LeaveBalanceViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserPer
     search_fields = ['user__username', 'user__first_name', 'user__last_name']
     filterset_fields = ['user', 'leave_type', 'year']
 
+    def list(self, request, *args, **kwargs):
+        # The admin balances page can be the first read of a new year: roll the year over first
+        # (idempotent, once per year) so carry-over rows exist before they are listed.
+        ensure_year_end_rollover()
+        return super().list(request, *args, **kwargs)
+
     def get_queryset(self):
         user_id = self.request.query_params.get('user')
         if user_id:

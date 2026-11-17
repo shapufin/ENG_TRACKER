@@ -61,7 +61,7 @@ R3 skip-all-overdue, R7 whole-month leave, L1 stdout-only logs, L3 guard test, L
 
 ## Verification on 2026-11-17 (before merge)
 
-Backend 4,882 tests, frontend 4,393 with coverage, a 5-seed balance reconciliation walk (also found and fixed: editing a rejected leave request left phantom pending days) and a year-rollover simulation all pass. Full desktop e2e: 7 of the 9 spec files that failed in the batch pass in isolation (shared seeded data between files). **Known failing on main too, not caused by this work:** `e2e/role-workflows.spec.ts` "B: visibility is scoped" (line 234) and "E: team views are scoped per team" (line 483); the 8 specs after them do not run. Needs its own look (the specs read leave ids created by an earlier step; check them against the 2026-10-20 team-confidentiality ruling).
+Backend 4,882 tests, frontend 4,393 with coverage, a 5-seed balance reconciliation walk (also found and fixed: editing a rejected leave request left phantom pending days) and a year-rollover simulation all pass. Full desktop e2e: 7 of the 9 spec files that failed in the batch pass in isolation (shared seeded data between files). **Correction (2026-11-17, later):** the two `role-workflows.spec.ts` failures (B visibility, E team views) were NOT bugs: a long-lived `db.e2e.sqlite3` had kept Line Manager links written by earlier specs (HBPR reassign), so TL B legitimately saw Team A. On a rebuilt e2e database the whole file passes (37 passed). Rule: delete `db.e2e.sqlite3`, run `migrate` and `prepare_e2e_db` (settings_e2e) before a full e2e run; specs that change links do not restore them.
 
 ## Still open (not started)
 
