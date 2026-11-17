@@ -24,7 +24,8 @@ from django.apps import apps
 from django.db.models import Q, QuerySet
 from django.contrib.auth.models import User
 
-from apps.leave_management.models import counted_days
+from apps.leave_management.models import counted_days, leave_days_in_window
+from apps.leave_management.models.core import plain_days
 from core.utils.csv_safe import csv_safe, xlsx_safe_row
 from core.utils.sheet_titles import safe_sheet_title
 
@@ -466,8 +467,15 @@ class ExportService:
         self,
         leave_qs: QuerySet,
         config: Optional[ExportConfig] = None,
+        period: Optional[tuple] = None,
     ) -> bytes:
-        """Export leave data to Excel with enterprise features."""
+        """Export leave data to Excel with enterprise features.
+
+        ``period`` is ``(start, end)`` of the export (either may be None). A request that runs past it is
+        still listed, but its Days column counts only the days inside the period and the Type says so, so
+        monthly exports add up to the request's days without counting any day twice. Without a period the
+        full request is listed (year close: a request touching two years belongs to both).
+        """
         config = config or ExportConfig()
         
         # Pre-fetch related data
@@ -490,7 +498,17 @@ class ExportService:
                 'end_date': leave.end_date,
                 'status': leave.status,
                 'reason': leave.reason or '',
+                'days_in_period': None,
+                'is_partial': False,
             })
+            if period and (period[0] or period[1]):
+                start, end = period
+                if (start and start > leave.start_date) or (end and end < leave.end_date):
+                    records[-1]['days_in_period'] = leave_days_in_window(
+                        {'request_type': leave.request_type, 'start_date': leave.start_date,
+                         'end_date': leave.end_date, 'days_counted': leave.days_counted}, start, end,
+                    )
+                    records[-1]['is_partial'] = True
         
         # Sort by user then start date — groups each user's records together
         # (was date-first, which interleaved users across dates).
@@ -533,7 +551,7 @@ class ExportService:
                 full_name = f"{user.first_name} {user.last_name}".strip() or user.username
                 start_date_str = rec['start_date'].strftime('%d/%m/%Y')
                 end_date_str = rec['end_date'].strftime('%d/%m/%Y')
-                days = counted_days(rec)
+                days = rec['days_in_period'] if rec['is_partial'] else counted_days(rec)
 
                 row = [
                     full_name,
@@ -541,7 +559,9 @@ class ExportService:
                     end_date_str,
                     days,
                     rec['request_type'].capitalize()
-                    + (f" (half day, {rec['half_day_period']})" if rec['half_day_period'] else ''),
+                    + (f" (half day, {rec['half_day_period']})" if rec['half_day_period'] else '')
+                    + (f" ({plain_days(days)} of {plain_days(counted_days(rec))} days in this period)"
+                       if rec['is_partial'] else ''),
                     rec['status'].capitalize(),
                     rec['reason'],
                     employee_code(user),

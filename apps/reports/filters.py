@@ -178,11 +178,21 @@ class UnifiedReportFilter(filters.FilterSet):
     def _apply_leave_temporal_filters(self, queryset):
         start = self.data.get('start_date')
         end = self.data.get('end_date')
+        # Overlap, not containment: a request crossing the window edge is part of the window.
         if start:
-            queryset = queryset.filter(start_date__gte=start)
+            queryset = queryset.filter(end_date__gte=start)
         if end:
-            queryset = queryset.filter(end_date__lte=end)
+            queryset = queryset.filter(start_date__lte=end)
         return queryset
+
+    def leave_window(self):
+        """``(start, end)`` dates of the report window, for ``leave_days_in_window``."""
+        from django.utils.dateparse import parse_date
+
+        def as_date(value):
+            return parse_date(value) if isinstance(value, str) else value
+
+        return as_date(self.data.get('start_date')), as_date(self.data.get('end_date'))
 
     def _apply_visibility_constraints(self, queryset):
         return apply_visibility_constraints(queryset, self.user)

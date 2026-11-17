@@ -63,6 +63,10 @@ R3 skip-all-overdue, R7 whole-month leave, L1 stdout-only logs, L3 guard test, L
 
 Backend 4,882 tests, frontend 4,393 with coverage, a 5-seed balance reconciliation walk (also found and fixed: editing a rejected leave request left phantom pending days) and a year-rollover simulation all pass. Full desktop e2e: 7 of the 9 spec files that failed in the batch pass in isolation (shared seeded data between files). **Correction (2026-11-17, later):** the two `role-workflows.spec.ts` failures (B visibility, E team views) were NOT bugs: a long-lived `db.e2e.sqlite3` had kept Line Manager links written by earlier specs (HBPR reassign), so TL B legitimately saw Team A. On a rebuilt e2e database the whole file passes (37 passed). Rule: delete `db.e2e.sqlite3`, run `migrate` and `prepare_e2e_db` (settings_e2e) before a full e2e run; specs that change links do not restore them.
 
+## Export and overview integrity check (2026-11-17)
+
+See workflow-invariants item 87(v). Fixed: leave requests crossing a report window edge were missing from the leave Excel, the report summary/detail and the Excel overview. Verified equal to the source rows: OT/standby Excel, CSVs, global stats, admin trends/overview, payroll Excel summary/detail/PDF. Not covered by a cross-check: scorecard, engagement, skills and ticket-KPI exports (plugin-specific, covered by their own tests), analytics export jobs.
+
 ## Still open (not started)
 
 M6 (PostgreSQL-only concurrency test), R3 to R7, section 5 lows (L1 to L9), handover section 7. Docs synced: `docs/workflow-invariants.md` item 87, `CLAUDE.md` hot invariant, runbook 5.4.

@@ -43,6 +43,16 @@ from apps.users.services.workforce import workforce_filter
 logger = logging.getLogger(__name__)
 
 
+
+def _window_from_params(params):
+    """``(start, end)`` dates from report query params, for ``leave_days_in_window``."""
+    from django.utils.dateparse import parse_date
+
+    def as_date(value):
+        return parse_date(value) if isinstance(value, str) else value
+
+    return as_date(params.get('start_date')), as_date(params.get('end_date'))
+
 class CanViewReports(BasePermission):
     """Allow report access to application users, excluding CR-only users."""
 
@@ -240,10 +250,15 @@ class SummaryReportView(HbprBlockedMixin, APIView):
             }
         
         if report_type in ('leave', 'combined'):
+            from apps.leave_management.models import leave_days_in_window
+
             # Use business-day property (weekends excluded) — calendar span over-counts.
-            total_days = sum(v.days_requested for v in leave_qs) if leave_qs.exists() else 0
-            approved_qs = leave_qs.filter(status='approved')
-            approved_days = sum(v.days_requested for v in approved_qs) if approved_qs.exists() else 0
+            window = filterset.leave_window()
+            leave_fields = ('start_date', 'end_date', 'request_type', 'days_counted')
+            total_days = sum(leave_days_in_window(v, *window) for v in leave_qs.values(*leave_fields))
+            approved_days = sum(
+                leave_days_in_window(v, *window) for v in leave_qs.filter(status='approved').values(*leave_fields)
+            )
             result['leave'] = {
                 'total_requests': leave_qs.count(),
                 'total_days': total_days,
@@ -318,13 +333,15 @@ class DetailedReportView(HbprBlockedMixin, APIView):
         sb_total = {r['user']: r for r in sb_qs.values('user').annotate(total_hours=Sum('hours'), entries=Count('id'))}
         sb_approved = {r['user']: r['approved_hours'] for r in sb_qs.filter(status='approved').values('user').annotate(approved_hours=Sum('hours'))}
         
-        from apps.leave_management.models import counted_days
+        from apps.leave_management.models import leave_days_in_window
 
+        window = _window_from_params(params)
         leave_total = {}
         leave_approved = {}
-        # Business days only — must match LeaveRequest.days_requested / validation.
+        # Business days only, clipped to the report window (a request crossing its edge counts only the
+        # days inside) — must match LeaveRequest.days_requested / validation.
         for v in leave_qs.values('user', 'start_date', 'end_date', 'request_type', 'days_counted'):
-            days = counted_days(v)
+            days = leave_days_in_window(v, *window)
             uid = v['user']
             if uid not in leave_total:
                 leave_total[uid] = {'total_days': 0, 'entries': 0}
@@ -332,7 +349,7 @@ class DetailedReportView(HbprBlockedMixin, APIView):
             leave_total[uid]['entries'] += 1
 
         for v in leave_qs.filter(status='approved').values('user', 'start_date', 'end_date', 'request_type', 'days_counted'):
-            days = counted_days(v)
+            days = leave_days_in_window(v, *window)
             uid = v['user']
             leave_approved[uid] = leave_approved.get(uid, 0) + days
 
@@ -447,20 +464,21 @@ class ExportExcelView(HbprBlockedMixin, APIView):
             sb_total = {rec['user']: rec for rec in standby_qs.values('user').annotate(total_hours=Sum('hours'), entries=Count('id'))}
             sb_approved = {rec['user']: rec['approved_hours'] for rec in standby_qs.filter(status='approved').values('user').annotate(approved_hours=Sum('hours'))}
 
-            from apps.leave_management.models import counted_days
+            from apps.leave_management.models import counted_days, leave_days_in_window
 
+            window = filterset.leave_window()
             leave_total = {}
             leave_approved = {}
-            # Business days only — must match LeaveRequest.days_requested / validation.
+            # Business days only, clipped to the report window — must match LeaveRequest.days_requested.
             for v in leave_qs.values('user', 'start_date', 'end_date', 'request_type', 'days_counted'):
-                days = counted_days(v)
+                days = leave_days_in_window(v, *window)
                 user_id = v['user']
                 if user_id not in leave_total:
                     leave_total[user_id] = {'total_days': 0, 'entries': 0}
                 leave_total[user_id]['total_days'] += days
                 leave_total[user_id]['entries'] += 1
             for v in leave_qs.filter(status='approved').values('user', 'start_date', 'end_date', 'request_type', 'days_counted'):
-                days = counted_days(v)
+                days = leave_days_in_window(v, *window)
                 user_id = v['user']
                 if user_id not in leave_approved:
                     leave_approved[user_id] = 0
@@ -845,10 +863,12 @@ class ExportLeaveView(HbprBlockedMixin, APIView):
             leave_qs = LeaveRequest.objects.filter(
                 status='approved', is_deleted=False, **workforce_filter('user__')
             )
+            # Overlap, not containment: a request running 29 Jun -> 3 Jul belongs to both months
+            # (and to year-close's overlap rule), so it must not vanish from every monthly export.
             if start_date:
-                leave_qs = leave_qs.filter(start_date__gte=start_date)
+                leave_qs = leave_qs.filter(end_date__gte=start_date)
             if end_date:
-                leave_qs = leave_qs.filter(end_date__lte=end_date)
+                leave_qs = leave_qs.filter(start_date__lte=end_date)
             if italian_tl_id_list:
                 leave_qs = leave_qs.filter(user__profile__italian_tl__in=italian_tl_id_list)
             if albanian_tl_id_list:
@@ -866,7 +886,9 @@ class ExportLeaveView(HbprBlockedMixin, APIView):
             # Use enterprise export service with optimizations
             export_service.clear_cache()
             config = ExportConfig(format='excel', include_summary=True)
-            excel_bytes = export_service.export_leave_to_excel(leave_qs, config)
+            excel_bytes = export_service.export_leave_to_excel(
+                leave_qs, config, period=(start_date, end_date),
+            )
 
             # Generate response
             filename = f"leave_export_{timezone.now().strftime('%Y%m%d')}.xlsx"

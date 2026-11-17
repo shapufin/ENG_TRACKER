@@ -100,6 +100,22 @@ def count_request_days(request_type, start_date, end_date, holidays=None, is_hal
     return count_business_days(start_date, end_date)
 
 
+def leave_days_in_window(row, start=None, end=None):
+    """Days of a ``values()`` row that fall inside ``[start, end]`` (either may be None).
+
+    A request wholly inside the window keeps its frozen count (so totals match what balances moved);
+    one that runs past it counts only its days inside, so a request crossing a month or year boundary is
+    reported in both periods and the periods add up to the request's days.
+    """
+    first = max(row['start_date'], start) if start else row['start_date']
+    last = min(row['end_date'], end) if end else row['end_date']
+    if (first, last) == (row['start_date'], row['end_date']):
+        return counted_days(row)
+    if last < first:
+        return 0
+    return plain_days(count_request_days(row['request_type'], first, last))
+
+
 def counted_days(row, holidays=None):
     """Counted days for a ``values()`` row (needs request_type, start/end, days_counted).
 

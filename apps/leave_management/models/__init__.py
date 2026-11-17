@@ -10,10 +10,12 @@ from .core import (
     count_leave_days,
     count_request_days,
     counted_days,
+    leave_days_in_window,
 )
 
 __all__ = [
     'counted_days',
+    'leave_days_in_window',
     'LeaveBalance',
     'LeaveRequest',
     'GlobalSettings',
