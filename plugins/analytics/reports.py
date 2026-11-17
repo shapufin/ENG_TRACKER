@@ -2,7 +2,7 @@ import pandas as pd
 import io
 
 from core.utils.csv_safe import xlsx_safe
-from datetime import timedelta, datetime
+from datetime import timedelta
 
 from django.utils import timezone
 
@@ -53,10 +53,10 @@ class AnalyticsReportGenerator:
         from apps.standby.models import StandbyLog
 
         start_date, end_date = cls.get_date_range(period, date_from, date_to)
-        start_dt = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
-        end_dt = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
 
-        leave_filters = Q(created_at__gte=start_dt, created_at__lte=end_dt, is_deleted=False)
+        # Leave is selected by the days it covers (overlap), not by when the request was created: a June
+        # report lists leave taken in June, wherever the request was made.
+        leave_filters = Q(start_date__lte=end_date, end_date__gte=start_date, is_deleted=False)
         overtime_filters = Q(date__gte=start_date, date__lte=end_date, is_deleted=False)
         standby_filters = Q(date__gte=start_date, date__lte=end_date, is_deleted=False)
 
@@ -80,6 +80,12 @@ class AnalyticsReportGenerator:
             leave_filters &= Q(status__in=statuses)
             overtime_filters &= Q(status__in=statuses)
             standby_filters &= Q(status__in=statuses)
+        else:
+            # Without a status filter, rejected and cancelled rows are not hours or days worked or taken;
+            # they stay out of every total (ask for them with ?status=rejected).
+            leave_filters &= Q(status__in=['pending', 'approved'])
+            overtime_filters &= Q(status__in=['pending', 'approved'])
+            standby_filters &= Q(status__in=['pending', 'approved'])
 
         if categories:
             include_leave = 'leave' in categories
@@ -128,19 +134,23 @@ class AnalyticsReportGenerator:
         from collections import defaultdict
         from django.db.models import Sum
 
-        leave_by_date = defaultdict(int)
+        from apps.leave_management.models.core import global_holiday_dates
+
+        leave_by_date = defaultdict(float)
         if include_leave:
+            holidays = global_holiday_dates(start_date, end_date)
             for lr in leave_data:
                 lr_start = lr.start_date
                 lr_end = lr.end_date
                 if lr_start is None or lr_end is None:
                     continue
-                # Clamp to the report window
+                # Clamp to the report window; same rule as the day counts everywhere else: Mon-Fri, a
+                # public holiday is no vacation day (sick leave ignores holidays), a half day is 0.5.
                 day = max(lr_start, start_date)
                 stop = min(lr_end, end_date)
                 while day <= stop:
-                    if day.weekday() < 5:  # Mon–Fri
-                        leave_by_date[day] += 1
+                    if day.weekday() < 5 and not (lr.request_type == 'vacation' and day in holidays):
+                        leave_by_date[day] += 0.5 if lr.is_half_day else 1
                     day += timedelta(days=1)
 
         ot_by_date = {}
@@ -168,6 +178,19 @@ class AnalyticsReportGenerator:
         return rows
 
     @staticmethod
+    def _leave_days(req, window):
+        """Days of a leave request inside the report window: the frozen count when it lies wholly inside,
+        the days inside it otherwise (``leave_days_in_window``), so every sheet and every format agree."""
+        from apps.leave_management.models.core import leave_days_in_window
+
+        if not (req.start_date and req.end_date):
+            return 0
+        return float(leave_days_in_window({
+            'request_type': req.request_type, 'start_date': req.start_date, 'end_date': req.end_date,
+            'days_counted': req.days_counted, 'is_half_day': req.is_half_day,
+        }, *window))
+
+    @staticmethod
     def _team_name_for(obj):
         """Resolve a user's team name using prefetched teams (no extra query)."""
         profile = getattr(obj.user, 'profile', None)
@@ -184,7 +207,7 @@ class AnalyticsReportGenerator:
 
     @classmethod
     def _user_summary_rows(cls, leave_data, overtime_data, standby_data,
-                           include_leave, include_overtime, include_standby):
+                           include_leave, include_overtime, include_standby, window=(None, None)):
         """Build per-user aggregated rows for the User Breakdown sheet.
 
         One row per user with OT hours, standby hours, leave days (business
@@ -226,20 +249,13 @@ class AnalyticsReportGenerator:
             for req in leave_data:
                 stats = _ensure(req.user)
                 stats['Leave Count'] += 1
-                # Business days (Mon–Fri) — matches count_business_days invariant
-                if req.start_date and req.end_date:
-                    day = req.start_date
-                    stop = req.end_date
-                    while day <= stop:
-                        if day.weekday() < 5:
-                            stats['Leave Days'] += 1
-                        day += timedelta(days=1)
+                stats['Leave Days'] += cls._leave_days(req, window)
 
         return list(user_stats.values())
 
     @classmethod
     def _raw_records_rows(cls, leave_data, overtime_data, standby_data,
-                          include_leave, include_overtime, include_standby):
+                          include_leave, include_overtime, include_standby, window=(None, None)):
         """Build per-record rows for the Raw Records sheet.
 
         Every OT, standby, and leave record in the filtered set, with user,
@@ -280,14 +296,7 @@ class AnalyticsReportGenerator:
 
         if include_leave:
             for req in leave_data:
-                leave_days = 0
-                if req.start_date and req.end_date:
-                    day = req.start_date
-                    stop = req.end_date
-                    while day <= stop:
-                        if day.weekday() < 5:
-                            leave_days += 1
-                        day += timedelta(days=1)
+                leave_days = cls._leave_days(req, window)
                 rows.append({
                     'User': cls._user_display_name(req.user),
                     'Username': req.user.username,
@@ -327,12 +336,12 @@ class AnalyticsReportGenerator:
         # 2. User Breakdown Sheet (per-user aggregated)
         df_user = pd.DataFrame(cls._user_summary_rows(
             leave_data, overtime_data, standby_data,
-            include_leave, include_overtime, include_standby)).map(xlsx_safe)
+            include_leave, include_overtime, include_standby, (start_date, end_date))).map(xlsx_safe)
 
         # 3. Raw Records Sheet (every record with full detail)
         df_raw = pd.DataFrame(cls._raw_records_rows(
             leave_data, overtime_data, standby_data,
-            include_leave, include_overtime, include_standby)).map(xlsx_safe)
+            include_leave, include_overtime, include_standby, (start_date, end_date))).map(xlsx_safe)
 
         # 4. Client Breakdown Sheet
         client_rows = []
@@ -545,7 +554,7 @@ class AnalyticsReportGenerator:
 
         df = pd.DataFrame(cls._user_summary_rows(
             leave_data, overtime_data, standby_data,
-            include_leave, include_overtime, include_standby)).map(xlsx_safe)
+            include_leave, include_overtime, include_standby, (start_date, end_date))).map(xlsx_safe)
         output = io.StringIO()
         df.to_csv(output, index=False)
         return output.getvalue()

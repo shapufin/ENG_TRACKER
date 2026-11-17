@@ -5,7 +5,7 @@ Each test reproduces an audit item through the HTTP API.
 import io
 import os
 import tempfile
-from datetime import date, timedelta
+from datetime import date
 
 from django.contrib.auth.models import User
 from django.core import mail
@@ -207,8 +207,9 @@ class ExportFreeTextDocumentationTests(TestCase):
         client = APIClient()
         client.force_authenticate(exporter)
         r = client.get(f'{BASE}/metrics/export/', {
-            'export_format': 'excel', 'date_from': (timezone.localdate() - timedelta(days=1)).isoformat(),
-            'date_to': (timezone.localdate() + timedelta(days=1)).isoformat(),
+            # The window covers the leave's own days: leave is selected by the days it covers, not by
+            # when the request was created.
+            'export_format': 'excel', 'date_from': '2026-06-01', 'date_to': '2026-06-03',
         })
         self.assertEqual(r.status_code, 200)
         from openpyxl import load_workbook

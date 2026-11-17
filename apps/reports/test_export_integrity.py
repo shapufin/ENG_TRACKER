@@ -262,3 +262,52 @@ class LeaveSeriesIntegrityTests(ExportIntegrityBase):
         by_month = {str(r[1])[:7]: r[2] for r in rows}
         self.assertEqual(by_month.get('2026-06'), 12.5)
         self.assertEqual(by_month.get('2026-07'), 3.0)
+
+
+class AnalyticsExportIntegrityTests(ExportIntegrityBase):
+    """The analytics export agrees with the source rows and with itself, whichever sheet or format you read."""
+    URL = '/api/plugins/analytics/metrics/export/'
+    JUNE_Q = {'date_from': '2026-06-01', 'date_to': '2026-06-30'}
+
+    def _csv(self, **extra):
+        import csv
+        r = self.api.get(self.URL, {'export_format': 'csv', **self.JUNE_Q, **extra})
+        self.assertEqual(r.status_code, 200)
+        return {row['Username']: row for row in csv.DictReader(io.StringIO(r.content.decode('utf-8-sig')))}
+
+    def _sheets(self, **extra):
+        r = self.api.get(self.URL, {'export_format': 'excel', **self.JUNE_Q, **extra})
+        return _sheet_rows(_workbook(r))
+
+    def test_leave_is_selected_by_the_days_taken_not_by_when_it_was_requested(self):
+        rows = self._csv()
+        # ana: 5 + 0.5 approved + 2 pending; bora: 2 sick + the 2 June days of the crossing request (rejected 1 is excluded)
+        self.assertEqual((float(rows['ei_ana']['Leave Days']), int(rows['ei_ana']['Leave Count'])), (7.5, 3))
+        self.assertEqual((float(rows['ei_bora']['Leave Days']), int(rows['ei_bora']['Leave Count'])), (4.0, 2))
+
+    def test_rejected_rows_are_not_counted_unless_asked_for(self):
+        rows = self._csv()
+        self.assertEqual(float(rows['ei_bora']['OT Hours']), 4.0)       # 2 approved + 2 pending, the rejected 3 is out
+        approved = self._csv(status='approved')
+        self.assertEqual(float(approved['ei_bora']['OT Hours']), 2.0)
+        self.assertEqual(float(approved['ei_ana']['OT Hours']), 3.0)    # shared paid hour counted once
+        self.assertEqual(float(approved['ei_ana']['Standby Hours']), 21.0)
+
+    def test_the_sheets_of_one_workbook_agree_with_each_other(self):
+        sheets = self._sheets(status='approved')
+        user_sheet = sheets['User Breakdown']
+        daily = sheets['Daily Summary']
+        self.assertAlmostEqual(sum(r[3] for r in user_sheet), sum(r[2] for r in daily), places=6)       # OT hours
+        self.assertAlmostEqual(sum(r[4] for r in user_sheet), sum(r[3] for r in daily), places=6)       # standby hours
+        self.assertAlmostEqual(sum(r[5] for r in user_sheet), sum(r[1] for r in daily), places=6)       # leave days
+        raw = sheets['Raw Records']
+        self.assertAlmostEqual(sum(r[5] or 0 for r in raw if r[3] == 'Overtime'), sum(r[3] for r in user_sheet), places=6)
+        self.assertAlmostEqual(sum(r[6] or 0 for r in raw if r[3] == 'Leave'), sum(r[5] for r in user_sheet), places=6)
+
+    def test_a_half_day_is_half_a_day_and_a_holiday_is_not_a_leave_day(self):
+        from apps.dashboard.models.calendar import PublicHoliday
+        PublicHoliday.objects.bulk_create([PublicHoliday(name='H', date=date(2026, 6, 10))])   # inside ana's 8-12 June week
+        daily = {r[0].date(): r[1] for r in self._sheets(status='approved')['Daily Summary']}
+        self.assertEqual(daily[date(2026, 6, 15)], 0.5)                  # ana's half day
+        self.assertEqual(daily[date(2026, 6, 10)], 0)                    # a public holiday takes no leave day
+        self.assertEqual(daily[date(2026, 6, 8)], 1)
