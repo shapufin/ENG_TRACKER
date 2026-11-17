@@ -107,6 +107,9 @@ export const ArchiveContents: React.FC<ArchiveContentsProps> = ({
                 {category.location === "team" ? "In the team files" : "In the company file"} · kept
                 until {formatDate(category.remove_on)}
               </p>
+              {category.hold && !category.purged_at && (
+                <p className="text-muted-foreground mt-1 text-xs">{category.hold}</p>
+              )}
               {category.purged_at ? (
                 <p className="text-muted-foreground mt-1 text-xs">
                   Removed on {formatDate(category.purged_at)}. The archive file is the record.

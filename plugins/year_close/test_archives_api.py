@@ -85,3 +85,30 @@ class ArchivesApiTests(YearCloseFixture):
         months = list(workbook['Scorecard months'].iter_rows(values_only=True))
         self.assertEqual(len(months) - 1, 2)
         self.assertTrue(all('yc_tl' in str(row[0]) for row in months[1:]))
+
+
+class LeaderSummaryQueryBudgetTests(YearCloseFixture):
+    """The leader list costs the same number of queries for 1 or many leaders (L2)."""
+
+    def test_query_count_does_not_grow_with_leaders(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        from django.utils import timezone
+        from plugins.tl_scorecard.models import ScorecardMonthSnapshot
+        from plugins.year_close.services.archive_view import leader_summary
+
+        def add_leader(name):
+            leader = User.objects.create_user(username=name, password='x')
+            ScorecardMonthSnapshot.objects.create(
+                leader=leader, month=date(self.year, 3, 1), member_ids=[], payload={},
+                computed_at=timezone.now())
+
+        add_leader('qb_one')
+        with CaptureQueriesContext(connection) as one:
+            leader_summary(self.year)
+        for index in range(4):
+            add_leader(f'qb_more_{index}')
+        with CaptureQueriesContext(connection) as five:
+            rows = leader_summary(self.year)
+        self.assertEqual(len(rows), 5)
+        self.assertEqual(len(five), len(one))

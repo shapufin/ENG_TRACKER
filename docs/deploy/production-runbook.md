@@ -411,6 +411,16 @@ Do this in November or December, before people book leave for the new year:
 3. Create the work calendar for the year and use *Generate* only after step 2: generation is refused (400) while the year has no holidays, it never invents them; `python manage.py sync_payroll_holidays` mirrors HR holidays into it. Payroll refuses a draft whose month has a holiday the calendar does not mark.
 4. Leave carry-over rolls over on the first leave read of the year; the year close and its retention notices run from the scheduler.
 
+## Year-close checklist (audit 2026-11-17, workflow-invariants item 88)
+
+A year closes by itself from 1 February of the next year (scheduler job `year_close.close_year`, hourly). Superusers get a "Closing YYYY needs attention" notice (Archives page link) whenever it is blocked or a file failed, once per set of reasons.
+
+1. Clear the blockers the notice and the Archives page list: pending overtime, standby or leave; draft payroll runs; approved entries of payroll subjects that are in no finalized run; a current leader without a December scorecard snapshot (`python manage.py freeze_scorecard_months`). Approved entries of Managers, superusers, deactivated people or people without a wage are a warning, never a blocker.
+2. After it closes, download and verify the files on the Archives page. `python manage.py close_year --year <year>` shows the same state from the shell.
+3. To correct a closed year: `python manage.py reopen_year --year <year> --reason "..."`, fix the rows, then wait for the next hourly run (or run `close_year --year <year>`). The old set is superseded and a new version is built and frozen. Then a superuser must open the Archives page, check the rebuilt files and press *Confirm rebuilt archive*: nothing of that year can be removed before that.
+4. Removal (retention) is always a superuser action. It is refused while the archive counts differ from the database, while a rebuilt set is unconfirmed, and, for overtime and standby, while finalized payroll still points at them (they go with or after the payroll, from year + 5).
+5. Restoring a database from before a close: the archive volume keeps the old set; the next run rebuilds it from the restored data and step 3's confirmation applies.
+
 ## Logs and dependency lock (audit 2026-11-16 L1, L9)
 
 - Logs: the backend writes only to stdout/stderr with a time, level and logger name on every line; read them with `docker compose logs`. There are no log files and no `logs/` volume to mount.

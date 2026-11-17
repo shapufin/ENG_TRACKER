@@ -42,6 +42,21 @@ def _leaders():
     return User.objects.filter(id__in=leader_user_ids(), profile__isnull=False).select_related('profile')
 
 
+def snapshot_rosters() -> dict:
+    """``{leader: scoreable member ids}`` for every leader the freeze job snapshots.
+
+    The one rule for "who gets a month snapshot": active leaders with scoreable members.
+    Year-close readiness asks the same question for December (audit 2026-11-17 H3), so
+    it must call this, never re-derive it.
+    """
+    rosters = {}
+    for leader in _leaders():
+        member_ids = scoreable_member_ids(leader)
+        if member_ids:
+            rosters[leader] = member_ids
+    return rosters
+
+
 def freeze_scorecard_months(now: datetime | None = None, month: date | None = None) -> int:
     """Snapshot every team leader's month blocks for ``month`` (default: latest frozen month).
 
@@ -64,11 +79,8 @@ def freeze_scorecard_months(now: datetime | None = None, month: date | None = No
         .values_list('leader_id', flat=True)
     )
     written = 0
-    for leader in _leaders():
+    for leader, member_ids in snapshot_rosters().items():
         if leader.pk in done:
-            continue
-        member_ids = scoreable_member_ids(leader)
-        if not member_ids:
             continue
         ScorecardMonthSnapshot.objects.update_or_create(
             leader=leader, month=month,

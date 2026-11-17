@@ -223,11 +223,18 @@ def leaders_workbook(year: int, leader_id=None) -> tuple[bytes | None, dict]:
     }
 
 
-def december_snapshot_blockers(year: int) -> list[str]:
-    """A leader with frozen months in ``year`` needs the final December one too."""
+def december_snapshot_state(year: int) -> tuple[list[str], list[str]]:
+    """``(blockers, warnings)`` for the final December scorecard snapshots of ``year``.
+
+    A missing December snapshot blocks only for a leader the freeze job can still
+    snapshot (``snapshot_rosters``), so ``manage.py freeze_scorecard_months`` really
+    fixes it. A former leader (demoted, deactivated, empty team) can never get one and
+    is a warning: their last frozen month stands (audit 2026-11-17 H3).
+    """
     if not scorecard_available():
-        return []
+        return [], []
     from plugins.tl_scorecard.models import ScorecardMonthSnapshot
+    from plugins.tl_scorecard.snapshots import snapshot_rosters
 
     december = date(year, 12, 1)
     leaders = set(
@@ -238,10 +245,20 @@ def december_snapshot_blockers(year: int) -> list[str]:
             month=december, computed_at__gte=freeze_at(december),
         ).values_list('leader_id', flat=True)
     )
-    missing = len(leaders - final)
+    missing = leaders - final
     if not missing:
-        return []
-    return [
-        f'{missing} leader(s) have no final December {year} scorecard snapshot; '
-        f'run manage.py freeze_scorecard_months.'
-    ]
+        return [], []
+    snapshottable = {leader.pk for leader in snapshot_rosters()}
+    required, former = missing & snapshottable, missing - snapshottable
+    blockers, warnings = [], []
+    if required:
+        blockers.append(
+            f'{len(required)} leader(s) have no final December {year} scorecard snapshot; '
+            f'run manage.py freeze_scorecard_months.'
+        )
+    if former:
+        warnings.append(
+            f'{len(former)} former leader(s) of {year} have no December snapshot (no longer '
+            f'leading at the freeze); their last frozen month is the record.'
+        )
+    return blockers, warnings

@@ -169,6 +169,7 @@ class ArchivesViewSet(SuperuserOnlyMixin, viewsets.ViewSet):
     plugin_name = 'year_close'
     permission_action_map = {
         'list': 'view', 'leaders': 'view', 'leaders_export': 'export', 'purge': 'export',
+        'confirm_set': 'export',
     }
 
     def list(self, request):
@@ -206,6 +207,19 @@ class ArchivesViewSet(SuperuserOnlyMixin, viewsets.ViewSet):
         dry_run = request.data.get('dry_run', True) is not False
         try:
             result = retention_service.purge(year, category, actor=request.user, dry_run=dry_run)
+        except retention_service.PurgeRefused as refused:
+            return Response({'reasons': refused.reasons}, status=status.HTTP_409_CONFLICT)
+        return Response(result)
+
+    @action(detail=False, methods=['post'], url_path='confirm-set', url_name='confirm-set')
+    def confirm_set(self, request):
+        """Confirm a set rebuilt after a reopen, so its year may be purged later (D3)."""
+        try:
+            year = int(request.data.get('year'))
+        except (TypeError, ValueError):
+            raise ValidationError({'year': 'year must be an integer.'})
+        try:
+            result = retention_service.confirm_snapshot(year, actor=request.user)
         except retention_service.PurgeRefused as refused:
             return Response({'reasons': refused.reasons}, status=status.HTTP_409_CONFLICT)
         return Response(result)

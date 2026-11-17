@@ -45,12 +45,25 @@ def _candidates(date_from, date_to, today):
     return qs.order_by('pk')
 
 
-def _apply(request_id, new_days):
-    """Release, recount, reserve again. Returns False if the request moved meanwhile."""
+def _count(leave) -> Decimal:
+    return Decimal(count_request_days(
+        'vacation', leave.start_date, leave.end_date, is_half_day=leave.is_half_day,
+    ))
+
+
+def _apply(request_id):
+    """Release, recount, reserve again. Returns the stored count, or ``None`` if nothing changed.
+
+    The count is taken from the LOCKED row: an edit between the scan and the lock would
+    otherwise store a count of dates the request no longer has (audit 2026-11-17 M10).
+    """
     with transaction.atomic():
         leave = LeaveRequest.objects.select_for_update().get(pk=request_id)
         if leave.status not in OPEN_STATUSES:
-            return False
+            return None
+        new_days = _count(leave)
+        if leave.days_counted is not None and Decimal(leave.days_counted) == new_days:
+            return None
         status = leave.status
         has_balance = bool(leave.balance_id or leave.carry_balance_id)
         if has_balance:
@@ -64,7 +77,7 @@ def _apply(request_id, new_days):
             reserve_vacation_days(leave)
             if status == 'approved':
                 move_request_days(leave, 'pending', 'approved')
-        return True
+        return new_days
 
 
 def recount_leave_days(date_from=None, date_to=None, today=None, apply=False):
@@ -77,14 +90,14 @@ def recount_leave_days(date_from=None, date_to=None, today=None, apply=False):
     for leave in _candidates(date_from, date_to, today):
         if is_closed_year(leave.start_date.year):
             continue
-        new_days = Decimal(count_request_days(
-            'vacation', leave.start_date, leave.end_date, is_half_day=leave.is_half_day,
-        ))
+        new_days = _count(leave)
         old_days = Decimal(leave.days_counted if leave.days_counted is not None else new_days)
         if new_days == old_days:
             continue
-        if apply and not _apply(leave.pk, new_days):
-            continue
+        if apply:
+            new_days = _apply(leave.pk)
+            if new_days is None:
+                continue
         changes.append(RecountChange(
             leave.pk, leave.user_id, leave.status, leave.start_date, leave.end_date, old_days, new_days,
         ))

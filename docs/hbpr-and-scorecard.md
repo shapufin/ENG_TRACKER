@@ -255,6 +255,10 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
   `stages_completed` and `stages_with_evidence` for `scoreable_member_ids(leader)`.
   Line Managers are excluded, as everywhere in the scorecard.
 
+## Month windows are Europe/Tirane months (2026-11-17)
+
+Every scorecard metric that buckets a request by `submitted_at` (leave SLA, overtime turnaround, pending at month end, the trend window) uses Tirane midnight as the month edge (`tl_scorecard.services._starts`), and business days elapsed are counted on Tirane dates (`_local_date`). Engagement already did (`month_bounds`). Before this a request submitted at 00:30 on the 1st counted in the previous month. Forward-only: frozen month snapshots are read, never recomputed. Owner decision D2, workflow-invariants item 88 (h).
+
 ## Year rollover and the closed-year archive (2026-11-12)
 
 - The TL scorecard has a **Reporting year** selector (`?year=`, default the Europe/Tirane business year), so a cycle or

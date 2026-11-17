@@ -72,17 +72,28 @@ def _compute_analytics_filters(request):
         start_date = now - timedelta(days=30)
         end_date = now
 
-    leave_filters = Q(created_at__gte=start_date, created_at__lte=end_date, is_deleted=False)
-    overtime_filters = Q(
-        date__gte=start_date.date(),
-        date__lte=end_date.date(),
-        is_deleted=False,
+    leave_filters, overtime_filters, standby_filters = _window_filters(
+        start_date, end_date, teams, users, statuses,
     )
-    standby_filters = Q(
-        date__gte=start_date.date(),
-        date__lte=end_date.date(),
-        is_deleted=False,
-    )
+    return (start_date, end_date, leave_filters, overtime_filters,
+            standby_filters, categories, period)
+
+
+def _window_filters(start_date, end_date, teams, users, statuses, end_exclusive=False):
+    """Leave, overtime and standby ``Q`` for one window with the request's other filters.
+
+    The overview's previous-period trend reuses it with ``end_exclusive=True``, so the
+    two periods differ only in their dates (audit 2026-11-17 M6: the previous period
+    used to ignore team, user and status filters).
+    """
+    if end_exclusive:
+        leave_filters = Q(created_at__gte=start_date, created_at__lt=end_date, is_deleted=False)
+        day_window = Q(date__gte=start_date.date(), date__lt=end_date.date(), is_deleted=False)
+    else:
+        leave_filters = Q(created_at__gte=start_date, created_at__lte=end_date, is_deleted=False)
+        day_window = Q(date__gte=start_date.date(), date__lte=end_date.date(), is_deleted=False)
+    overtime_filters = day_window
+    standby_filters = day_window
 
     if teams:
         from apps.users.models.core import UserProfile
@@ -104,9 +115,17 @@ def _compute_analytics_filters(request):
         leave_filters &= Q(status__in=statuses)
         overtime_filters &= Q(status__in=statuses)
         standby_filters &= Q(status__in=statuses)
+    else:
+        # Rejected overtime and standby are not hours worked: without ?status= they stay out
+        # of every hours total, as in the analytics export (`reports.py`, workflow-invariants
+        # 87(x)). The overview once counted them (audit 2026-11-17). Leave here is a COUNT of
+        # requests by status (the trend chart stacks approved/pending/rejected), so it keeps
+        # every status.
+        open_statuses = Q(status__in=['pending', 'approved'])
+        overtime_filters &= open_statuses
+        standby_filters &= open_statuses
 
-    return (start_date, end_date, leave_filters, overtime_filters,
-            standby_filters, categories, period)
+    return leave_filters, overtime_filters, standby_filters
 
 
 class AnalyticsSnapshotViewSet(PluginPermissionMixin, viewsets.ReadOnlyModelViewSet):
@@ -219,21 +238,14 @@ class AnalyticsMetricViewSet(PluginPermissionMixin,
         # Calculate trends (compare with previous period of equal length)
         period_length = (end_date - start_date).days + 1
         prev_start = start_date - timedelta(days=period_length)
-        prev_leave = LeaveRequest.objects.filter(
-            created_at__gte=prev_start, created_at__lt=start_date, is_deleted=False
-        ).count()
-        prev_overtime = safe_aggregate(
-            OvertimeLog.objects.filter(
-                date__gte=prev_start.date(), date__lt=start_date.date(), is_deleted=False
-            ),
-            'hours',
+        prev_leave_q, prev_overtime_q, prev_standby_q = _window_filters(
+            prev_start, start_date,
+            request.query_params.getlist('teams'), request.query_params.getlist('users'),
+            request.query_params.getlist('status'), end_exclusive=True,
         )
-        prev_standby = safe_aggregate(
-            StandbyLog.objects.filter(
-                date__gte=prev_start.date(), date__lt=start_date.date(), is_deleted=False
-            ),
-            'hours',
-        )
+        prev_leave = LeaveRequest.objects.filter(prev_leave_q).count()
+        prev_overtime = safe_aggregate(OvertimeLog.objects.filter(prev_overtime_q), 'hours')
+        prev_standby = safe_aggregate(StandbyLog.objects.filter(prev_standby_q), 'hours')
         prev_user_count = User.objects.filter(date_joined__gte=prev_start, date_joined__lt=start_date).count()
         prev_active_user_count = User.objects.filter(date_joined__gte=prev_start, date_joined__lt=start_date, is_active=True).count()
 
@@ -318,7 +330,8 @@ class AnalyticsMetricViewSet(PluginPermissionMixin,
                     'total_hours': float(s.total_hours) if hasattr(s, 'total_hours') else 0,
                     'average_hours': float(s.average_hours) if hasattr(s, 'average_hours') else 0,
                     'overtime_hours': float(s.overtime_approved_hours) if hasattr(s, 'overtime_approved_hours') else 0,
-                    'standby_hours': float(s.standby_completed_count * 8) if hasattr(s, 'standby_completed_count') else 0,
+                    # A count: the snapshot stores no standby hours, so none are invented (M6).
+                    'standby_completed': s.standby_completed_count,
                 }
                 for s in recent_snapshots
             ]
@@ -555,6 +568,9 @@ class AnalyticsMetricViewSet(PluginPermissionMixin,
         users = request.query_params.getlist('users')
         statuses = request.query_params.getlist('status')
         categories = request.query_params.getlist('category')
+        range_error = self._export_range_error(date_from, date_to)
+        if range_error is not None:
+            return range_error
 
         # Audit trail: log the export request
         try:
@@ -611,6 +627,29 @@ class AnalyticsMetricViewSet(PluginPermissionMixin,
 
         return Response({'error': 'Unsupported format'}, status=status.HTTP_400_BAD_REQUEST)
 
+    def _export_range_error(self, raw_from, raw_to):
+        """A 400 response for a bad or too long explicit range, else ``None``.
+
+        Shared by the synchronous export and the export jobs (audit 2026-11-17 M7): the
+        synchronous one runs inside a gunicorn worker, so it needs the cap even more.
+        """
+        if not (raw_from and raw_to):
+            return None
+        try:
+            range_from = datetime.strptime(str(raw_from), '%Y-%m-%d').date()
+            range_to = datetime.strptime(str(raw_to), '%Y-%m-%d').date()
+        except ValueError:
+            return Response({'error': 'date_from and date_to must be YYYY-MM-DD.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if range_to < range_from:
+            return Response({'error': 'date_to must not be before date_from.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        if (range_to - range_from).days > self.MAX_EXPORT_RANGE_DAYS:
+            return Response(
+                {'error': f'Date range must not exceed {self.MAX_EXPORT_RANGE_DAYS} days.'},
+                status=status.HTTP_400_BAD_REQUEST)
+        return None
+
     def _can_access_job(self, user, job):
         """Check if user can access an export job (creator or staff/superuser)."""
         if not user.is_authenticated:
@@ -658,21 +697,9 @@ class AnalyticsMetricViewSet(PluginPermissionMixin,
             return Response({'error': 'Invalid format'}, status=status.HTTP_400_BAD_REQUEST)
 
         # A-03: bound the explicit date range of a background export.
-        raw_from, raw_to = request.data.get('date_from'), request.data.get('date_to')
-        if raw_from and raw_to:
-            try:
-                range_from = datetime.strptime(str(raw_from), '%Y-%m-%d').date()
-                range_to = datetime.strptime(str(raw_to), '%Y-%m-%d').date()
-            except ValueError:
-                return Response({'error': 'date_from and date_to must be YYYY-MM-DD.'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            if range_to < range_from:
-                return Response({'error': 'date_to must not be before date_from.'},
-                                status=status.HTTP_400_BAD_REQUEST)
-            if (range_to - range_from).days > self.MAX_EXPORT_RANGE_DAYS:
-                return Response(
-                    {'error': f'Date range must not exceed {self.MAX_EXPORT_RANGE_DAYS} days.'},
-                    status=status.HTTP_400_BAD_REQUEST)
+        range_error = self._export_range_error(request.data.get('date_from'), request.data.get('date_to'))
+        if range_error is not None:
+            return range_error
 
         filter_params = {
             'period': request.data.get('period', 'month'),

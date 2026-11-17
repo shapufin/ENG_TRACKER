@@ -5,7 +5,7 @@ so it is a management command rather than an API endpoint. Shell/superuser only.
 """
 
 from django.core.management.base import BaseCommand, CommandError
-from django.core.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError  # what reopen_year raises
 
 from apps.users.models import ClosedYear
 from apps.users.services.approval_periods import reopen_year
@@ -33,8 +33,10 @@ class Command(BaseCommand):
         try:
             reopen_year(year, reason=reason)
         except ValidationError as exc:
-            raise CommandError(str(exc)) from exc
+            raise CommandError(' '.join(str(item) for item in exc.detail)) from exc
         self.stdout.write(self.style.SUCCESS(f'Reopened {year}: its records are editable again.'))
         self.stdout.write(
-            'The year-close snapshot (if one exists) is superseded; the next close builds a new version.'
+            'The archive set of this year (if one exists) is superseded the next time the '
+            'year-close job runs (hourly), which then builds and freezes a new version. '
+            'Run `manage.py close_year --year %d` to do it now.' % year
         )

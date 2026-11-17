@@ -43,6 +43,7 @@ def archive_entries() -> list[dict]:
         entries.append({
             'year': snapshot.year, 'snapshot_id': snapshot.pk, 'version': snapshot.version,
             'completed_at': snapshot.completed_at, 'total_bytes': snapshot.total_bytes,
+            'needs_confirmation': retention_service.needs_confirmation(snapshot.year, snapshot),
             'categories': categories,
             'files': YearSnapshotFileSerializer(files, many=True).data,
         })
@@ -89,14 +90,16 @@ def leader_summary(year: int) -> list[dict]:
     ):
         add(queryset, field, 'leader_records')
 
-    users = User.objects.filter(id__in=tally).select_related('profile').order_by('username')
+    from apps.users.services.leader_ownership import leader_user_ids
+
+    current_leaders = leader_user_ids()  # one query, never ``is_team_leader`` per row (L2)
+    users = User.objects.filter(id__in=tally).order_by('username')
     rows = []
     for user in users:
-        profile = getattr(user, 'profile', None)
         rows.append({
             'leader_id': user.pk, 'username': user.username,
             'name': user.get_full_name() or user.username,
-            'is_current': bool(user.is_active and profile and profile.is_team_leader),
+            'is_current': user.pk in current_leaders,
             'scorecard_months': tally[user.pk]['scorecard_months'],
             'engagement_months': tally[user.pk]['engagement_months'],
             'governance_evidence': tally[user.pk]['governance_evidence'],

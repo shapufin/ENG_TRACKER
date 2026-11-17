@@ -457,6 +457,39 @@ def _create_run_entries(run: PayrollRun, line: PayrollLine, result) -> None:
     PayrollRunEntry.objects.bulk_create(entries)
 
 
+def payroll_exclusion_reasons(user_ids, periods) -> dict:
+    """``{(user_id, year, month): reason}`` for people payroll never pays that month.
+
+    The one answer to "is this person a payroll subject?" outside run generation
+    (year-close readiness, audit 2026-11-17 H2). Same rules as
+    ``partition_payable_users`` plus the automatic run's active-user filter
+    (``_payable_wage_users``): superuser, Manager, deactivated, no wage for the month.
+    Pairs that ARE payroll subjects are absent from the result.
+    """
+    from django.contrib.auth import get_user_model
+    from apps.users.services.team_leaders import italian_tl_user_ids
+
+    users = {u.id: u for u in get_user_model().objects.filter(id__in=set(user_ids))}
+    managers = italian_tl_user_ids()
+    reasons = {}
+    for user_id, year, month in set(periods):
+        user = users.get(user_id)
+        if user is None:
+            continue
+        if user.is_superuser:
+            reasons[(user_id, year, month)] = 'superuser'
+        elif user_id in managers:
+            reasons[(user_id, year, month)] = 'Manager'
+        elif not user.is_active:
+            reasons[(user_id, year, month)] = 'deactivated'
+        else:
+            try:
+                WageAssignment.resolve_for_month(user, year, month)
+            except ValidationError:
+                reasons[(user_id, year, month)] = 'no wage for the month'
+    return reasons
+
+
 def partition_payable_users(users, year: int, month: int):
     """Split users into (payable, skipped) for a payroll month.
 

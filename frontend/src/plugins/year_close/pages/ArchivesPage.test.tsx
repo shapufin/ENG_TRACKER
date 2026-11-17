@@ -5,6 +5,7 @@ import { ArchivesPage } from "./ArchivesPage";
 import { yearCloseService } from "../services/yearCloseService";
 import * as download from "@/lib/download";
 import { toast } from "sonner";
+import type { ArchiveEntry } from "../types/yearClose";
 
 const permissions = vi.hoisted(() => ({ isSuperuser: true }));
 
@@ -21,6 +22,7 @@ vi.mock("../services/yearCloseService", () => ({
     listLeaderHistory: vi.fn(),
     exportLeader: vi.fn(),
     purgeCategory: vi.fn(),
+    confirmSet: vi.fn(),
   },
 }));
 vi.mock("@/lib/download", async (importOriginal) => ({
@@ -173,6 +175,48 @@ describe("ArchivesPage", () => {
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("does not match"))
     );
+  });
+
+  it("asks a superuser to confirm a set rebuilt after a reopen, then refreshes", async () => {
+    vi.mocked(yearCloseService.listSnapshots).mockResolvedValue([snapshot({ version: 2 })]);
+    vi.mocked(yearCloseService.listArchives).mockResolvedValue([
+      entry({ version: 2, needs_confirmation: true }),
+    ]);
+    vi.mocked(yearCloseService.confirmSet).mockResolvedValue({ year: 2025, version: 2 });
+    renderPage();
+    await screen.findByText("2025");
+    screen.getByRole("button", { name: "Files for 2025" }).click();
+
+    expect(await screen.findByText(/rebuilt after the year was reopened/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm rebuilt archive" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm archive" }));
+    await waitFor(() => expect(yearCloseService.confirmSet).toHaveBeenCalledWith(2025));
+    await waitFor(() => expect(yearCloseService.listArchives).toHaveBeenCalledTimes(2));
+  });
+
+  it("explains why a category past its date is still kept", async () => {
+    vi.mocked(yearCloseService.listSnapshots).mockResolvedValue([snapshot()]);
+    const held = entry() as unknown as ArchiveEntry;
+    held.categories[1] = {
+      ...held.categories[1],
+      removable: false,
+      hold: "Kept until the 2025 payroll is removed (from 2030-12-31): finalized payroll still points at these overtime entries.",
+    };
+    vi.mocked(yearCloseService.listArchives).mockResolvedValue([held]);
+    renderPage();
+    await screen.findByText("2025");
+    screen.getByRole("button", { name: "Files for 2025" }).click();
+    expect(await screen.findByText(/Kept until the 2025 payroll is removed/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Remove Overtime of 2025" })).not.toBeInTheDocument();
+  });
+
+  it("shows no confirmation for a first set", async () => {
+    vi.mocked(yearCloseService.listSnapshots).mockResolvedValue([snapshot()]);
+    renderPage();
+    await screen.findByText("2025");
+    screen.getByRole("button", { name: "Files for 2025" }).click();
+    await screen.findByText("2025 contents and retention");
+    expect(screen.queryByRole("button", { name: "Confirm rebuilt archive" })).not.toBeInTheDocument();
   });
 
   it("offers no delete control anywhere", async () => {

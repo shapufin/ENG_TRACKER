@@ -654,7 +654,7 @@ class ExportExcelView(HbprBlockedMixin, APIView):
             logger.error(f"[Excel Export] Error: {str(e)}", exc_info=True)
             from rest_framework.response import Response
             return Response(
-                {'error': f'Failed to generate Excel export: {str(e)}'},
+                {'error': 'Failed to generate Excel export. The error was logged.'},  # never the exception text (L6)
                 status=500
             )
 
@@ -804,7 +804,7 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
             logger.error(f"[OT/Standby Export] Error: {str(e)}", exc_info=True)
             from rest_framework.response import Response
             return Response(
-                {'error': f'Failed to generate OT/Standby export: {str(e)}'},
+                {'error': 'Failed to generate OT/Standby export. The error was logged.'},  # never the exception text (L6)
                 status=500
             )
 
@@ -905,7 +905,7 @@ class ExportLeaveView(HbprBlockedMixin, APIView):
             logger.error(f"[Leave Export] Error: {str(e)}", exc_info=True)
             from rest_framework.response import Response
             return Response(
-                {'error': f'Failed to generate Leave export: {str(e)}'},
+                {'error': 'Failed to generate Leave export. The error was logged.'},  # never the exception text (L6)
                 status=500
             )
 

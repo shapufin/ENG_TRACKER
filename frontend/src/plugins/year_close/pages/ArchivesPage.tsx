@@ -12,6 +12,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { navigateToDownload } from "@/lib/download";
 import { handleApiError } from "@/lib/error-handler";
 import { usePermissions } from "@/context/PermissionContext";
@@ -58,6 +60,8 @@ const ArchivesContent: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [tab, setTab] = useState<ArchivesTab>("years");
   const [removing, setRemoving] = useState<ArchiveCategory | null>(null);
+  const [confirmingSet, setConfirmingSet] = useState(false);
+  const [isConfirmingSet, setIsConfirmingSet] = useState(false);
   const queryClient = useQueryClient();
 
   const snapshots = useQuery({
@@ -82,6 +86,20 @@ const ArchivesContent: React.FC = () => {
       showVerifyResult(await yearCloseService.verifyFile(fileId));
     } catch (error) {
       handleApiError(error);
+    }
+  };
+
+  const confirmSet = async (year: number) => {
+    setIsConfirmingSet(true);
+    try {
+      await yearCloseService.confirmSet(year);
+      toast.success(`The rebuilt ${year} archive is confirmed.`);
+      setConfirmingSet(false);
+      void queryClient.invalidateQueries({ queryKey: ["year_close"] });
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setIsConfirmingSet(false);
     }
   };
 
@@ -221,6 +239,30 @@ const ArchivesContent: React.FC = () => {
                 ))}
               </ul>
             </GlassCard>
+          )}
+          {entry?.needs_confirmation && (
+            <GlassCard delay={0} className="p-4">
+              <h3 className="mb-1 text-sm font-medium">Confirm the rebuilt {entry.year} archive</h3>
+              <p className="text-muted-foreground mb-3 text-sm">
+                This archive (version {entry.version}) was rebuilt after the year was reopened.
+                Download and check it, then confirm it. Nothing of {entry.year} can be removed
+                until it is confirmed.
+              </p>
+              <Button variant="outline" size="control-sm" onClick={() => setConfirmingSet(true)}>
+                Confirm rebuilt archive
+              </Button>
+            </GlassCard>
+          )}
+          {entry && (
+            <ConfirmDialog
+              open={confirmingSet}
+              onOpenChange={setConfirmingSet}
+              title={`Confirm the ${entry.year} archive (version ${entry.version})?`}
+              description="Confirm only after you checked the downloaded files. The server verifies every checksum again and records who confirmed."
+              confirmLabel="Confirm archive"
+              isConfirming={isConfirmingSet}
+              onConfirm={() => void confirmSet(entry.year)}
+            />
           )}
           {entry && (
             <ArchiveContents

@@ -139,17 +139,49 @@ class GuardTests(YearCloseFixture):
                 'or a bug inside the plugin reads as "plugin disabled"',
             )
 
-    def test_payslip_files_are_named_by_username(self):
+    def test_payslip_files_are_named_by_username_and_month(self):
         from unittest.mock import Mock
 
         line = Mock()
         line.user.username = 'yc_member'
         line.pk = 5
-        self.assertEqual(builder._payslip_name(line), 'payslips/yc_member.pdf')
+        line.run.year, line.run.month = 2025, 3
+        self.assertEqual(builder._payslip_name(line), 'payslips/yc_member/2025-03.pdf')
 
 
 class PayslipNamingTests(YearCloseFixture):
-    pass
+    """One payslip per person per month, never one per person (audit 2026-11-17 H1)."""
+
+    def test_every_monthly_payslip_of_a_person_is_kept(self):
+        import io
+        import zipfile
+        from unittest.mock import Mock
+
+        lines = []
+        for month in (1, 2, 3):
+            line = Mock()
+            line.pk = month
+            line.user.username = 'yc_member'
+            line.run.year, line.run.month = self.year, month
+            lines.append(line)
+        bundle = {
+            'kind': 'team', 'leader_name': 'yc_tl', 'team_name': 'YCT',
+            'member_ids': [self.member.id], 'ot_ids': {'overtime': [], 'standby': []},
+            'leader_id': self.tl.id, 'team_id': self.team.id,
+        }
+        with patch.object(builder, '_finalized_lines', return_value=lines), patch(
+            'plugins.payroll.services.export_service.generate_payslip_pdf',
+            side_effect=lambda line: io.BytesIO(f'pdf-{line.run.month}'.encode()),
+        ):
+            path, counts = builder.build_bundle(self.year, bundle, [])
+        with zipfile.ZipFile(path) as archive:
+            names = sorted(n for n in archive.namelist() if n.startswith('payslips/'))
+            self.assertEqual(archive.read(names[0]), b'pdf-1')
+        self.assertEqual(counts['payslips'], 3)
+        self.assertEqual(names, [
+            f'payslips/yc_member/{self.year}-01.pdf', f'payslips/yc_member/{self.year}-02.pdf',
+            f'payslips/yc_member/{self.year}-03.pdf',
+        ])
 
 class ReadinessTests(YearCloseFixture):
     def test_a_year_before_february_is_blocked(self):
@@ -175,10 +207,43 @@ class ReadinessTests(YearCloseFixture):
         blockers = check_year_readiness(self.year)['blockers']
         self.assertTrue(any('leave' in b for b in blockers))
 
+    def give_wage(self, user):
+        from decimal import Decimal
+
+        from plugins.payroll.models import WageAssignment
+
+        WageAssignment.objects.create(
+            user=user, gross_monthly_wage=Decimal('1000'), effective_from=date(self.year, 1, 1),
+        )
+
     def test_approved_overtime_outside_finalized_payroll_blocks(self):
+        self.give_wage(self.member)
         self.add_overtime(status='approved')
         blockers = check_year_readiness(self.year)['blockers']
         self.assertTrue(any('finalized payroll' in b for b in blockers))
+
+    def test_approved_rows_of_people_payroll_never_pays_are_a_warning(self):
+        """Owner decision D1 (audit 2026-11-17 H2): never a blocker, always named."""
+        from apps.permissions.services.role_service import assign_role
+
+        boss = User.objects.create_superuser('yc_boss', 'b@x.test', 'x')
+        manager = User.objects.create_user(username='yc_manager', password='x')
+        assign_role(manager, 'italian_tl')
+        gone = User.objects.create_user(username='yc_gone', password='x')
+        self.give_wage(gone)
+        gone.is_active = False
+        gone.save(update_fields=['is_active'])
+        for user in (boss, manager, gone, self.member):  # member has no wage
+            self.add_overtime(user=user, status='approved')
+        self.add_standby(user=manager, status='approved')
+
+        readiness = check_year_readiness(self.year)
+        self.assertFalse(any('finalized payroll' in b for b in readiness['blockers']),
+                         readiness['blockers'])
+        warning = next(w for w in readiness['warnings'] if 'payroll never pays' in w)
+        self.assertIn('5 approved', warning)
+        for label in ('superuser', 'Manager', 'deactivated', 'no wage'):
+            self.assertIn(label, warning)
 
     def test_a_draft_payroll_run_blocks(self):
         from plugins.payroll.models import PayrollRuleSet, PayrollRun
@@ -393,3 +458,153 @@ class ManagedMembersParityTests(YearCloseFixture):
                 batched[leader.pk], set(leader.profile.get_team_member_ids()),
                 f'mismatch for {leader.username}',
             )
+
+
+class BlockedYearTests(YearCloseFixture):
+    """A blocked year is announced once, logged once per change, never abandoned (H4)."""
+
+    def test_repeated_blocked_ticks_write_one_audit_row_and_one_notice(self):
+        from apps.reports.models import AuditLog
+
+        self.add_overtime(status='pending')
+        with patch('plugins.year_close.notification_types.YearCloseAttentionNotice.dispatch') as dispatch,                 self.captureOnCommitCallbacks(execute=True):
+            close_year(self.year)
+            close_year(self.year)
+        self.assertEqual(AuditLog.objects.filter(
+            extra_data__operation='year_close_blocked').count(), 1)
+        self.assertEqual(dispatch.call_count, 1)
+        self.assertEqual(dispatch.call_args.args[0]['year'], self.year)
+
+    def test_a_new_blocker_is_announced_again(self):
+        self.add_overtime(status='pending')
+        with patch('plugins.year_close.notification_types.YearCloseAttentionNotice.dispatch') as dispatch,                 self.captureOnCommitCallbacks(execute=True):
+            close_year(self.year)
+            self.add_standby(status='pending')
+            close_year(self.year)
+        self.assertEqual(dispatch.call_count, 2)
+
+    def test_the_notice_goes_to_active_superusers_only(self):
+        from plugins.year_close.notification_types import YearCloseAttentionNotice
+
+        User.objects.create_superuser('yc_su', 'su@x.test', 'x')
+        User.objects.create_user('yc_staff', password='x', is_staff=True)
+        names = {u.username for u in YearCloseAttentionNotice().recipients({})}
+        self.assertEqual(names, {'yc_su'})
+
+    def test_an_older_started_year_is_still_retried_by_the_scheduler(self):
+        from plugins.year_close.services import closer
+
+        older = self.year - 1
+        YearSnapshot.objects.create(year=older, version=1, status='blocked')
+        with patch.object(closer, 'close_year') as close:
+            closer.process_close_year()
+        self.assertEqual(sorted(call.args[0] for call in close.call_args_list), [older, self.year])
+
+    def test_a_never_started_older_year_is_left_to_the_command(self):
+        from plugins.year_close.services import closer
+
+        with patch.object(closer, 'close_year') as close:
+            closer.process_close_year()
+        self.assertEqual([call.args[0] for call in close.call_args_list], [self.year])
+
+
+class BundleNameCollisionTests(YearCloseFixture):
+    """Two bundles never share a file name (audit 2026-11-17 M3)."""
+
+    def bundle(self, leader_id, leader, team_id, team):
+        return {'kind': 'team', 'leader_id': leader_id, 'leader_name': leader,
+                'team_id': team_id, 'team_name': team, 'member_ids': [],
+                'ot_ids': {'overtime': [], 'standby': []}}
+
+    def test_names_that_clean_to_the_same_text_get_their_ids(self):
+        bundles = [self.bundle(1, 'a@b', 7, 'X Y'), self.bundle(2, 'a_b', 8, 'X_Y'),
+                   self.bundle(3, 'carol', 9, 'OPS')]
+        builder.assign_filenames(bundles)
+        names = [builder.bundle_filename(b) for b in bundles]
+        self.assertEqual(names, ['a_b__X_Y__1-7.zip', 'a_b__X_Y__2-8.zip', 'carol__OPS.zip'])
+
+    def test_bundles_for_year_names_are_unique(self):
+        self.add_overtime(status='rejected')
+        names = [builder.bundle_filename(b) for b in builder.bundles_for_year(self.year)]
+        self.assertEqual(len(names), len(set(names)))
+
+
+class ChangedDuringBuildTests(YearCloseFixture):
+    """A row written while the set is built fails the set; the next run rebuilds (M4)."""
+
+    def test_a_row_added_mid_build_fails_the_set_and_the_retry_catches_it(self):
+        self.add_overtime(status='rejected')
+        real_build = builder.build_bundle
+        added = []
+
+        def build_then_write(year, bundle, warnings):
+            result = real_build(year, bundle, warnings)
+            if not added:
+                added.append(self.add_overtime(status='rejected'))
+            return result
+
+        with patch.object(builder, 'build_bundle', side_effect=build_then_write):
+            first = close_year(self.year)
+        self.assertEqual(first.status, 'failed')
+        self.assertFalse(ClosedYear.objects.filter(year=self.year).exists())
+
+        second = close_year(self.year)
+        self.assertEqual(second.status, 'ready', second.readiness)
+        self.assertTrue(ClosedYear.objects.filter(year=self.year).exists())
+
+
+class YearCloseDressRehearsalTests(YearCloseFixture):
+    """A realistic finished year closes, freezes, and survives a reopen (audit 2026-11-17).
+
+    One test, many traps: a Manager and a superuser with approved overtime payroll never
+    pays (H2), an employee older than their Line Manager (H5), a leader who stopped
+    leading during the year (H3), and a reopen followed by a correction (C1).
+    """
+
+    def test_the_year_closes_and_a_reopen_rebuilds_it(self):
+        from django.utils import timezone
+        from apps.permissions.services.role_service import assign_role
+        from apps.users.services.approval_periods import reopen_year
+        from plugins.tl_scorecard.models import ScorecardMonthSnapshot
+        from plugins.tl_scorecard.snapshots import freeze_scorecard_months
+
+        early = User.objects.create_user(username='dr_early', password='x')
+        line_manager = User.objects.create_user(username='dr_line_manager', password='x')
+        assign_role(line_manager, 'albanian_tl')
+        team = Team.objects.create(name='DR Team', code='DRT', team_leader=line_manager)
+        TeamMembership.objects.create(user_profile=early.profile, team=team, is_primary_team=True)
+        early.profile.albanian_tl = line_manager
+        early.profile.save(update_fields=['albanian_tl'])
+        self.add_leave(user=early)
+        self.add_overtime(user=early, status='rejected')
+
+        manager = User.objects.create_user(username='dr_manager', password='x')
+        assign_role(manager, 'italian_tl')
+        self.add_overtime(user=manager, status='approved')
+        boss = User.objects.create_superuser('dr_boss', 'dr@x.test', 'x')
+        self.add_standby(user=boss, status='approved')
+
+        former = User.objects.create_user(username='dr_former', password='x')
+        ScorecardMonthSnapshot.objects.create(
+            leader=former, month=date(self.year, 6, 1), member_ids=[], payload={},
+            computed_at=timezone.now())
+        freeze_scorecard_months(month=date(self.year, 12, 1))
+
+        first = close_year(self.year)
+        self.assertEqual(first.status, 'ready', first.readiness)
+        self.assertTrue(ClosedYear.objects.filter(year=self.year).exists())
+        warnings = ' '.join(first.readiness['warnings'])
+        self.assertIn('payroll never pays', warnings)
+        self.assertIn('former leader', warnings)
+        early_bundles = [
+            row.relative_path for row in first.files.filter(kind='team')
+            if row.leader_name == 'dr_line_manager'
+        ]
+        self.assertEqual(early_bundles, [f'{self.year}/dr_line_manager__DRT.zip'])
+        self.assertFalse(first.files.filter(leader_name='dr_early').exists())
+
+        reopen_year(self.year, reason='late correction')
+        self.add_overtime(user=early, status='rejected')
+        second = close_year(self.year)
+        self.assertEqual((second.status, second.version), ('ready', 2))
+        self.assertTrue(ClosedYear.objects.filter(year=self.year).exists())

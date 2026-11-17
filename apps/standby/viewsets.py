@@ -216,12 +216,18 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
         ):
             raise PermissionDenied("Team leaders cannot edit a team member's standby entry.")
 
+    @transaction.atomic
     def perform_update(self, serializer):
         """Reset status to pending if record was approved and is being modified."""
         from rest_framework.exceptions import ValidationError
         from core.utils.time_overlap import find_overlapping_entry
 
         obj = self.get_object()
+        # Person lock, then the row lock, as overtime does (audit 2026-11-17 M9, and the
+        # 2026-11-16 L5 fix that only reached overtime): no concurrent create can pass the
+        # overlap check and no payroll finalize can slip in before the save.
+        lock_person(obj.user_id)
+        StandbyLog.objects.select_for_update().get(pk=obj.pk)
         self._ensure_not_in_finalized_payroll(obj)
         self._ensure_pattern_belongs_to(serializer.validated_data.get('pattern'), obj.user_id)
         date = serializer.validated_data.get('date', obj.date)
@@ -416,7 +422,7 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
                 descriptions = dict.fromkeys(g.description for g in group if g.description)
                 evidence = dict.fromkeys(g.evidence for g in group if g.evidence)
                 writer.writerow([csv_safe(v) for v in (
-                    first.user.get_full_name() if first.user else '',
+                    (first.user.get_full_name() or first.user.username) if first.user else '',
                     first.date.strftime('%d/%m/%Y') if first.date else '',
                     _format_hours(sum((g.hours or 0 for g in group), 0)) if any(g.hours for g in group) else '0',
                     first.status,

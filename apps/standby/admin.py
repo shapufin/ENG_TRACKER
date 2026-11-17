@@ -21,6 +21,23 @@ class StandbyLogAdmin(SuperuserOnlyAdminMixin, admin.ModelAdmin):
     date_hierarchy = 'date'
 
     @staticmethod
+    def _in_closed_year(obj) -> bool:
+        """The STORED row's year, so an edit can never move a row out of a closed year."""
+        from apps.users.services.approval_periods import closed_year_of
+
+        if obj is None or obj.pk is None:
+            return False
+        stored = StandbyLog.objects.filter(pk=obj.pk).only('date').first()
+        return stored is not None and closed_year_of(stored) is not None
+
+    def has_change_permission(self, request, obj=None):
+        # A closed year is frozen for everyone, the Django admin included (item 31): view only.
+        return super().has_change_permission(request, obj) and not self._in_closed_year(obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return super().has_delete_permission(request, obj) and not self._in_closed_year(obj)
+
+    @staticmethod
     def _ensure_not_finalized(obj):
         try:
             from plugins.payroll.models import PayrollRunEntry

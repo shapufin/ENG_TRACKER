@@ -55,6 +55,15 @@ export const yearCloseService = {
     return data;
   },
 
+  /** Confirm a set rebuilt after a reopen (superuser). 409 carries `reasons`. */
+  async confirmSet(year: number): Promise<{ year: number; version: number }> {
+    const { data } = await api.post<{ year: number; version: number }>(
+      `${BASE}/archives/confirm-set/`,
+      { year }
+    );
+    return data;
+  },
+
   /** A leader's workbook for one year; small enough to stream as a blob. */
   async exportLeader(year: number, leaderId: number): Promise<Blob> {
     const { data } = await api.get<Blob>(`${BASE}/archives/leaders/export/`, {

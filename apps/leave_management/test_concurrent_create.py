@@ -6,7 +6,7 @@ Two checks:
   entry produce exactly one row. SQLite ignores row locks, so that test is skipped there.
 """
 import threading
-from datetime import date
+from datetime import date, time
 from unittest import mock, skipUnless
 
 from django.contrib.auth import get_user_model
@@ -59,6 +59,47 @@ class LockOrderTests(TestCase):
                 'description': 'x',
             }, format='json'),
             ('apps.overtime.viewsets.lock_person', 'core.utils.time_overlap.find_overlapping_entry'),
+        )
+        self.assertEqual(events[:2], ['lock', 'check'])
+
+
+class EditLockOrderTests(LockOrderTests):
+    """Edits take the same person lock first (audit 2026-11-17 M9)."""
+
+    def test_leave_edit_locks_before_the_overlap_check(self):
+        api = _client(self.emp)
+        leave_id = api.post('/api/leave-management/requests/', LEAVE, format='json').data['id']
+        events = self._order(
+            lambda: api.patch(f'/api/leave-management/requests/{leave_id}/',
+                              {'end_date': '2026-12-10'}, format='json'),
+            ('apps.leave_management.viewsets.lock_person',
+             'apps.leave_management.viewsets.LeaveRequestViewSet._ensure_no_overlap'),
+        )
+        self.assertEqual(events[:2], ['lock', 'check'])
+
+    def test_overtime_edit_locks_before_the_overlap_check(self):
+        row = OvertimeLog.objects.create(
+            user=self.emp, client=self.client_obj, date=date(2026, 12, 7), hours=2,
+            start_time=time(19, 0), end_time=time(21, 0), status='pending',
+        )
+        events = self._order(
+            lambda: _client(self.emp).patch(f'/api/overtime/logs/{row.pk}/?ignore_date_filter=true',
+                                            {'end_time': '22:00'}, format='json'),
+            ('apps.overtime.viewsets.lock_person', 'core.utils.time_overlap.find_overlapping_entry'),
+        )
+        self.assertEqual(events[:2], ['lock', 'check'])
+
+    def test_standby_edit_locks_before_the_overlap_check(self):
+        from apps.standby.models import StandbyLog
+
+        row = StandbyLog.objects.create(
+            user=self.emp, date=date(2026, 12, 7), hours=2,
+            start_time=time(19, 0), end_time=time(21, 0), status='pending',
+        )
+        events = self._order(
+            lambda: _client(self.emp).patch(f'/api/standby/logs/{row.pk}/?ignore_date_filter=true',
+                                            {'end_time': '22:00'}, format='json'),
+            ('apps.standby.viewsets.lock_person', 'core.utils.time_overlap.find_overlapping_entry'),
         )
         self.assertEqual(events[:2], ['lock', 'check'])
 
