@@ -415,7 +415,9 @@ def calculate_payroll(inp: PayrollCalculationInput) -> PayrollCalculationResult:
         source_period = entry.date.replace(day=1)
         requested_period = entry.requested_period or source_period
         resolved_period = date(inp.year, inp.month, 1)
-        carried = requested_period != source_period
+        # Carried over = worked in one month but settled in a later one: either the employee asked for a
+        # later period, or the requested period was already finalized and this run pays it (carry-in).
+        carried = requested_period != source_period or requested_period < resolved_period
         detail = {
             'source_kind': kind,
             'source_id': entry.source_id,

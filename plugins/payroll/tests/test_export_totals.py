@@ -93,7 +93,7 @@ class PayrollExportTotalsTests(TestCase):
             self.assertAlmostEqual(row['Overtime Amount'], float(line.overtime_amount), delta=1)
             self.assertAlmostEqual(row['Standby Amount'], float(line.standby_amount), delta=1)
             self.assertAlmostEqual(
-                row['Total Gross'], row['Gross Wage'] + row['Overtime Amount'] + row['Standby Amount'] + row['Carryover Amount'], delta=1,
+                row['Total Gross'], row['Gross Wage'] + row['Overtime Amount'] + row['Standby Amount'], delta=1,   # carry-over is part of these, never added again
             )
             self.assertAlmostEqual(row['Net Pay'], row['Total Gross'] - row['Total Deductions'], delta=1)
             self.assertAlmostEqual(
@@ -132,3 +132,83 @@ class PayrollExportTotalsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'application/pdf')
         self.assertTrue(b''.join(response.streaming_content).startswith(b'%PDF'))
+
+
+class CarriedOverEntriesTests(TestCase):
+    """An entry approved after its month was finalized is paid in the next run: once, and it shows everywhere."""
+
+    @classmethod
+    def setUpTestData(cls):
+        PayrollConfiguration.objects.update_or_create(pk=1, defaults={'require_tl_closed_before_finalize': False})
+        call_command('seed_payroll_rules', verbosity=0)
+        cls.admin = User.objects.create_superuser(username='co_admin', email='a@t.com', password='x')
+        cls.user = User.objects.create_user(username='co_emp', password='x', first_name='Co', last_name='Emp')
+        WageAssignment.objects.create(
+            user=cls.user, gross_monthly_wage=Decimal('100000'), effective_from=date(2026, 1, 1), is_active=True,
+        )
+        cls.client_obj = Client.objects.create(name='C', code='C')
+        rule_set = PayrollRuleSet.objects.get(code='AL_2026_BOSHTI_REFERENCE')
+        cls.regular = cls._entry(date(2026, 5, 5), time(19, 0), time(21, 0), date(2026, 5, 1))
+        may = PayrollRun.objects.create(year=2026, month=5, status='draft', rule_set=rule_set, created_by=cls.admin)
+        generate_draft_run(may, [cls.user])
+        finalize_run(may, cls.admin)
+        # Approved late: it belongs to May, which is closed, so the June run pays it.
+        cls.late = cls._entry(date(2026, 5, 29), time(19, 0), time(22, 0), date(2026, 5, 1))
+        cls.june_own = cls._entry(date(2026, 6, 9), time(19, 0), time(21, 0), date(2026, 6, 1))
+        StandbyLog.objects.create(
+            user=cls.user, date=date(2026, 5, 30), start_time=time(18, 0), end_time=time(0, 0), hours=Decimal('6'),
+            status='approved', description='x', requested_processing_period=date(2026, 5, 1),
+        )
+        june = PayrollRun.objects.create(year=2026, month=6, status='draft', rule_set=rule_set, created_by=cls.admin)
+        generate_draft_run(june, [cls.user])
+        cls.june = finalize_run(june, cls.admin)
+
+    @classmethod
+    def _entry(cls, day, start, end, period):
+        return OvertimeLog.objects.create(
+            user=cls.user, client=cls.client_obj, date=day, start_time=start, end_time=end, hours=1,
+            description='x', status='approved', requested_processing_period=period,
+        )
+
+    def setUp(self):
+        self.api = APIClient()
+        self.api.force_authenticate(user=self.admin)
+
+    def test_the_june_line_pays_its_own_hours_plus_the_carried_ones_once(self):
+        line = PayrollLine.objects.get(run=self.june)
+        self.assertEqual(line.overtime_hours, Decimal('5'))       # 2 of June + 3 carried from 29 May
+
+    def test_the_payroll_excel_lists_the_carried_entry_and_the_totals_still_add_up(self):
+        response = self.api.get(f'/api/plugins/payroll/runs/{self.june.pk}/export_excel/')
+        wb = openpyxl.load_workbook(io.BytesIO(b''.join(response.streaming_content)), data_only=True)
+        carry = list(wb['Carryover Detail'].iter_rows(min_row=2, values_only=True))
+        self.assertEqual(len(carry), 1)
+        self.assertEqual((carry[0][6], carry[0][8]), (3, 6))      # carried overtime hours, carried standby hours
+        employees = {r[0]: r for r in wb['Employee Breakdown'].iter_rows(min_row=2, values_only=True)}
+        row = employees['Co Emp']
+        self.assertEqual((row[2], row[4]), (5, 6))                # hours columns: own + carried overtime, carried standby
+        self.assertAlmostEqual(row[7], row[1] + row[3] + row[5], delta=1)   # gross = wage + OT + standby: carried is not added twice
+        entries = list(wb['Overtime Entries'].iter_rows(min_row=2, values_only=True))
+        self.assertEqual(sum(e[5] for e in entries), 5)           # paid hours of every listed entry
+
+    def test_a_later_run_does_not_pay_it_again(self):
+        rule_set = PayrollRuleSet.objects.get(code='AL_2026_BOSHTI_REFERENCE')
+        july = PayrollRun.objects.create(year=2026, month=7, status='draft', rule_set=rule_set, created_by=self.admin)
+        generate_draft_run(july, [self.user])
+        self.assertEqual(PayrollLine.objects.get(run=july).overtime_hours, Decimal('0'))
+
+    def test_the_payroll_period_exports_list_each_entry_once_under_its_requested_period(self):
+        # date_mode=processing_period filters by the REQUESTED period (documented): the late May entry is in
+        # May's export and is not repeated in June's.
+        from apps.reports.test_export_integrity import _sheet_rows, _workbook
+
+        def rows(month_start, month_end):
+            response = self.api.get('/api/reports/export-ot-standby/', {
+                'start_date': month_start, 'end_date': month_end, 'date_mode': 'processing_period',
+            })
+            return [r for rs in _sheet_rows(_workbook(response)).values() for r in rs]
+        may, june = rows('2026-05-01', '2026-05-31'), rows('2026-06-01', '2026-06-30')
+        self.assertEqual(sorted(r[1] for r in may), ['05/05/2026', '29/05/2026', '30/05/2026'])
+        self.assertEqual(sorted(r[1] for r in june), ['09/06/2026'])
+        # (where it was paid is in the payroll Excel's Carryover Detail, not in this file: the settlement is
+        # only used to keep paid-block bundling from merging rows across settlements)

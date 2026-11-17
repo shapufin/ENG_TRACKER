@@ -78,6 +78,11 @@ This is the piece most often misunderstood:
   P also picks entries whose requested period belongs to an already-finalized
   earlier run (`_source_queryset`, `_finalized_periods_before`), tagged in
   `PayrollRunEntry.resolution_reason='target_finalized'`.
+- Both kinds are "carried over" in `PayrollLine.carryover_breakdown` (Excel Carryover Detail, payslip PDF):
+  an entry whose requested period differs from its work month, and a carry-in tagged `target_finalized`
+  (fixed 2026-11-17: carry-ins used to be listed only in the entry details). Carry-over amounts are part of
+  the overtime/standby totals, never added again to gross. Runs finalized before that date keep the
+  breakdown they were calculated with.
 - Double-payment is impossible by construction: per-run
   `payroll_run_source_entry_unique` (one row per draft) and the global
   `payroll_finalized_source_unique` partial unique constraint (one finalized

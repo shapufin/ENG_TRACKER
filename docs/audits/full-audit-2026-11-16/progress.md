@@ -71,6 +71,10 @@ See workflow-invariants item 87(v). Fixed: leave requests crossing a report wind
 
 Generating a payroll work calendar for a year other than 2026 no longer writes an approximate holiday list into the HR catalog; it is refused until HR has entered that year's holidays (workflow-invariants 87(u)).
 
+## State at the end of the 2026-11-17 session
+
+Everything above is merged to `main` except what is listed here. Cross-checked against source rows and fixed where wrong: leave reports (boundary requests), report series, analytics export, calendar generation, payroll carry-in listing. Standing gates: `docs/workflow-invariants.md` item 87(v)-(y) and the "Standing simulation gates" paragraph of `CLAUDE.md`. **Still open:** L9 hashed lock (needs the production image, runbook recipe), L8 scratch files (owner), PostgreSQL CI job for the race test skipped locally, a quick manual look at the new calendar cards on production.
+
 ## Still open (not started)
 
 M6 (PostgreSQL-only concurrency test), R3 to R7, section 5 lows (L1 to L9), handover section 7. Docs synced: `docs/workflow-invariants.md` item 87, `CLAUDE.md` hot invariant, runbook 5.4.
