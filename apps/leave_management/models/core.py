@@ -4,7 +4,7 @@ Leave management app core models.
 This module contains models for leave tracking including requests and balance.
 """
 
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -114,6 +114,36 @@ def leave_days_in_window(row, start=None, end=None):
     if last < first:
         return 0
     return plain_days(count_request_days(row['request_type'], first, last))
+
+
+def leave_days_by_period(row, unit='month', start=None, end=None):
+    """``{period: days}`` of a ``values()`` row split by calendar month (key: its first day) or year (key: int).
+
+    Each period gets only the request's days inside it (and inside ``[start, end]`` when given), so a request
+    crossing a month or year edge is shared between the periods and the series adds up to its days. Periods
+    with no day are left out.
+    """
+    from calendar import monthrange
+
+    first = max(row['start_date'], start) if start else row['start_date']
+    last = min(row['end_date'], end) if end else row['end_date']
+    result = {}
+    year, month = first.year, first.month
+    while (year, month) <= (last.year, last.month):
+        if unit == 'year':
+            p_start, p_end = date(year, 1, 1), date(year, 12, 31)
+            key = year
+        else:
+            p_start, p_end = date(year, month, 1), date(year, month, monthrange(year, month)[1])
+            key = p_start
+        days = leave_days_in_window(row, max(first, p_start), min(last, p_end))
+        if days:
+            result[key] = days
+        if unit == 'year':
+            year, month = year + 1, 1
+        else:
+            year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+    return result
 
 
 def counted_days(row, holidays=None):

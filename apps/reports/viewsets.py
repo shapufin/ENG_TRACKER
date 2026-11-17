@@ -395,16 +395,17 @@ class DetailedReportView(HbprBlockedMixin, APIView):
         if params['report_type'] in ('standby', 'combined'):
             result['standby'] = list(sb_qs.annotate(time_unit=trunc_func('date')).values('time_unit').annotate(total_hours=Sum('hours'), entries=Count('id')).order_by('time_unit'))
         if params['report_type'] in ('leave', 'combined'):
-            from apps.leave_management.models import counted_days
+            from apps.leave_management.models import leave_days_by_period
 
             time_data = {}
+            window = _window_from_params(params)
             for v in leave_qs.values('start_date', 'end_date', 'request_type', 'days_counted'):
-                unit_key = v['start_date'].replace(day=1) if group_by == 'month' else v['start_date'].year
-                days = counted_days(v)
-                if unit_key not in time_data:
-                    time_data[unit_key] = {'total_days': 0, 'entries': 0}
-                time_data[unit_key]['total_days'] += days
-                time_data[unit_key]['entries'] += 1
+                # A request crossing a month or year edge is shared between the periods it touches.
+                for unit_key, days in leave_days_by_period(v, group_by, *window).items():
+                    if unit_key not in time_data:
+                        time_data[unit_key] = {'total_days': 0, 'entries': 0}
+                    time_data[unit_key]['total_days'] += days
+                    time_data[unit_key]['entries'] += 1
             result['leave'] = [{'time_unit': k, **v} for k, v in sorted(time_data.items())]
             
         return result
@@ -464,7 +465,7 @@ class ExportExcelView(HbprBlockedMixin, APIView):
             sb_total = {rec['user']: rec for rec in standby_qs.values('user').annotate(total_hours=Sum('hours'), entries=Count('id'))}
             sb_approved = {rec['user']: rec['approved_hours'] for rec in standby_qs.filter(status='approved').values('user').annotate(approved_hours=Sum('hours'))}
 
-            from apps.leave_management.models import counted_days, leave_days_in_window
+            from apps.leave_management.models import leave_days_by_period, leave_days_in_window
 
             window = filterset.leave_window()
             leave_total = {}
@@ -633,12 +634,11 @@ class ExportExcelView(HbprBlockedMixin, APIView):
                 # Aggregate by month using business days (match LeaveRequest.days_requested).
                 month_data = {}
                 for v in leave_qs.values('start_date', 'end_date', 'id', 'request_type', 'days_counted'):
-                    month_key = v['start_date'].replace(day=1)
-                    days = counted_days(v)
-                    if month_key not in month_data:
-                        month_data[month_key] = {'total_days': 0, 'entries': 0}
-                    month_data[month_key]['total_days'] += days
-                    month_data[month_key]['entries'] += 1
+                    for month_key, days in leave_days_by_period(v, 'month', *window).items():
+                        if month_key not in month_data:
+                            month_data[month_key] = {'total_days': 0, 'entries': 0}
+                        month_data[month_key]['total_days'] += days
+                        month_data[month_key]['entries'] += 1
                 for month, data in sorted(month_data.items()):
                     ws2.append(['Leave', str(month), data['total_days'], data['entries']])
 

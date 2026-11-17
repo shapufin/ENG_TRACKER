@@ -241,3 +241,24 @@ class DashboardIntegrityTests(ExportIntegrityBase):
         self.assertEqual(backlog['overtime']['hours'], float(sum(o.hours for o in OvertimeLog.objects.filter(status='pending'))))
         self.assertEqual(backlog['leave']['count'], LeaveRequest.objects.filter(status='pending').count())
         self.assertEqual(backlog['leave']['days'], float(sum(Decimal(row.days_counted) for row in LeaveRequest.objects.filter(status="pending"))))
+
+
+class LeaveSeriesIntegrityTests(ExportIntegrityBase):
+    """Month-by-month leave series must add up to the summary and split a boundary request by month."""
+    WINDOW = {'start_date': '2026-06-01', 'end_date': '2026-07-31'}
+
+    def test_the_monthly_series_splits_a_boundary_leave_and_adds_up_to_the_summary(self):
+        series = self.api.get('/api/reports/detailed/', {**self.WINDOW, 'group_by': 'month', 'report_type': 'leave'}).data
+        by_month = {str(row['time_unit'])[:7]: row['total_days'] for row in series['leave']}
+        summary = self.api.get('/api/reports/summary/', {**self.WINDOW, 'report_type': 'leave'}).data['leave']
+        self.assertEqual(by_month['2026-06'], 12.5)   # 5 + 0.5 + 2 sick + 2 pending + 1 rejected + 2 (29-30 Jun)
+        self.assertEqual(by_month['2026-07'], 3.0)    # 1-3 Jul of the crossing request
+        self.assertEqual(sum(by_month.values()), float(summary['total_days']))
+
+    def test_the_excel_overview_monthly_sheet_agrees(self):
+        response = self.api.get('/api/reports/export-excel/', {**self.WINDOW, 'report_type': 'leave'})
+        wb = _workbook(response)
+        rows = [r for ws in wb.worksheets for r in ws.iter_rows(values_only=True) if r and r[0] == 'Leave']
+        by_month = {str(r[1])[:7]: r[2] for r in rows}
+        self.assertEqual(by_month.get('2026-06'), 12.5)
+        self.assertEqual(by_month.get('2026-07'), 3.0)
