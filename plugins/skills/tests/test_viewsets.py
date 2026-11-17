@@ -853,3 +853,41 @@ class SkillLevelLabelsViewSetTest(ViewSetTestCase, TestCase):
     def test_delete_is_not_allowed(self):
         resp = self._delete(SkillLevelLabelsViewSet, self.hr, 1)
         self.assertEqual(resp.status_code, 405)
+
+
+
+class ExportIntegrityTest(ViewSetTestCase, TestCase):
+    """The CSV and the XLSX matrix carry exactly the ratings in the table: none missing, none invented."""
+    LABELS = {1: 'Foundational', 2: 'Developing', 3: 'Proficient', 4: 'Advanced', 5: 'Mastery'}
+
+    def setUp(self):
+        super().setUp()
+        self.retired = Skill.objects.create(name='Retired', category=self.skill1.category, is_active=False)
+        for skill, level in ((self.skill1, 3), (self.skill2, 5), (self.retired, 2)):
+            UserSkill.objects.create(user=self.employee, skill=skill, level=level, last_updated_by=self.employee)
+
+    def _csv(self):
+        import csv
+        import io
+        resp = self._action_list(SkillExportViewSet, self.tl, 'export')
+        return list(csv.DictReader(io.StringIO(b''.join(resp.streaming_content).decode('utf-8-sig'))))
+
+    def test_csv_rows_equal_the_active_ratings_of_the_visible_users(self):
+        rows = {(r['Username'], r['Skill'], int(r['Level'])) for r in self._csv()}
+        expected = {
+            (u.user.username, u.skill.name, u.level)
+            for u in UserSkill.objects.filter(user=self.employee, skill__is_active=True).select_related('user', 'skill')
+        }
+        self.assertEqual(rows, expected)
+        self.assertNotIn('Retired', {skill for _, skill, _ in rows})      # a retired skill is not exported
+
+    def test_xlsx_cells_carry_each_rating_in_its_user_row_and_skill_column(self):
+        import io
+        import openpyxl
+        resp = self._action_list(SkillExportViewSet, self.tl, 'export_xlsx')
+        wb = openpyxl.load_workbook(io.BytesIO(b''.join(resp.streaming_content) if hasattr(resp, 'streaming_content') else resp.content))
+        rows = list(wb['Skill matrix'].iter_rows(values_only=True))
+        header = rows[1]
+        mine = next(r for r in rows[2:] if r[2] == self.employee.username)
+        rated = {header[i]: mine[i] for i in range(4, len(header)) if mine[i]}
+        self.assertEqual(rated, {self.skill1.name: self.LABELS[3], self.skill2.name: self.LABELS[5]})

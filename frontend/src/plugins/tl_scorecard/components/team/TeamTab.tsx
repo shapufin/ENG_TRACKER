@@ -202,7 +202,9 @@ const buildColumns = (
  */
 export const TeamTab: React.FC = () => {
   const queryClient = useQueryClient();
-  const [selected, setSelected] = useState<TeamMemberSummary | null>(null);
+  // Only the id is kept: the panel reads the member from the latest roster, so a skip, a log or a
+  // schedule change made from the panel shows at once instead of the row as it was when opened.
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [scheduleIds, setScheduleIds] = useState<number[] | null>(null);
   const [logFor, setLogFor] = useState<TeamMemberSummary | null>(null);
   const [skipFor, setSkipFor] = useState<TeamMemberSummary | null>(null);
@@ -212,6 +214,7 @@ export const TeamTab: React.FC = () => {
     queryFn: async () => (await tlScorecardService.getTeamMembers()).data,
   });
   const columns = useMemo(() => buildColumns(setLogFor), []);
+  const selected = teamQuery.data?.find((m) => m.id === selectedId) ?? null;
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "team-members"] });
@@ -325,7 +328,7 @@ export const TeamTab: React.FC = () => {
           searchColumn="full_name"
           searchPlaceholder="Search team members"
           getRowId={(row) => String(row.id)}
-          onRowClick={setSelected}
+          onRowClick={(member) => setSelectedId(member.id)}
           mobileCard={TEAM_CARD}
           emptyMessage="No team members match your search."
         />
@@ -333,7 +336,7 @@ export const TeamTab: React.FC = () => {
 
       <TeamMemberDetailPanel
         member={selected}
-        onOpenChange={(open) => !open && setSelected(null)}
+        onOpenChange={(open) => !open && setSelectedId(null)}
         onSchedule={(m) => setScheduleIds([m.id])}
         onLogOneOnOne={setLogFor}
         onSkipOneOnOne={setSkipFor}

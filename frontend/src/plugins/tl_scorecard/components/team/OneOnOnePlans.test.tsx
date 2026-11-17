@@ -178,6 +178,37 @@ describe("TeamTab 1-on-1 schedule", () => {
     );
   });
 
+  it("the open detail panel shows the new next slot after a skip, without reopening it", async () => {
+    const getMembers = tlScorecardService.getTeamMembers as ReturnType<typeof vi.fn>;
+    renderTab();
+    fireEvent.click(await screen.findByText("Ana Planned"));
+    expect(
+      await screen.findByText(/overdue/i, { selector: "[role=dialog] *" })
+    ).toBeInTheDocument();
+
+    // After the skip the roster comes back with the slot moved on.
+    getMembers.mockResolvedValue({
+      data: [
+        member(1, "Ana Planned", {
+          ...PLAN,
+          status: "upcoming",
+          next_due_on: "2026-11-25",
+          moved_from: null,
+          moved_reason: null,
+        }),
+        member(2, "Bora Unplanned", null),
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    fireEvent.change(await screen.findByLabelText(/reason/i), { target: { value: "Crunch" } });
+    fireEvent.click(screen.getByRole("button", { name: /skip 1-on-1/i }));
+
+    await waitFor(() => expect(screen.getAllByText("25/11/2026").length).toBeGreaterThan(0));
+    const panel = screen.getByRole("dialog");
+    expect(panel).toHaveTextContent("25/11/2026");
+    expect(panel).not.toHaveTextContent("Overdue");
+  });
+
   it("offers the skip-all box only for an overdue slot", async () => {
     (tlScorecardService.getTeamMembers as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: [

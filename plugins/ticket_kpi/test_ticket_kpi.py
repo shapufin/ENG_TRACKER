@@ -658,6 +658,32 @@ class TicketKPIViewSetTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['total_tickets'], 2)
 
+    def test_excel_and_csv_exports_carry_the_report_numbers_and_add_up(self):
+        import csv
+        import io
+
+        import openpyxl
+
+        self._upload(self.member)
+        self._upload(self.tl)
+        report = self._export('yearly_summary').data
+        wb = openpyxl.load_workbook(io.BytesIO(self._export('export_excel').content), data_only=True)
+        summary = {row[0]: row[1] for row in wb['Summary'].iter_rows(min_row=2, values_only=True)}
+        self.assertEqual(summary['Total Tickets'], report['total_tickets'])
+        self.assertEqual(summary['Users with Data'], report['users_with_data'])
+        per_user = list(wb['Per-User Summary'].iter_rows(min_row=2, values_only=True))
+        monthly = list(wb['Monthly Breakdown'].iter_rows(min_row=2, values_only=True))
+        self.assertEqual(sum(r[2] for r in per_user), report['total_tickets'])        # users add up to the total
+        self.assertEqual(sum(r[1] for r in monthly), report['total_tickets'])         # months add up to the total
+        self.assertEqual({r[0] for r in per_user}, {u['username'] for u in report['per_user_summary']})
+        text = self._export('export_csv').content.decode('utf-8-sig')
+        self.assertEqual(len(list(csv.reader(io.StringIO(text)))) > 1, True)
+
+    def _export(self, action):
+        request = self.factory.get(f'/reports/{action}/', {'year': 2026})
+        force_authenticate(request, self.tl)
+        return TicketKPIReportViewSet.as_view({'get': action})(request)
+
     def test_yearly_summary_rejects_malformed_year(self):
         request = self.factory.get('/reports/yearly_summary/', {'year': 'not-a-year'})
         force_authenticate(request, self.member)

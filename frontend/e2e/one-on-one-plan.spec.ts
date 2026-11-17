@@ -5,6 +5,7 @@
  *
  * Uses the seeded Line Manager `e2e_tl` and cleans up every plan it creates.
  */
+import { execSync } from "node:child_process";
 import { expect, request, test, type APIRequestContext } from "@playwright/test";
 import { E2E_CREDENTIALS, fetchApiToken, loginAsRole } from "./helpers";
 
@@ -126,4 +127,37 @@ test("a skip needs a reason and records one", async ({ page }) => {
   await page.goto("/tl-scorecard?tab=team");
   await page.waitForLoadState("networkidle").catch(() => undefined);
   await expect(page.getByText(/Upcoming|Due today|Overdue/).first()).toBeVisible();
+});
+
+test("skip all overdue clears a backlog with one reason", async ({ page }) => {
+  const set = await ctx.post("/api/plugins/tl_scorecard/one-on-one-plans/", {
+    data: {
+      employee_ids: [memberIds[0]],
+      cadence: "weekly",
+      cadence_day_of_week: null,
+      cadence_nth_week: null,
+    },
+  });
+  expect(set.ok()).toBeTruthy();
+  // Three weeks of missed slots: move the plan's start back (dev data only; the API starts a plan today).
+  execSync(
+    `python ../manage.py shell -c "from datetime import timedelta;from plugins.tl_scorecard.models import OneOnOnePlan, OneOnOneSkip;OneOnOneSkip.objects.filter(employee_id=${memberIds[0]}).delete();from core.utils.timezone_local import business_today;OneOnOnePlan.objects.filter(employee_id=${memberIds[0]}).update(effective_from=business_today()-timedelta(weeks=3))"`,
+    { env: { ...process.env, DJANGO_SETTINGS_MODULE: "config.settings_e2e" }, stdio: "ignore" }
+  );
+
+  await loginAsRole(page, "teamLeader");
+  await page.goto("/tl-scorecard?tab=team");
+  await page.waitForLoadState("networkidle").catch(() => undefined);
+  await page.getByText(firstName, { exact: true }).first().click();
+  const panel = page.getByRole("dialog");
+  await panel.getByRole("button", { name: "Skip", exact: true }).click();
+  const skip = page.getByRole("dialog", { name: /skip this 1-on-1/i });
+  await skip.getByLabel("Reason").fill("Project crunch");
+  await skip.getByRole("checkbox", { name: /skip all overdue/i }).check();
+  await skip.getByRole("button", { name: /skip 1-on-1/i }).click();
+  await expect(page.getByText(/\d+ 1-on-1s skipped/)).toBeVisible({ timeout: 15_000 });
+
+  // Nothing is overdue any more: the open panel shows the next slot as upcoming without a reload.
+  await expect(panel.getByText("Upcoming")).toBeVisible({ timeout: 15_000 });
+  await expect(panel.getByText("Overdue")).toHaveCount(0);
 });
