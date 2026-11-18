@@ -50,6 +50,18 @@ if not MFA_ENCRYPTION_KEYS:
         base64.urlsafe_b64encode(hashlib.sha256(SECRET_KEY.encode()).digest()).decode()
     ]
 
+# Passkeys (WebAuthn). The RP ID is bound to every registered passkey for life, so
+# changing the hostname means users re-enrol. Dev defaults serve the Vite dev server;
+# settings_production re-reads them and refuses invalid values (docs/deploy).
+from .webauthn_config import parse_webauthn_settings  # noqa: E402
+
+WEBAUTHN_RP_NAME = os.getenv('WEBAUTHN_RP_NAME', 'Engineering Tracker')
+WEBAUTHN_RP_ID, WEBAUTHN_ORIGINS = parse_webauthn_settings(
+    os.getenv('WEBAUTHN_RP_ID', 'localhost'),
+    os.getenv('WEBAUTHN_ORIGINS', 'http://localhost:5173'),
+    production=False,
+)
+
 # Site backup archives are encrypted at rest (AES-256-GCM). Comma-separated
 # urlsafe-base64 32-byte keys (Fernet.generate_key() format): the first
 # encrypts, all decrypt. Production requires it; dev/test derive one from

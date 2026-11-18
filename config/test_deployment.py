@@ -1098,3 +1098,54 @@ class SchedulerFoundationContractTests(SimpleTestCase):
         for root in (settings.EXPORT_ROOT, settings.SNAPSHOT_ROOT):
             with self.subTest(root=str(root)):
                 self.assertNotIn(str(settings.MEDIA_ROOT), str(root))
+
+
+class WebAuthnSettingsGuardTests(TestCase):
+    """Passkey settings (docs/superpowers/specs/2026-11-18-passkeys-design.md section 3)."""
+
+    def _parse(self, rp_id, origins, production=True):
+        from config.webauthn_config import parse_webauthn_settings
+        return parse_webauthn_settings(rp_id, origins, production=production)
+
+    def test_valid_production_settings_are_accepted(self):
+        rp_id, origins = self._parse("tracker2.integrit.org", "https://tracker2.integrit.org")
+        self.assertEqual(rp_id, "tracker2.integrit.org")
+        self.assertEqual(origins, ["https://tracker2.integrit.org"])
+
+    def test_unset_production_settings_disable_passkeys_instead_of_failing_boot(self):
+        self.assertEqual(self._parse("", ""), ("", []))
+
+    def test_production_refuses_only_one_of_the_two_settings(self):
+        from django.core.exceptions import ImproperlyConfigured
+        with self.assertRaises(ImproperlyConfigured):
+            self._parse("tracker2.integrit.org", "")
+        with self.assertRaises(ImproperlyConfigured):
+            self._parse("", "https://tracker2.integrit.org")
+
+    def test_production_refuses_http_origin(self):
+        from django.core.exceptions import ImproperlyConfigured
+        with self.assertRaises(ImproperlyConfigured):
+            self._parse("tracker2.integrit.org", "http://tracker2.integrit.org")
+
+    def test_production_refuses_rp_id_that_is_not_a_host_suffix_of_every_origin(self):
+        from django.core.exceptions import ImproperlyConfigured
+        with self.assertRaises(ImproperlyConfigured):
+            self._parse("tracker2.integrit.org", "https://evil.example.com")
+        with self.assertRaises(ImproperlyConfigured):
+            self._parse("tracker2.integrit.org", "https://nottracker2.integrit.org")
+
+    def test_parent_domain_rp_id_is_a_valid_suffix(self):
+        rp_id, _ = self._parse("integrit.org", "https://tracker2.integrit.org")
+        self.assertEqual(rp_id, "integrit.org")
+
+    def test_localhost_http_is_allowed_outside_production(self):
+        self.assertEqual(
+            self._parse("localhost", "http://localhost:5173", production=False),
+            ("localhost", ["http://localhost:5173"]),
+        )
+
+    def test_origins_are_split_trimmed_and_deduplicated(self):
+        _, origins = self._parse(
+            "integrit.org", " https://a.integrit.org , https://a.integrit.org,https://b.integrit.org "
+        )
+        self.assertEqual(origins, ["https://a.integrit.org", "https://b.integrit.org"])

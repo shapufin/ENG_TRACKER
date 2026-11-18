@@ -29,6 +29,16 @@ if not os.getenv('MFA_ENCRYPTION_KEYS', '').strip():
         "locks out every user who enrolled a second factor."
     )
 
+# Passkeys: unset disables them (TOTP keeps working); a wrong value refuses to boot
+# because a wrong RP ID would silently lock every passkey out.
+from .webauthn_config import parse_webauthn_settings  # noqa: E402
+
+WEBAUTHN_RP_ID, WEBAUTHN_ORIGINS = parse_webauthn_settings(
+    os.getenv('WEBAUTHN_RP_ID', ''),
+    os.getenv('WEBAUTHN_ORIGINS', ''),
+    production=True,
+)
+
 # Site backups are encrypted at rest; a dev key derived from SECRET_KEY would
 # die with a SECRET_KEY rotation, so production must carry its own key.
 if not os.getenv('BACKUP_ENCRYPTION_KEYS', '').strip():
