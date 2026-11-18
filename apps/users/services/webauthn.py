@@ -261,6 +261,14 @@ def verify_assertion(user, response: dict) -> WebAuthnCredential:
 
 # --- Management --------------------------------------------------------------
 
+def summary(credential: WebAuthnCredential) -> dict:
+    """What a client may see of a passkey: never the key material."""
+    return {
+        'id': credential.pk, 'name': credential.name,
+        'created_at': credential.created_at, 'last_used_at': credential.last_used_at,
+    }
+
+
 def list_credentials(user) -> list[WebAuthnCredential]:
     return list(WebAuthnCredential.objects.filter(user=user))
 

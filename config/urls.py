@@ -37,6 +37,10 @@ from apps.users.views.auth import (
     MFASetupView,
     MFAStatusView,
     MFAVerifyView,
+    PasskeyDetailView,
+    PasskeyListView,
+    PasskeyOptionsView,
+    PasskeyRegisterView,
     PasswordChangeView,
     TokenLogoutView,
 )
@@ -171,6 +175,10 @@ urlpatterns += [
     path('api/auth/mfa/activate/', MFAActivateView.as_view(), name='mfa_activate'),
     path('api/auth/mfa/disable/', MFADisableView.as_view(), name='mfa_disable'),
     path('api/auth/mfa/backup-codes/', MFABackupCodesView.as_view(), name='mfa_backup_codes'),
+    path('api/auth/mfa/passkeys/', PasskeyListView.as_view(), name='mfa_passkeys'),
+    path('api/auth/mfa/passkeys/options/', PasskeyOptionsView.as_view(), name='mfa_passkey_options'),
+    path('api/auth/mfa/passkeys/register/', PasskeyRegisterView.as_view(), name='mfa_passkey_register'),
+    path('api/auth/mfa/passkeys/<int:pk>/', PasskeyDetailView.as_view(), name='mfa_passkey_detail'),
     path('api/auth/password/change/', PasswordChangeView.as_view(), name='password_change'),
 ]
 

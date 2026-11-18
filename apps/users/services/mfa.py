@@ -162,6 +162,8 @@ def is_enrolled(user) -> bool:
 
 
 def status_for(user) -> dict:
+    from .webauthn import summary
+
     totp = totp_enabled(user)
     passkeys = WebAuthnCredential.objects.filter(user=user)
     return {
@@ -172,10 +174,7 @@ def status_for(user) -> dict:
         'backup_codes_remaining': (
             MFABackupCode.objects.filter(user=user, used_at__isnull=True).count() if totp else 0
         ),
-        'passkeys': [
-            {'id': p.pk, 'name': p.name, 'created_at': p.created_at, 'last_used_at': p.last_used_at}
-            for p in passkeys
-        ],
+        'passkeys': [summary(p) for p in passkeys],
     }
 
 

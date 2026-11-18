@@ -24,6 +24,7 @@ from core.maintenance import MaintenanceModeActive, is_maintenance_active, is_us
 from apps.reports.services.security_audit import log_security_event
 from ..serializers import CustomTokenObtainPairSerializer
 from ..services import mfa as mfa_service
+from ..services import webauthn as webauthn_service
 from ..services.mfa import MFAError
 from ..services.tokens import revoke_refresh_tokens
 
@@ -131,6 +132,9 @@ _MFA_STATUS = {
     'invalid_code': status.HTTP_400_BAD_REQUEST,
     'locked': status.HTTP_429_TOO_MANY_REQUESTS,
     'unavailable': status.HTTP_503_SERVICE_UNAVAILABLE,
+    'not_found': status.HTTP_404_NOT_FOUND,
+    'credential_exists': status.HTTP_409_CONFLICT,
+    'last_factor': status.HTTP_409_CONFLICT,
 }
 
 
@@ -328,6 +332,78 @@ class MFADisableView(_SignedInMFAView):
             return _mfa_error(exc)
         mfa_service.remove_mfa(request.user)
         mfa_service.audit(request.user, 'mfa_disabled', f'{request.user.username} turned off two-factor authentication', request.user, ip_address=ip, user_agent=ua)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class PasskeyOptionsView(_SignedInMFAView):
+    """POST /api/auth/mfa/passkeys/options/ {password}: registration options (a stolen session alone cannot add a device)."""
+
+    def post(self, request):
+        if not request.user.check_password(str(request.data.get('password', ''))):
+            return _mfa_error(MFAError('invalid_password', 'The password is not correct.'))
+        try:
+            return Response(webauthn_service.registration_options(request.user))
+        except MFAError as exc:
+            return _mfa_error(exc)
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class PasskeyListView(_SignedInMFAView):
+    """GET /api/auth/mfa/passkeys/: the user's passkeys, without key material."""
+
+    def get(self, request):
+        return Response([webauthn_service.summary(c) for c in webauthn_service.list_credentials(request.user)])
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class PasskeyRegisterView(_SignedInMFAView):
+    def post(self, request):
+        ip = get_client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', '')
+        try:
+            credential = webauthn_service.register(
+                request.user, request.data.get('response'), str(request.data.get('name', '')),
+            )
+        except MFAError as exc:
+            return _mfa_error(exc)
+        mfa_service.audit(
+            request.user, 'mfa_passkey_added',
+            f"{request.user.username} added the passkey '{credential.name}'",
+            request.user, ip_address=ip, user_agent=ua,
+        )
+        return Response(webauthn_service.summary(credential), status=status.HTTP_201_CREATED)
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class PasskeyDetailView(_SignedInMFAView):
+    """PATCH {name, password, code?} renames; DELETE {password, code?} removes. Both re-prove the password."""
+
+    def _step_up(self, request):
+        mfa_service.check_step_up(
+            request.user, str(request.data.get('password', '')), str(request.data.get('code', ''))
+        )
+
+    def patch(self, request, pk):
+        try:
+            self._step_up(request)
+            credential = webauthn_service.rename(request.user, pk, str(request.data.get('name', '')))
+        except MFAError as exc:
+            return _mfa_error(exc)
+        return Response(webauthn_service.summary(credential))
+
+    def delete(self, request, pk):
+        ip = get_client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', '')
+        try:
+            self._step_up(request)
+            webauthn_service.remove(request.user, pk)
+        except MFAError as exc:
+            return _mfa_error(exc)
+        mfa_service.audit(
+            request.user, 'mfa_passkey_removed', f'{request.user.username} removed a passkey',
+            request.user, ip_address=ip, user_agent=ua,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
