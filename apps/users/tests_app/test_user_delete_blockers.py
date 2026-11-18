@@ -40,6 +40,22 @@ class UserDeleteBlockerTests(TestCase):
         blank = User.objects.create_user(username='udb-blank', password='x')
         self.assertEqual(user_delete_blockers(blank), {})
 
+    def test_passkeys_are_housekeeping_and_never_block_a_delete(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.users.models import WebAuthnChallenge, WebAuthnCredential
+
+        blank = User.objects.create_user(username='udb-passkey', password='x')
+        WebAuthnCredential.objects.create(
+            user=blank, credential_id=b'udb-1', public_key=b'pk', sign_count=0, name='Phone',
+        )
+        WebAuthnChallenge.objects.create(
+            user=blank, purpose='login', challenge=b'c', expires_at=timezone.now() + timedelta(seconds=60),
+        )
+        self.assertEqual(user_delete_blockers(blank), {})
+
     def test_single_delete_is_refused_and_keeps_the_rows(self):
         resp = self.api.delete(f'/api/users/users/{self.employee.id}/')
         self.assertEqual(resp.status_code, 409, getattr(resp, 'data', None))
