@@ -24,6 +24,22 @@ describe("KPITrendChart", () => {
     expect(container.querySelector('[class*="h-80"]')).toBeInTheDocument();
   });
 
+  it("gives screen readers the resolution times too, and skips empty months", () => {
+    const { container } = render(
+      <KPITrendChart
+        title="T"
+        data={[
+          { month: "2026-04", tickets: 4, avgHours: null, p50: 5.25, p90: 20 },
+          { month: "2026-05", tickets: 0, avgHours: null, p50: null, p90: null },
+        ]}
+      />
+    );
+    const text = container.querySelector(".sr-only")?.textContent;
+    expect(text).toBe(
+      "Apr '26: 4 tickets, median 5.3 hours, slowest 10% 20 hours. May '26: 0 tickets"
+    );
+  });
+
   it("renders empty chart", () => {
     render(<KPITrendChart title="Empty" data={[]} />);
     expect(screen.getByText("Empty")).toBeInTheDocument();

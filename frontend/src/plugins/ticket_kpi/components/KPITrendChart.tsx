@@ -65,9 +65,17 @@ const hasValue = (data: TrendDataPoint[], key: "p50" | "p90") =>
  */
 export const KPITrendChart: React.FC<KPITrendChartProps> = ({ title, data }) => {
   const showPercentiles = hasValue(data, "p50") || hasValue(data, "p90");
+  const hours = (label: string, value: number | null | undefined) =>
+    value === null || value === undefined ? "" : `, ${label} ${Math.round(value * 10) / 10} hours`;
   const summary = data
-    .map((d) => `${formatMonthTick(d.month)}: ${d.tickets} ticket${d.tickets === 1 ? "" : "s"}`)
-    .join(", ");
+    .map(
+      (d) =>
+        `${formatMonthTick(d.month)}: ${d.tickets} ticket${d.tickets === 1 ? "" : "s"}` +
+        (showPercentiles
+          ? hours("median", d.p50) + hours("slowest 10%", d.p90)
+          : hours("average", d.avgHours))
+    )
+    .join(". ");
   return (
     <Card>
       <CardHeader>
