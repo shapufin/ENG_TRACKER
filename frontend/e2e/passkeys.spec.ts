@@ -88,6 +88,8 @@ async function logout(page: Page) {
 test.describe("Passkeys", () => {
   test.describe.configure({ mode: "serial", timeout: 120_000 });
 
+  // Playwright requires the destructuring pattern in the first argument, even when it is empty.
+  // eslint-disable-next-line no-empty-pattern
   test.beforeAll(({}, testInfo) => {
     USER = testInfo.project.name === "mobile-chromium" ? E2E_CREDENTIALS.employeeC : E2E_CREDENTIALS.employeeB;
     resetFactors();
