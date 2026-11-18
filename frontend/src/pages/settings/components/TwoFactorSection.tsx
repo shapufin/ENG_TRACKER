@@ -20,10 +20,9 @@ import { BackupCodesPanel } from "@/components/auth/BackupCodesPanel";
 import { MfaCodeField } from "@/components/auth/MfaCodeField";
 import { MfaEnrollment } from "@/components/auth/MfaEnrollment";
 import { mfaErrorMessage, mfaService } from "@/services/mfaService";
+import { MFA_STATUS_KEY as STATUS_KEY } from "@/services/mfaKeys";
 import type { MfaSetupData } from "@/types";
 import { SecurityRow } from "./SecurityRow";
-
-const STATUS_KEY = ["mfa", "status"] as const;
 
 const requiredReason = (by: "global" | "user" | null) =>
   by === "global"
