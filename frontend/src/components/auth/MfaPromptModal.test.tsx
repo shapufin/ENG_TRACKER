@@ -157,6 +157,16 @@ describe("MfaPromptModal", () => {
       expect(sessionStorage.getItem("mfa_prompt_dismissed:42")).toBe("true");
     });
 
+    it("stacks the three actions so none is clipped by the narrow dialog", async () => {
+      vi.mocked(mfaService.status).mockResolvedValue({ ...off, enrolled: false });
+      renderModal();
+
+      const later = await screen.findByRole("button", { name: /remind me later/i });
+      // Three buttons in one row overflow the 448px dialog; the clipped one cannot be clicked.
+      expect(later.parentElement).toHaveClass("sm:flex-col");
+      expect(later.parentElement).toHaveClass("[&>button]:w-full");
+    });
+
     it("still offers an authenticator app", async () => {
       vi.mocked(mfaService.status).mockResolvedValue({ ...off, enrolled: false });
       renderModal();

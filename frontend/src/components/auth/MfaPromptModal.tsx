@@ -102,7 +102,7 @@ export const MfaPromptModal: React.FC = () => {
               : "Setup takes about two minutes and ends with a set of backup codes."}
           </p>
         </DialogBody>
-        <DialogFooter>
+        <DialogFooter className={passkeys ? "sm:flex-col sm:space-x-0 [&>button]:w-full" : undefined}>
           <Button variant="ghost" onClick={snooze}>
             Remind me later
           </Button>
