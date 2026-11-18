@@ -14,7 +14,7 @@ OPEN_WORDS = frozenset({
     'work in progress', 'awaiting info', 'awaiting user', 'awaiting vendor',
     'awaiting assignment', 'active', 'to do', 'todo', 'in review',
 })
-CANCELLED_WORDS = frozenset({'cancelled', 'canceled', 'withdrawn'})
+CANCELLED_WORDS = frozenset({'cancelled', 'canceled', 'withdrawn', 'rejected'})
 
 
 def status_group(value) -> str:

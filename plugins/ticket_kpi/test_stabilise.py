@@ -25,7 +25,7 @@ class StatusGroupTests(SimpleTestCase):
             self.assertEqual(status_group(word), 'closed', word)
         for word in ('open', 'New', 'In Progress', 'On Hold', 'Pending', 'Reopened', 'Assigned'):
             self.assertEqual(status_group(word), 'open', word)
-        for word in ('cancelled', 'Canceled', 'Withdrawn'):
+        for word in ('cancelled', 'Canceled', 'Withdrawn', 'Rejected'):
             self.assertEqual(status_group(word), 'cancelled', word)
 
     def test_unknown_or_blank_is_other(self):
