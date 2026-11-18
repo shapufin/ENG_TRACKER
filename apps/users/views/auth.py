@@ -164,54 +164,98 @@ class _MFAView(APIView):
     throttle_scope = 'mfa'
 
 
+def _complete_mfa_login(request, verify, *, failure_text, auth_method):
+    """Finish a password-authenticated login with a second factor.
+
+    One body for the code and passkey paths so the maintenance check, failure
+    logging and the single token-issuing call cannot drift apart. ``verify(user)``
+    raises ``MFAError`` on any failure; nothing is issued before it returns.
+    """
+    ip = get_client_ip(request)
+    ua = request.META.get('HTTP_USER_AGENT', '')
+    user = None
+    try:
+        user = mfa_service.read_challenge(
+            str(request.data.get('mfa_token', '')), mfa_service.PURPOSE_VERIFY
+        )
+        # A challenge issued before the switch must not be completed.
+        if is_maintenance_active() and not is_user_exempt(user):
+            raise MaintenanceModeActive()
+        verify(user)
+    except MFAError as exc:
+        action = 'MFA_LOCKED' if exc.code == 'locked' else 'MFA_FAILED'
+        username = user.username if user else 'Unknown'
+        desc = (
+            f"User '{username}' locked out due to too many invalid MFA attempts"
+            if exc.code == 'locked'
+            else f"{failure_text} for user '{username}'"
+        )
+        extra_data = {'username': username, 'code': exc.code}
+        if exc.reason:
+            extra_data['reason'] = exc.reason
+        log_security_event(
+            user=user,
+            action=action,
+            description=desc,
+            ip_address=ip,
+            user_agent=ua,
+            extra_data=extra_data,
+            status='failure',
+        )
+        return _mfa_error(exc)
+
+    log_security_event(
+        user=user,
+        action='LOGIN_SUCCESS',
+        description=f"User '{user.username}' verified MFA and signed in",
+        ip_address=ip,
+        user_agent=ua,
+        extra_data={'username': user.username, 'auth_method': auth_method},
+        status='success',
+    )
+    return _signed_in_response(user)
+
+
 @extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
 class MFAVerifyView(_MFAView):
     """POST /api/auth/token/mfa-verify/ {mfa_token, code}: finish an MFA login."""
 
     def post(self, request):
-        ip = get_client_ip(request)
-        ua = request.META.get('HTTP_USER_AGENT', '')
-        user = None
+        return _complete_mfa_login(
+            request,
+            lambda user: mfa_service.verify_second_factor(user, str(request.data.get('code', ''))),
+            failure_text='Invalid MFA code entered',
+            auth_method='mfa',
+        )
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class PasskeyLoginOptionsView(_MFAView):
+    """POST /api/auth/token/passkey-options/ {mfa_token}: the browser's sign-in options."""
+
+    def post(self, request):
         try:
             user = mfa_service.read_challenge(
                 str(request.data.get('mfa_token', '')), mfa_service.PURPOSE_VERIFY
             )
-            # A challenge issued before the switch must not be completed.
             if is_maintenance_active() and not is_user_exempt(user):
                 raise MaintenanceModeActive()
-            mfa_service.verify_second_factor(user, str(request.data.get('code', '')))
+            return Response(webauthn_service.authentication_options(user))
         except MFAError as exc:
-            action = 'MFA_LOCKED' if exc.code == 'locked' else 'MFA_FAILED'
-            username = user.username if user else 'Unknown'
-            desc = (
-                f"User '{username}' locked out due to too many invalid MFA attempts"
-                if exc.code == 'locked'
-                else f"Invalid MFA code entered for user '{username}'"
-            )
-            extra_data = {'username': username, 'code': exc.code}
-            if exc.reason:
-                extra_data['reason'] = exc.reason
-            log_security_event(
-                user=user,
-                action=action,
-                description=desc,
-                ip_address=ip,
-                user_agent=ua,
-                extra_data=extra_data,
-                status='failure',
-            )
             return _mfa_error(exc)
 
-        log_security_event(
-            user=user,
-            action='LOGIN_SUCCESS',
-            description=f"User '{user.username}' verified MFA and signed in",
-            ip_address=ip,
-            user_agent=ua,
-            extra_data={'username': user.username, 'auth_method': 'mfa'},
-            status='success',
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class PasskeyLoginVerifyView(_MFAView):
+    """POST /api/auth/token/passkey-verify/ {mfa_token, response}: finish an MFA login with a passkey."""
+
+    def post(self, request):
+        return _complete_mfa_login(
+            request,
+            lambda user: webauthn_service.verify_assertion(user, request.data.get('response')),
+            failure_text='Invalid passkey sign-in',
+            auth_method='passkey',
         )
-        return _signed_in_response(user)
 
 
 @extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
@@ -269,6 +313,65 @@ class MFALoginActivateView(_MFAView):
             status='success',
         )
         return _signed_in_response(user, {'backup_codes': codes})
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class PasskeyLoginSetupOptionsView(_MFAView):
+    """POST /api/auth/mfa/login/passkey-options/ {mfa_token}: registration options for a user who must enrol to sign in."""
+
+    def post(self, request):
+        try:
+            user = mfa_service.read_challenge(
+                str(request.data.get('mfa_token', '')), mfa_service.PURPOSE_SETUP
+            )
+            return Response(webauthn_service.registration_options(user))
+        except MFAError as exc:
+            return _mfa_error(exc)
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class PasskeyLoginRegisterView(_MFAView):
+    """POST /api/auth/mfa/login/passkey-register/ {mfa_token, response, name}: enrol a passkey and sign in."""
+
+    def post(self, request):
+        ip = get_client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', '')
+        user = None
+        try:
+            user = mfa_service.read_challenge(
+                str(request.data.get('mfa_token', '')), mfa_service.PURPOSE_SETUP
+            )
+            if is_maintenance_active() and not is_user_exempt(user):
+                raise MaintenanceModeActive()
+            credential = webauthn_service.register(
+                user, request.data.get('response'), str(request.data.get('name', ''))
+            )
+        except MFAError as exc:
+            username = user.username if user else 'Unknown'
+            log_security_event(
+                user=user,
+                action='MFA_FAILED',
+                description=f"Invalid passkey during enrolment for user '{username}'",
+                ip_address=ip,
+                user_agent=ua,
+                extra_data={'username': username, 'code': exc.code},
+                status='failure',
+            )
+            return _mfa_error(exc)
+        mfa_service.audit(
+            user, 'mfa_passkey_added', f"{user.username} added the passkey '{credential.name}' at sign-in",
+            user, ip_address=ip, user_agent=ua,
+        )
+        log_security_event(
+            user=user,
+            action='LOGIN_SUCCESS',
+            description=f"User '{user.username}' enrolled a passkey and signed in",
+            ip_address=ip,
+            user_agent=ua,
+            extra_data={'username': user.username, 'auth_method': 'passkey_setup'},
+            status='success',
+        )
+        return _signed_in_response(user)
 
 
 class _SignedInMFAView(APIView):
