@@ -7,6 +7,10 @@ export interface AuthContextType {
   login: (credentials: LoginCredentials) => Promise<LoginResponse>;
   /** Finish an MFA sign-in with a 6-digit or backup code. */
   verifyMfa: (mfaToken: string, code: string) => Promise<AuthResponse>;
+  /** Finish an MFA sign-in with a passkey (Face ID, fingerprint or device PIN). */
+  verifyPasskey: (mfaToken: string) => Promise<AuthResponse>;
+  /** Enrol a passkey as the required second factor and sign in. */
+  finishLoginPasskeySetup: (mfaToken: string, name: string) => Promise<AuthResponse>;
   /** Seed + QR for an account that must enrol before it can sign in. */
   startLoginSetup: (mfaToken: string) => Promise<MfaSetupData>;
   /** Confirm the first code of a required enrolment; signs in and returns the backup codes. */

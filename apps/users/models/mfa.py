@@ -50,3 +50,37 @@ class MFABackupCode(TimeStampedModel):
 
     def __str__(self):
         return f'MFABackupCode({self.user_id}, used={self.used_at is not None})'
+
+
+class WebAuthnCredential(TimeStampedModel):
+    """A passkey. Another second factor, never a replacement for TOTP (item 27)."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='passkeys')
+    credential_id = models.BinaryField(unique=True, max_length=1023)
+    public_key = models.BinaryField()
+    sign_count = models.PositiveBigIntegerField(default=0)
+    transports = models.JSONField(default=list, blank=True)
+    name = models.CharField(max_length=64)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'users_webauthn_credential'
+        ordering = ['created_at', 'id']
+
+    def __str__(self):
+        return f'Passkey({self.user_id}, {self.name})'
+
+
+class WebAuthnChallenge(TimeStampedModel):
+    """Single-use challenge, in Postgres (never Redis) so replay protection survives eviction."""
+    PURPOSE_REGISTER = 'register'
+    PURPOSE_LOGIN = 'login'
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='passkey_challenges')
+    purpose = models.CharField(max_length=16)
+    challenge = models.BinaryField()
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'users_webauthn_challenge'
+        indexes = [models.Index(fields=['user', 'purpose', 'used_at'])]

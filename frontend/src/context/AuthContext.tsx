@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { isMfaChallenge, type AuthResponse, type User, type LoginCredentials } from "@/types";
 import { authService } from "@/services/authService";
+import { authenticateWithPasskey, registerPasskeyAtLogin } from "@/services/passkeyService";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { isAuthRejection, setAccessToken } from "@/lib/api";
 import { getQueueCount } from "@/lib/offline/offlineQueue";
@@ -92,6 +93,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [startSession]
   );
 
+  const verifyPasskey = useCallback(
+    async (mfaToken: string) => startSession(await authenticateWithPasskey(mfaToken)),
+    [startSession]
+  );
+
+  const finishLoginPasskeySetup = useCallback(
+    async (mfaToken: string, name: string) =>
+      startSession(await registerPasskeyAtLogin(mfaToken, name)),
+    [startSession]
+  );
+
   const startLoginSetup = useCallback(
     (mfaToken: string) => authService.startLoginSetup(mfaToken),
     []
@@ -139,6 +151,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     login,
     verifyMfa,
+    verifyPasskey,
+    finishLoginPasskeySetup,
     startLoginSetup,
     finishLoginSetup,
     logout,

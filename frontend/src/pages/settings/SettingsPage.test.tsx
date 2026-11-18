@@ -22,6 +22,9 @@ vi.mock("./components/ClientAssignmentSection", () => ({
 vi.mock("./components/PasswordRow", () => ({
   PasswordRow: () => <div data-testid="password-row" />,
 }));
+vi.mock("./components/PasskeysSection", () => ({
+  PasskeysSection: () => <div data-testid="passkeys" />,
+}));
 vi.mock("./components/TwoFactorSection", () => ({
   TwoFactorSection: () => <div data-testid="two-factor" />,
 }));
@@ -98,6 +101,7 @@ describe("SettingsPage", () => {
     const security = screen.getByRole("group", { name: "Security" });
     expect(within(security).getByTestId("password-row")).toBeInTheDocument();
     expect(within(security).getByTestId("two-factor")).toBeInTheDocument();
+    expect(within(security).getByTestId("passkeys")).toBeInTheDocument();
   });
 
   // CR user settings — MyClientsSection hidden, CR Scope card shown,

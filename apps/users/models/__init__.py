@@ -16,11 +16,13 @@ from .core import (
     TeamMembershipHistory,
 )
 from .hbpr import HbprAlbanianTlAssignment
-from .mfa import MFABackupCode, UserMFA
+from .mfa import MFABackupCode, UserMFA, WebAuthnChallenge, WebAuthnCredential
 
 __all__ = [
     'MFABackupCode',
     'UserMFA',
+    'WebAuthnChallenge',
+    'WebAuthnCredential',
     'ApprovalPeriodBoundary',
     'ClosedYear',
     'ApprovalPeriodClose',

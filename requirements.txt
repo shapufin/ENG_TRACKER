@@ -36,6 +36,14 @@ uritemplate==4.2.0
 cryptography==50.0.2
 qrcode==8.2
 
+# Passkeys (WebAuthn registration and assertion verification, owner-approved 2026-11-18).
+# Re-check this pin with each Django upgrade (docs/superpowers/UPGRADE-JOURNAL.md).
+webauthn==3.0.1
+cbor2==6.3.0
+pyasn1==0.6.5
+pyasn1_modules==0.4.2
+pyOpenSSL==26.4.0
+
 # Web Push notifications
 pywebpush==2.5.0
 py-vapid==1.9.4

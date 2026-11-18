@@ -258,6 +258,24 @@ class AdminControlTests(MFATestBase):
             OutstandingToken.objects.filter(user=self.user).count(),
         )
 
+    def test_admin_reset_removes_passkeys_and_revokes_refresh_tokens(self):
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        from apps.users.models import WebAuthnCredential
+
+        WebAuthnCredential.objects.create(
+            user=self.user, credential_id=b'adm-1', public_key=b'pk', sign_count=0, name='Phone',
+        )
+        RefreshToken.for_user(self.user)
+        self.as_user(self.staff)
+        response = self.client.post(f'/api/users/users/{self.user.id}/reset_mfa/')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(WebAuthnCredential.objects.filter(user=self.user).exists())
+        self.assertEqual(
+            BlacklistedToken.objects.filter(token__user=self.user).count(),
+            OutstandingToken.objects.filter(user=self.user).count(),
+        )
+
     def test_plain_user_cannot_reset(self):
         self.enrol()
         self.as_user(self.other)

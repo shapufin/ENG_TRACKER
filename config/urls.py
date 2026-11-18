@@ -37,6 +37,14 @@ from apps.users.views.auth import (
     MFASetupView,
     MFAStatusView,
     MFAVerifyView,
+    PasskeyDetailView,
+    PasskeyLoginOptionsView,
+    PasskeyLoginRegisterView,
+    PasskeyLoginSetupOptionsView,
+    PasskeyLoginVerifyView,
+    PasskeyListView,
+    PasskeyOptionsView,
+    PasskeyRegisterView,
     PasswordChangeView,
     TokenLogoutView,
 )
@@ -164,6 +172,10 @@ urlpatterns += [
     path('api/auth/token/logout/', TokenLogoutView.as_view(), name='token_logout'),
     # Second factor. mfa-verify lives under token/ so it shares the refresh cookie path.
     path('api/auth/token/mfa-verify/', MFAVerifyView.as_view(), name='mfa_verify'),
+    path('api/auth/token/passkey-options/', PasskeyLoginOptionsView.as_view(), name='passkey_login_options'),
+    path('api/auth/token/passkey-verify/', PasskeyLoginVerifyView.as_view(), name='passkey_login_verify'),
+    path('api/auth/mfa/login/passkey-options/', PasskeyLoginSetupOptionsView.as_view(), name='passkey_setup_options'),
+    path('api/auth/mfa/login/passkey-register/', PasskeyLoginRegisterView.as_view(), name='passkey_setup_register'),
     path('api/auth/mfa/login/setup/', MFALoginSetupView.as_view(), name='mfa_login_setup'),
     path('api/auth/mfa/login/activate/', MFALoginActivateView.as_view(), name='mfa_login_activate'),
     path('api/auth/mfa/status/', MFAStatusView.as_view(), name='mfa_status'),
@@ -171,6 +183,10 @@ urlpatterns += [
     path('api/auth/mfa/activate/', MFAActivateView.as_view(), name='mfa_activate'),
     path('api/auth/mfa/disable/', MFADisableView.as_view(), name='mfa_disable'),
     path('api/auth/mfa/backup-codes/', MFABackupCodesView.as_view(), name='mfa_backup_codes'),
+    path('api/auth/mfa/passkeys/', PasskeyListView.as_view(), name='mfa_passkeys'),
+    path('api/auth/mfa/passkeys/options/', PasskeyOptionsView.as_view(), name='mfa_passkey_options'),
+    path('api/auth/mfa/passkeys/register/', PasskeyRegisterView.as_view(), name='mfa_passkey_register'),
+    path('api/auth/mfa/passkeys/<int:pk>/', PasskeyDetailView.as_view(), name='mfa_passkey_detail'),
     path('api/auth/password/change/', PasswordChangeView.as_view(), name='password_change'),
 ]
 

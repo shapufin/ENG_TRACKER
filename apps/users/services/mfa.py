@@ -24,7 +24,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from core.utils.crypto import SecretDecryptError, decrypt_text, encrypt_text
-from ..models.mfa import MFABackupCode, UserMFA
+from ..models.mfa import MFABackupCode, UserMFA, WebAuthnChallenge, WebAuthnCredential
 
 logger = logging.getLogger(__name__)
 
@@ -147,19 +147,34 @@ def required_source(user) -> str | None:
     return None
 
 
-def is_enrolled(user) -> bool:
+def totp_enabled(user) -> bool:
+    """An authenticator-app seed is verified and on (backup codes belong to it)."""
     return UserMFA.objects.filter(user=user, is_enabled=True).exists()
 
 
+def has_passkey(user) -> bool:
+    return WebAuthnCredential.objects.filter(user=user).exists()
+
+
+def is_enrolled(user) -> bool:
+    """The user has at least one second factor, authenticator app or passkey."""
+    return totp_enabled(user) or has_passkey(user)
+
+
 def status_for(user) -> dict:
-    enrolled = is_enrolled(user)
+    from .webauthn import summary
+
+    totp = totp_enabled(user)
+    passkeys = WebAuthnCredential.objects.filter(user=user)
     return {
-        'enabled': enrolled,
+        'enabled': totp,  # the authenticator app; the Settings TOTP controls read this
+        'enrolled': totp or passkeys.exists(),
         'required': required_source(user) is not None,
         'required_by': required_source(user),
         'backup_codes_remaining': (
-            MFABackupCode.objects.filter(user=user, used_at__isnull=True).count() if enrolled else 0
+            MFABackupCode.objects.filter(user=user, used_at__isnull=True).count() if totp else 0
         ),
+        'passkeys': [summary(p) for p in passkeys],
     }
 
 
@@ -188,12 +203,31 @@ def read_challenge(token: str, purpose: str):
     return user
 
 
+def _methods(user) -> list[str]:
+    from .webauthn import is_available
+
+    methods = []
+    if is_available() and has_passkey(user):
+        methods.append('passkey')
+    if totp_enabled(user):
+        methods.append('totp')
+    return methods
+
+
 def login_challenge(user) -> dict | None:
     """What a password-authenticated ``user`` must still do, or None to sign in now."""
     if is_enrolled(user):
-        return {'mfa_required': True, 'mfa_token': make_challenge(user, PURPOSE_VERIFY)}
+        return {
+            'mfa_required': True, 'mfa_token': make_challenge(user, PURPOSE_VERIFY),
+            'methods': _methods(user),
+        }
     if required_source(user) is not None:
-        return {'mfa_setup_required': True, 'mfa_token': make_challenge(user, PURPOSE_SETUP)}
+        from .webauthn import is_available
+
+        return {
+            'mfa_setup_required': True, 'mfa_token': make_challenge(user, PURPOSE_SETUP),
+            'methods': (['passkey'] if is_available() else []) + ['totp'],
+        }
     return None
 
 
@@ -237,7 +271,7 @@ def _consume_backup_code(user, code: str) -> bool:
 
 def begin_setup(user) -> dict:
     """Create (or replace) a pending seed. It does nothing until ``activate`` verifies a code."""
-    if is_enrolled(user):
+    if totp_enabled(user):
         raise MFAError('already_enabled', 'Two-factor authentication is already on.')
     secret = generate_secret()
     UserMFA.objects.update_or_create(
@@ -352,10 +386,10 @@ def verify_second_factor(user, code: str) -> None:
 
 
 def check_step_up(user, password: str, code: str) -> None:
-    """Re-prove password and (when enrolled) a current code before a sensitive change."""
+    """Re-prove password and (with an authenticator app on) a current code before a sensitive change."""
     if not user.check_password(password or ''):
         raise MFAError('invalid_password', 'The password is not correct.')
-    if is_enrolled(user):
+    if totp_enabled(user):
         verify_second_factor(user, code or '')
 
 
@@ -384,3 +418,11 @@ def remove_mfa(user) -> None:
     with transaction.atomic():
         MFABackupCode.objects.filter(user=user).delete()
         UserMFA.objects.filter(user=user).delete()
+
+
+def reset_all_factors(user) -> None:
+    """Admin and command reset: the authenticator app, backup codes and every passkey."""
+    with transaction.atomic():
+        remove_mfa(user)
+        WebAuthnCredential.objects.filter(user=user).delete()
+        WebAuthnChallenge.objects.filter(user=user).delete()

@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, ShieldAlert, ShieldCheck } from "lucide-react";
+import { ArrowRight, Fingerprint, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { MFA_STATUS_KEY as STATUS_KEY } from "@/services/mfaKeys";
 import { mfaService } from "@/services/mfaService";
+import { isPasskeySupported } from "@/services/passkeyService";
 import {
   Dialog,
   DialogBody,
@@ -14,9 +16,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-
-// Same key as TwoFactorSection, so activating a factor there closes this prompt.
-const STATUS_KEY = ["mfa", "status"] as const;
 
 const snoozeKey = (userId: number) => `mfa_prompt_dismissed:${userId}`;
 
@@ -52,13 +51,20 @@ export const MfaPromptModal: React.FC = () => {
     setSnoozedKey(key);
   };
 
+  // `enrolled` counts a passkey as well as the authenticator app; older servers only send `enabled`.
   const open =
     !!user &&
-    data?.enabled === false &&
+    (data?.enrolled ?? data?.enabled) === false &&
     pathname !== "/settings" &&
     snoozedKey !== key &&
     !readSnoozed(key);
   if (!open) return null;
+
+  const passkeys = isPasskeySupported();
+  const goTo = (state: { openMfaSetup: true } | { openPasskeySetup: true }) => {
+    snooze();
+    navigate("/settings", { state });
+  };
 
   return (
     <Dialog open onOpenChange={(next) => !next && snooze()}>
@@ -91,22 +97,31 @@ export const MfaPromptModal: React.FC = () => {
             </li>
           </ul>
           <p className="text-muted-foreground mt-3 text-center text-xs">
-            Setup takes about two minutes and ends with a set of backup codes.
+            {passkeys
+              ? "A passkey takes a few seconds: your device asks for Face ID, your fingerprint or your PIN. An authenticator app takes about two minutes and ends with backup codes."
+              : "Setup takes about two minutes and ends with a set of backup codes."}
           </p>
         </DialogBody>
-        <DialogFooter>
+        <DialogFooter className={passkeys ? "sm:flex-col sm:space-x-0 [&>button]:w-full" : undefined}>
           <Button variant="ghost" onClick={snooze}>
             Remind me later
           </Button>
-          <Button
-            onClick={() => {
-              snooze();
-              navigate("/settings", { state: { openMfaSetup: true } });
-            }}
-          >
-            Set up two-factor now
-            <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
-          </Button>
+          {passkeys ? (
+            <>
+              <Button variant="outline" onClick={() => goTo({ openMfaSetup: true })}>
+                Use an authenticator app
+              </Button>
+              <Button onClick={() => goTo({ openPasskeySetup: true })}>
+                <Fingerprint className="mr-2 h-4 w-4" aria-hidden="true" />
+                Set up Face ID or fingerprint
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => goTo({ openMfaSetup: true })}>
+              Set up two-factor now
+              <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

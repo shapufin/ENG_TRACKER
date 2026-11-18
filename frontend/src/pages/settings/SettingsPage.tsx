@@ -15,6 +15,7 @@ import { ClientAssignmentSection } from "./components/ClientAssignmentSection";
 import { NotificationPreferencesSection } from "./components/NotificationPreferencesSection";
 import { PluginCRScopeCard } from "./components/PluginCRScopeCard";
 import { PasswordRow } from "./components/PasswordRow";
+import { PasskeysSection } from "./components/PasskeysSection";
 import { TwoFactorSection } from "./components/TwoFactorSection";
 
 export const SettingsPage: React.FC = () => {
@@ -99,6 +100,7 @@ export const SettingsPage: React.FC = () => {
             {/* Security: the two account protections, compact but never hidden. */}
             <div className="space-y-2 border-t pt-4" role="group" aria-label="Security">
               <PasswordRow />
+              <PasskeysSection />
               <TwoFactorSection />
             </div>
             {(user?.techs?.length ?? 0) > 0 && (

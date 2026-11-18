@@ -1226,3 +1226,7 @@ Backend baseline after this round: 1875 tests, 0 failures.
 ## Font 404s in production - 2026-10-01
 
 Found on the first production load: every `/assets/files/*.woff2` returned 404. Root cause: Tailwind 4 inlines `@import`ed CSS but does not let Vite rewrite its `url(./files/*.woff2)`, so the fontsource files were never emitted and the CSS kept unhashed relative URLs (a Tailwind 3 / postcss-import build handled this). Fix: the four fontsource CSS files are imported from `src/main.tsx` instead of `index.css`; the build now emits 30 hashed woff2 files under `/assets/`, which the existing nginx `/assets/` block serves. Guard: `src/lib/fontImports.test.ts`. The Recharts "width(-1) and height(-1)" console warning is a first-render zero-size container message, not an error.
+
+## Passkeys dependency pin - 2026-11-18
+
+`webauthn==3.0.1` (py_webauthn) with `cbor2==6.3.0`, `pyasn1==0.6.5`, `pyasn1_modules==0.4.2`, `pyOpenSSL==26.4.0` were added for passkey verification (owner-approved; `docs/superpowers/plans/2026-11-18-passkeys.md`). On each Django or `cryptography` upgrade re-run `apps.users.tests_app.test_webauthn_*`: they verify real ES256 signatures, and `test_counter_regression_is_rejected_and_audited` pins the library's "sign count" error wording that the clone audit relies on. The API used: keyword-only `generate_*_options` and `verify_*_response` (`require_user_verification` defaults to False, so it is always passed as True).

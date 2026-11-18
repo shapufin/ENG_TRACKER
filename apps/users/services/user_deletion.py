@@ -30,6 +30,8 @@ HOUSEKEEPING_MODELS = frozenset({
     'permissions.UserRole',
     'users.MFABackupCode',
     'users.UserMFA',
+    'users.WebAuthnChallenge',
+    'users.WebAuthnCredential',
     'tl_scorecard.OneOnOnePlan',  # a schedule, not history; skips are kept
     'users.UserProfile',
 })

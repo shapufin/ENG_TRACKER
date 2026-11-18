@@ -22,7 +22,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, reencrypt=False, **options):
         total = bad = 0
-        for row in UserMFA.objects.all().iterator():
+        # A passkey-only user has a seedless row that only carries the failure counter.
+        for row in UserMFA.objects.exclude(secret_ciphertext='').iterator():
             total += 1
             try:
                 decrypt_text(row.secret_ciphertext)

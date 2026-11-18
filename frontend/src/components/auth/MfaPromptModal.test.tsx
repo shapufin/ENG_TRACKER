@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -26,6 +26,9 @@ vi.mock("@/context/AuthContext", () => ({ useAuth: () => ({ user: auth.user }) }
 
 vi.mock("@/services/mfaService", () => ({ mfaService: { status: vi.fn() } }));
 
+const passkeys = vi.hoisted(() => ({ supported: false }));
+vi.mock("@/services/passkeyService", () => ({ isPasskeySupported: () => passkeys.supported }));
+
 const off = { enabled: false, required: false, required_by: null, backup_codes_remaining: 0 };
 const on = { enabled: true, required: false, required_by: null, backup_codes_remaining: 10 };
 const TITLE = /two-factor authentication is required/i;
@@ -46,6 +49,7 @@ describe("MfaPromptModal", () => {
     vi.resetAllMocks();
     sessionStorage.clear();
     auth.user = { id: 42 };
+    passkeys.supported = false;
   });
 
   it("explains that two-factor is mandatory when the user is not enrolled", async () => {
@@ -124,5 +128,52 @@ describe("MfaPromptModal", () => {
 
     expect(navigateMock).toHaveBeenCalledWith("/settings", { state: { openMfaSetup: true } });
     expect(sessionStorage.getItem("mfa_prompt_dismissed:42")).toBe("true");
+  });
+
+  it("stays closed for a user whose only factor is a passkey", async () => {
+    vi.mocked(mfaService.status).mockResolvedValue({ ...off, enrolled: true });
+    renderModal();
+
+    await waitFor(() => expect(mfaService.status).toHaveBeenCalled());
+    // Let the resolved status render: a prompt that wrongly opens does so a tick later.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(screen.queryByText(TITLE)).not.toBeInTheDocument();
+  });
+
+  describe("when the browser supports passkeys", () => {
+    beforeEach(() => {
+      passkeys.supported = true;
+    });
+
+    it("offers a passkey first and sends the user to add one", async () => {
+      vi.mocked(mfaService.status).mockResolvedValue({ ...off, enrolled: false });
+      renderModal();
+
+      fireEvent.click(await screen.findByRole("button", { name: /set up face id or fingerprint/i }));
+
+      expect(navigateMock).toHaveBeenCalledWith("/settings", { state: { openPasskeySetup: true } });
+      expect(sessionStorage.getItem("mfa_prompt_dismissed:42")).toBe("true");
+    });
+
+    it("stacks the three actions so none is clipped by the narrow dialog", async () => {
+      vi.mocked(mfaService.status).mockResolvedValue({ ...off, enrolled: false });
+      renderModal();
+
+      const later = await screen.findByRole("button", { name: /remind me later/i });
+      // Three buttons in one row overflow the 448px dialog; the clipped one cannot be clicked.
+      expect(later.parentElement).toHaveClass("sm:flex-col");
+      expect(later.parentElement).toHaveClass("[&>button]:w-full");
+    });
+
+    it("still offers an authenticator app", async () => {
+      vi.mocked(mfaService.status).mockResolvedValue({ ...off, enrolled: false });
+      renderModal();
+
+      fireEvent.click(await screen.findByRole("button", { name: /use an authenticator app/i }));
+
+      expect(navigateMock).toHaveBeenCalledWith("/settings", { state: { openMfaSetup: true } });
+    });
   });
 });
