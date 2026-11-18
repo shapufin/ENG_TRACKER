@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { LogIn, ShieldCheck, Wrench } from "lucide-react";
+import { Fingerprint, LogIn, ShieldCheck, Wrench } from "lucide-react";
 import { useSiteBranding } from "@/hooks/useSiteBranding";
 import { useMaintenanceStatus } from "@/hooks/useMaintenanceStatus";
 import { isMaintenanceError } from "@/lib/api";
@@ -15,15 +15,24 @@ import { BackupCodesPanel } from "@/components/auth/BackupCodesPanel";
 import { MfaCodeField } from "@/components/auth/MfaCodeField";
 import { MfaEnrollment } from "@/components/auth/MfaEnrollment";
 import { mfaErrorMessage } from "@/services/mfaService";
+import { PasskeyCancelledError, isPasskeySupported } from "@/services/passkeyService";
 import { isMfaChallenge, type AuthResponse, type MfaSetupData, type User } from "@/types";
 
-type Step = "password" | "code" | "setup" | "backup";
+type Step = "password" | "passkey" | "code" | "choose" | "setup" | "backup";
 
 const STEP_COPY: Record<Step, { title: string; subtitle: string }> = {
   password: { title: "", subtitle: "Sign in to your account" },
+  passkey: {
+    title: "Two-factor authentication",
+    subtitle: "Confirm it is you with Face ID, your fingerprint or your device PIN.",
+  },
   code: {
     title: "Two-factor authentication",
     subtitle: "Enter the code from your authenticator app.",
+  },
+  choose: {
+    title: "Set up two-factor authentication",
+    subtitle: "Your account needs a second step. Choose how you want to confirm it is you.",
   },
   setup: {
     title: "Set up two-factor authentication",
@@ -61,7 +70,15 @@ export const LoginPage: React.FC = () => {
   const [setupData, setSetupData] = useState<MfaSetupData | null>(null);
   const [signedIn, setSignedIn] = useState<AuthResponse | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
-  const { login, verifyMfa, startLoginSetup, finishLoginSetup } = useAuth();
+  const [methods, setMethods] = useState<Array<"passkey" | "totp">>([]);
+  const {
+    login,
+    verifyMfa,
+    verifyPasskey,
+    startLoginSetup,
+    finishLoginSetup,
+    finishLoginPasskeySetup,
+  } = useAuth();
   const navigate = useNavigate();
   const shouldReduceMotion = useReducedMotion();
   const { data: branding } = useSiteBranding();
@@ -83,6 +100,7 @@ export const LoginPage: React.FC = () => {
     setCode("");
     setUseBackupCode(false);
     setSetupData(null);
+    setMethods([]);
     setPassword("");
     setError(message);
   };
@@ -110,9 +128,23 @@ export const LoginPage: React.FC = () => {
       }
       setMfaToken(data.mfa_token);
       setPassword("");
+      const offered = data.methods ?? [];
+      setMethods(offered);
+      const passkeyUsable = offered.includes("passkey") && isPasskeySupported();
       if (data.mfa_setup_required) {
-        setSetupData(await startLoginSetup(data.mfa_token));
-        setStep("setup");
+        if (passkeyUsable) {
+          setStep("choose");
+        } else {
+          setSetupData(await startLoginSetup(data.mfa_token));
+          setStep("setup");
+        }
+      } else if (passkeyUsable) {
+        setStep("passkey");
+      } else if (data.methods && !offered.includes("totp")) {
+        // A passkey-only account on a browser that cannot use one: a code field would be a dead end.
+        backToPassword(
+          "This account signs in with a passkey, which this browser does not support. Use another browser or device, or ask an administrator to reset two-factor authentication."
+        );
       } else {
         setStep("code");
       }
@@ -135,6 +167,44 @@ export const LoginPage: React.FC = () => {
     }
   };
 
+  const handlePasskeySubmit = async () => {
+    try {
+      const data = await verifyPasskey(mfaToken);
+      navigate(homePathFor(data.user));
+    } catch (err) {
+      // A dismissed prompt is the person's choice, not a failure: stay put, no alert.
+      if (err instanceof PasskeyCancelledError) return;
+      handleStepError(err, "The passkey did not work. Try again, or use a code instead.");
+    }
+  };
+
+  const handlePasskeySetup = async () => {
+    setError("");
+    setIsLoading(true);
+    try {
+      const data = await finishLoginPasskeySetup(mfaToken, "This device");
+      navigate(homePathFor(data.user));
+    } catch (err) {
+      if (err instanceof PasskeyCancelledError) return;
+      handleStepError(err, "The passkey could not be set up. Try again, or use an authenticator app.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleChooseApp = async () => {
+    setError("");
+    setIsLoading(true);
+    try {
+      setSetupData(await startLoginSetup(mfaToken));
+      setStep("setup");
+    } catch (err) {
+      handleStepError(err, "Setup could not start. Try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSetupSubmit = async () => {
     try {
       const data = await finishLoginSetup(mfaToken, code);
@@ -152,6 +222,7 @@ export const LoginPage: React.FC = () => {
     setIsLoading(true);
     try {
       if (step === "password") await handlePasswordSubmit();
+      else if (step === "passkey") await handlePasskeySubmit();
       else if (step === "code") await handleCodeSubmit();
       else if (step === "setup") await handleSetupSubmit();
       else if (signedIn) navigate(homePathFor(signedIn.user));
@@ -163,11 +234,15 @@ export const LoginPage: React.FC = () => {
   const copy = STEP_COPY[step];
   const submitLabel = {
     password: isLoading ? "Signing in..." : "Sign In",
+    passkey: isLoading ? "Waiting for your device..." : "Use Face ID or fingerprint",
+    choose: "",
     code: isLoading ? "Verifying..." : "Verify",
     setup: isLoading ? "Verifying..." : "Turn on and sign in",
     backup: "Continue",
   }[step];
   const submitDisabled = isLoading || (step === "backup" && !acknowledged);
+  const canUsePasskey = methods.includes("passkey") && isPasskeySupported();
+  const canUseCode = methods.length === 0 || methods.includes("totp");
 
   return (
     <div className="bg-background flex min-h-screen items-center justify-center px-4 py-8">
@@ -214,7 +289,7 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
-          {error && (step === "password" || step === "backup") && (
+          {error && (step === "password" || step === "backup" || step === "passkey" || step === "choose") && (
             <div
               role="alert"
               className="border-destructive/20 bg-destructive/10 text-destructive mb-4 rounded border p-3 text-sm"
@@ -251,6 +326,33 @@ export const LoginPage: React.FC = () => {
               </>
             )}
 
+            {step === "passkey" && (
+              <div className="flex flex-col items-center gap-3 py-2 text-center">
+                <Fingerprint className="text-primary h-10 w-10" aria-hidden="true" />
+                <p className="text-muted-foreground text-sm">
+                  Your device will ask for Face ID, your fingerprint or your PIN. Nothing to type.
+                </p>
+              </div>
+            )}
+
+            {step === "choose" && (
+              <div className="space-y-3">
+                <Button type="button" className="w-full" onClick={handlePasskeySetup} disabled={isLoading}>
+                  <Fingerprint className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Set up Face ID or fingerprint
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleChooseApp}
+                  disabled={isLoading}
+                >
+                  Use an authenticator app
+                </Button>
+              </div>
+            )}
+
             {step === "code" && (
               <>
                 <MfaCodeField
@@ -273,6 +375,19 @@ export const LoginPage: React.FC = () => {
                 >
                   {useBackupCode ? "Use my authenticator app instead" : "Use a backup code instead"}
                 </button>
+                {canUsePasskey && (
+                  <button
+                    type="button"
+                    className="text-primary hover:text-primary-hover block min-h-6 text-sm underline-offset-4 hover:underline"
+                    onClick={() => {
+                      setStep("passkey");
+                      setCode("");
+                      setError("");
+                    }}
+                  >
+                    Use my passkey instead
+                  </button>
+                )}
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   Having trouble? Make sure automatic date and time is turned on on your device, or
                   wait for the next code. If you lost access, use a backup code or ask an
@@ -300,10 +415,26 @@ export const LoginPage: React.FC = () => {
               />
             )}
 
-            <Button type="submit" className="w-full" disabled={submitDisabled}>
-              {submitLabel}
-            </Button>
-            {(step === "code" || step === "setup") && (
+            {step !== "choose" && (
+              <Button type="submit" className="w-full" disabled={submitDisabled} autoFocus={step === "passkey"}>
+                {submitLabel}
+              </Button>
+            )}
+            {step === "passkey" && canUseCode && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setStep("code");
+                  setError("");
+                }}
+                disabled={isLoading}
+              >
+                Use a code instead
+              </Button>
+            )}
+            {(step === "passkey" || step === "code" || step === "choose" || step === "setup") && (
               <Button
                 type="button"
                 variant="ghost"
