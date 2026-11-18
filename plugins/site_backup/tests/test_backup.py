@@ -69,3 +69,6 @@ class CreateBackupTests(TestCase):
         graph = build_dependents_map()
         self.assertNotIn('users.usermfa', graph)
         self.assertFalse(any('users.usermfa' in deps for deps in graph.values()))
+        for label in ('users.webauthncredential', 'users.webauthnchallenge'):
+            self.assertNotIn(label, graph)
+            self.assertFalse(any(label in deps for deps in graph.values()))

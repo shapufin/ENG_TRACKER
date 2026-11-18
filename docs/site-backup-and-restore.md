@@ -5,7 +5,7 @@ Two separate backup tiers exist. Pick by goal, not by convenience.
 | | Infrastructure DR (`db-backup` profile) | Application plugin (`plugins/site_backup`) |
 |---|---|---|
 | Captures | `pg_dump -Fc` of every table and sequence, `media_files` tar, `snapshot_files` tar | Django `dumpdata` JSON + media, zipped with a `manifest.json` |
-| Two-factor secrets | Included (needs the same `MFA_ENCRYPTION_KEYS`) | **Excluded** (`users.usermfa`, `users.mfabackupcode`) |
+| Two-factor secrets and passkeys | Included (needs the same `MFA_ENCRYPTION_KEYS`; passkeys need the same hostname, runbook 5.8) | **Excluded** (`users.usermfa`, `users.mfabackupcode`, `users.webauthncredential`, `users.webauthnchallenge`) |
 | Sessions, JWT refresh tokens, year-close snapshots | Included | **Excluded** (`sessions`, `token_blacklist`, `year_close`) |
 | Restore | `pg_restore` (runbook 4.1-4.3) | Superuser UI (preview-first, per-model) or `restore_site_backup` |
 | Use for | Server moves, disaster recovery | Selective rollback, staging seed, clean-install data import |
