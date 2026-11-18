@@ -63,6 +63,8 @@ class CreateBackupTests(TestCase):
         labels = backup_service.dumpable_model_labels()
         self.assertNotIn('users.usermfa', labels)
         self.assertNotIn('users.mfabackupcode', labels)
+        self.assertNotIn('users.webauthncredential', labels)
+        self.assertNotIn('users.webauthnchallenge', labels)
         from plugins.site_backup.services.dependency_graph import build_dependents_map
         graph = build_dependents_map()
         self.assertNotIn('users.usermfa', graph)
