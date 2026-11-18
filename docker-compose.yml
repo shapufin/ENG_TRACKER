@@ -114,6 +114,11 @@ services:
       # Fernet key(s) that encrypt two-factor seeds, comma separated (first encrypts, all
       # decrypt). Carry it to any new server with SECRET_KEY; losing it locks out enrolled users.
       MFA_ENCRYPTION_KEYS: ${MFA_ENCRYPTION_KEYS:?MFA_ENCRYPTION_KEYS is required}
+      # Passkeys (WebAuthn). Unset leaves them off (the authenticator app keeps working). The RP ID is
+      # bound to every registered passkey: changing the hostname means users add their passkey again.
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
+      WEBAUTHN_ORIGINS: ${WEBAUTHN_ORIGINS:-}
+      WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Engineering Tracker}
       # Encrypts site backup archives at rest; without it no backup can be restored.
       BACKUP_ENCRYPTION_KEYS: ${BACKUP_ENCRYPTION_KEYS:?BACKUP_ENCRYPTION_KEYS is required}
       ONLYOFFICE_DOCUMENT_SERVER_URL: ${ONLYOFFICE_DOCUMENT_SERVER_URL:-}
@@ -204,6 +209,11 @@ services:
       # Fernet key(s) that encrypt two-factor seeds, comma separated (first encrypts, all
       # decrypt). Carry it to any new server with SECRET_KEY; losing it locks out enrolled users.
       MFA_ENCRYPTION_KEYS: ${MFA_ENCRYPTION_KEYS:?MFA_ENCRYPTION_KEYS is required}
+      # Passkeys (WebAuthn). Unset leaves them off (the authenticator app keeps working). The RP ID is
+      # bound to every registered passkey: changing the hostname means users add their passkey again.
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
+      WEBAUTHN_ORIGINS: ${WEBAUTHN_ORIGINS:-}
+      WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Engineering Tracker}
       # Encrypts site backup archives at rest; without it no backup can be restored.
       BACKUP_ENCRYPTION_KEYS: ${BACKUP_ENCRYPTION_KEYS:?BACKUP_ENCRYPTION_KEYS is required}
       ONLYOFFICE_DOCUMENT_SERVER_URL: ${ONLYOFFICE_DOCUMENT_SERVER_URL:-}

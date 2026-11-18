@@ -340,6 +340,7 @@ for at minimum:
 
 - `SECRET_KEY` (Django session/token signing — rotate to invalidate all sessions)
 - `MFA_ENCRYPTION_KEYS` (Fernet key(s) that encrypt two-factor seeds — copy it to any new server; losing it locks out enrolled users)
+- `WEBAUTHN_RP_ID`, `WEBAUTHN_ORIGINS` (optional; turn on passkeys, e.g. `tracker2.integrit.org` and `https://tracker2.integrit.org`. The hostname is bound to every passkey, see runbook 5.8)
 - `DB_PASSWORD` (Postgres)
 - `REDIS_PASSWORD` (Redis auth — required by compose)
 - `EMAIL_HOST_PASSWORD` (SMTP)

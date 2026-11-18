@@ -402,6 +402,33 @@ Two-factor (TOTP) is optional per person until an admin switches on the company-
   through setup at sign-in, and only then receives a session. The window between switching it on and a
   person finishing setup is the one moment a stolen password alone is enough for that person's account.
 
+### 5.8 Passkeys (WebAuthn)
+
+A passkey (Face ID, fingerprint or device PIN) is an alternative second factor beside the authenticator
+app: it never replaces it, and TOTP plus backup codes stay the fallback. Spec:
+`docs/superpowers/specs/2026-11-18-passkeys-design.md`.
+
+- **Settings** (`.env`, passed through `docker-compose.yml`): `WEBAUTHN_RP_ID=tracker2.integrit.org` (exact host,
+  not the parent domain), `WEBAUTHN_ORIGINS=https://tracker2.integrit.org`, optional `WEBAUTHN_RP_NAME`.
+  Unset leaves passkeys off and nothing else changes. Set to a wrong value (an `http` origin, an RP ID that is
+  not a suffix of the origin host, only one of the two) the backend refuses to boot.
+- **Check after any hostname, proxy or TLS change**:
+  `docker compose exec backend python manage.py check_webauthn_config --production`. It prints the RP ID,
+  origins and how many passkeys are registered, and exits non-zero when the setup is invalid.
+- **The RP ID is bound to every passkey for life.** Moving the site to another hostname makes every passkey
+  unusable: users sign in with the authenticator app or a backup code and add their passkey again. Passkey-only
+  users cannot, so they need `reset_user_mfa`. Decide the hostname before rolling passkeys out widely.
+- **Moving to a new server**: the credentials are in the database (`users_webauthn_credential`) and travel
+  with `pg_dump`. There is no key to carry, but the hostname must stay the same. The Site Backup archive leaves
+  both passkey tables out on purpose.
+- **Locked-out user**: `reset_user_mfa <username>` (or "Reset two-factor" in the admin panel) removes the app,
+  backup codes and every passkey and ends the user's sessions.
+- **`/django-admin/` login** still asks for an authenticator code. A staff user whose only factor is a
+  passkey is refused there (it fails closed): give them the authenticator app as well.
+- **Watch the audit log** for `MFA_PASSKEY_CLONE_SUSPECTED` (a passkey reported a lower sign counter, which
+  can mean a cloned authenticator) and repeated `MFA_FAILED` rows with reason `verification_failed`.
+- Challenges expire after 120 s and are deleted lazily when the next one is created; there is no job to run.
+
 ## Year-start checklist (audit 2026-11-16 M4)
 
 Do this in November or December, before people book leave for the new year:
