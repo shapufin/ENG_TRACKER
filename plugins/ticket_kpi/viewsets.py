@@ -246,9 +246,10 @@ class ExportProfileViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.M
 
         except UploadValidationError as exc:
             return _upload_error_response(exc)
-        except Exception as e:
+        except Exception:
+            logger.exception("Mapping tool could not read an upload for user %s", request.user.username)
             return Response(
-                {'error': f'Failed to parse file: {str(e)}'},
+                {'error': 'Could not read this file. Check that it is a valid CSV or Excel export.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -282,9 +283,10 @@ class ExportProfileViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.M
 
         except UploadValidationError as exc:
             return _upload_error_response(exc)
-        except Exception as e:
+        except Exception:
+            logger.exception("Mapping tool could not read an upload for user %s", request.user.username)
             return Response(
-                {'error': f'Failed to parse file: {str(e)}'},
+                {'error': 'Could not read this file. Check that it is a valid CSV or Excel export.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 

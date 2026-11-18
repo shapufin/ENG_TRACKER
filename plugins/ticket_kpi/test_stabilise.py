@@ -314,3 +314,22 @@ class SeedDummyTicketsTests(TestCase):
         User.objects.create_user(username='seed_prod', password='x')
         with override_settings(DEBUG=False), self.assertRaises(CommandError):
             call_command('seed_dummy_tickets', username='seed_prod')
+
+
+class MappingToolErrorTests(TestCase):
+    """The admin mapping tools never echo a parser exception to the client."""
+
+    def test_unreadable_file_gets_a_fixed_message(self):
+        from unittest import mock
+        from plugins.ticket_kpi.viewsets import ExportProfileViewSet
+        admin = User.objects.create_user(username='mt_admin', password='x', is_staff=True)
+        profile = ExportProfile.objects.create(name='MT', field_mapping={'ticket_id': 'A'}, is_global=True)
+        with mock.patch('plugins.ticket_kpi.viewsets.ColumnMapper.read_file',
+                        side_effect=ValueError('secret-internal-detail')):
+            for action, kwargs in (('auto_detect', {}), ('test_mapping', {'pk': profile.pk})):
+                request = factory.post('/x/', {'file': SimpleUploadedFile('t.csv', b'A\n1\n')},
+                                       format='multipart')
+                force_authenticate(request, admin)
+                response = ExportProfileViewSet.as_view({'post': action})(request, **kwargs)
+                self.assertEqual(response.status_code, 400, action)
+                self.assertNotIn('secret-internal-detail', str(response.data), action)

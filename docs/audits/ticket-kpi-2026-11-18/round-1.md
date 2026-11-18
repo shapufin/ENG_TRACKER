@@ -79,7 +79,7 @@ Open: Phase 4 (per-team import format, Backup team first) waits for the owner's 
 
 Re-read in code against every round-1 finding; none reappeared. Resolved items hold: B1 (`status_groups.py`, now also counts `Rejected` as cancelled, owner ruling), B2/B3/B5 (`upload_scope.py`), B6, B7/B9 (all three signal receivers carry a `raw` guard), B8, F1-F6. Remaining `?? 0` in the frontend are ticket counts, never hours.
 
-New findings: none above LOW. Deferred (LOW): the two admin mapping-test endpoints (`test_mapping`, `auto_detect`, `viewsets.py`) still return the parser's message in a 400; useful to the admin debugging a profile, revisit when they are next touched.
+New findings: none above LOW. One LOW (the two admin mapping-test endpoints, `test_mapping` and `auto_detect`, returned the parser's message in a 400) was fixed the same day with a fixed message and `logger.exception` (`test_stabilise.MappingToolErrorTests`).
 Not run: Playwright e2e, the accessibility kit audit (kit not installed), 280 px width.
 Scorecard: round 1 had 18 findings (1 critical, 3 high, 10 medium, 3 low, 1 unknown); round 2 has 0 open above LOW, 1 new LOW, 0 false positives.
 Open by design: Phase 4 (per-team import format, Backup team first) waits for the owner's export and column list.
