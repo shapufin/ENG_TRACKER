@@ -5,6 +5,7 @@ import { usePermissions } from "@/context/PermissionContext";
 import { ticketKPIService } from "../../services/ticketKPIService";
 import { generateMonthOptions } from "@/lib/monthOptions";
 import type { TeamSummary } from "../../utils/teamCSVExport";
+import { currentBusinessMonthKey, currentBusinessYear } from "@/lib/date-format-utils";
 
 type TeamTab = "monthly" | "yearly" | "documents";
 
@@ -38,15 +39,12 @@ export const useTicketKPITeamPage = () => {
   const { user } = useAuth();
   const { isTeamLeader } = usePermissions();
   const [activeTab, setActiveTab] = useState<TeamTab>("monthly");
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-  });
-  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(() => `${currentBusinessMonthKey()}-01`);
+  const [selectedYear, setSelectedYear] = useState<number>(() => currentBusinessYear());
 
   const monthOptions = generateMonthOptions();
   const yearOptions = useMemo(() => {
-    const currentYear = new Date().getFullYear();
+    const currentYear = currentBusinessYear();
     return Array.from({ length: 5 }, (_, i) => currentYear - i);
   }, []);
 
@@ -92,7 +90,7 @@ export const useTicketKPITeamPage = () => {
       teamTrend?.map((d) => ({
         month: d.month,
         tickets: d.total_tickets,
-        avgHours: d.avg_resolution_hours ?? 0,
+        avgHours: d.avg_resolution_hours ?? null,
       })) ?? [],
     [teamTrend]
   );
@@ -102,7 +100,7 @@ export const useTicketKPITeamPage = () => {
       yearlySummary?.monthly_breakdown?.map((d) => ({
         month: d.month,
         tickets: d.total_tickets,
-        avgHours: d.avg_resolution_hours ?? 0,
+        avgHours: d.avg_resolution_hours ?? null,
       })) ?? [],
     [yearlySummary]
   );

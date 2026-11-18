@@ -59,8 +59,10 @@ from .upload_validation import (
     policy_for,
     validate_upload,
 )
+from .upload_scope import client_access_error, may_replace_existing, resolve_import_target
 from .analytics import (
     compute_monthly_kpi,
+    get_breakdown,
     get_user_monthly_summary,
     get_team_monthly_summary,
     compute_yearly_summary,
@@ -287,6 +289,49 @@ class ExportProfileViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.M
             )
 
 
+STATUS_OVERRIDE_GROUPS = ('open', 'closed', 'cancelled')
+
+
+def _apply_status_overrides(base_transforms: dict, raw_overrides) -> tuple:
+    """Merge ``status_overrides`` (their value -> open/closed/cancelled) onto a
+    profile's value transforms. Returns ``(effective_transforms, error)``."""
+    if not raw_overrides:
+        return dict(base_transforms), None
+    try:
+        overrides = json.loads(raw_overrides) if isinstance(raw_overrides, str) else raw_overrides
+    except (TypeError, ValueError):
+        overrides = None
+    if not isinstance(overrides, dict) or any(
+        not isinstance(k, str) or v not in STATUS_OVERRIDE_GROUPS for k, v in overrides.items()
+    ):
+        return None, _error_response(
+            'status_overrides must be a JSON object of status -> open, closed or cancelled.',
+            status.HTTP_400_BAD_REQUEST,
+        )
+    merged = dict(base_transforms)
+    status_map = dict(merged.get('status') or {})
+    status_map.update({k.strip().lower(): v for k, v in overrides.items()})
+    merged['status'] = status_map
+    return merged, None
+
+
+def _audit_batch_import(user, batch):
+    """Best-effort audit row for an import done on a member's behalf."""
+    try:
+        from plugins.audit_log.signals import log_action
+    except ImportError:
+        return
+    log_action(
+        user,
+        'create_for_user',
+        description=(
+            f"Imported {batch.record_count} tickets for {batch.user.username} "
+            f"({batch.month:%Y-%m}) on their behalf"
+        ),
+        obj=batch,
+    )
+
+
 # ============================================================================
 # USER: Upload Flow
 # ============================================================================
@@ -347,15 +392,14 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
                     1 for their_col in profile.field_mapping.values()
                     if str(their_col).strip().lower() in normalized_columns
                 )
-                if score > best_score:
+                needed = min(2, len(profile.field_mapping))
+                if score >= max(needed, 1) and score > best_score:
                     best_score = score
                     best_profile = profile
 
-            # Fallback: if nothing matched, suggest the most recently created active profile
-            # so the user can still select/override it manually.
-            if not best_profile and profiles:
-                best_profile = profiles[0]
-                best_score = 0
+            # A profile is suggested only when it really fits the file (audit
+            # B6): a silent fallback to the newest profile proposes a wrong
+            # mapping. With no fit the user picks one by hand.
 
             response_data = {
                 'detected_columns': list(df.columns),
@@ -378,9 +422,10 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
 
         except UploadValidationError as exc:
             return _upload_error_response(exc)
-        except Exception as e:
+        except Exception:
+            logger.exception("Ticket analyze failed for user %s", request.user.username)
             return Response(
-                {'error': f'Failed to analyze file: {str(e)}'},
+                {'error': 'Could not read this file. Check that it is a valid CSV or Excel export.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -400,6 +445,12 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
         file_obj = request.FILES.get('file')
         profile_id = request.data.get('profile_id')
         month_str = request.data.get('month')
+
+        target, target_error = resolve_import_target(
+            request.user, request.data.get('target_user_id')
+        )
+        if target_error:
+            return target_error
 
         if not file_obj:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
@@ -423,6 +474,11 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
         )
         if override_error:
             return override_error
+        effective_transforms, status_error = _apply_status_overrides(
+            profile.value_transforms, request.data.get('status_overrides')
+        )
+        if status_error:
+            return status_error
 
         try:
             validate_upload(file_obj, "ticket_import")
@@ -437,7 +493,7 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
             records, errors = mapper.apply_mapping(
                 df,
                 effective_mapping,
-                profile.value_transforms,
+                effective_transforms,
                 compute_resolution=profile.compute_resolution_time,
                 compute_sla=profile.compute_sla
             )
@@ -451,7 +507,7 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
             existing = None
             if month:
                 existing = TicketImportBatch.objects.filter(
-                    user=request.user, month=month
+                    user=target.owner, month=month, is_overridden=False
                 ).first()
 
             preview = mapper.validate_preview(records)
@@ -464,9 +520,10 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
 
         except UploadValidationError as exc:
             return _upload_error_response(exc)
-        except Exception as e:
+        except Exception:
+            logger.exception("Ticket preview failed for user %s", request.user.username)
             return Response(
-                {'error': f'Failed to preview: {str(e)}'},
+                {'error': 'Could not read this file with the selected profile.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -478,7 +535,13 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
         file_obj = request.FILES.get('file')
         profile_id = request.data.get('profile_id')
         month_str = request.data.get('month')
-        override = request.data.get('override', 'false').lower() == 'true'
+        override = str(request.data.get('override', 'false')).lower() == 'true'
+
+        target, target_error = resolve_import_target(
+            request.user, request.data.get('target_user_id')
+        )
+        if target_error:
+            return target_error
 
         # Parse client_ids
         raw_client_ids = request.data.get('client_ids', [])
@@ -527,6 +590,11 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
         )
         if override_error:
             return override_error
+        effective_transforms, status_error = _apply_status_overrides(
+            profile.value_transforms, request.data.get('status_overrides')
+        )
+        if status_error:
+            return status_error
 
         # Persisting the fix back onto the shared profile is a configure-level
         # change (it affects every future upload against this profile, not
@@ -561,21 +629,11 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
 
         # Defense-in-depth: validate user is actually assigned to the selected
         # clients. Admins bypass this check (they manage all clients).
-        is_admin_user = request.user.is_staff or request.user.is_superuser
-        if not is_admin_user and client_ids:
-            user_client_ids = set()
-            if hasattr(request.user, 'profile'):
-                user_client_ids = set(
-                    request.user.profile.clients.values_list('id', flat=True)
-                )
-            if user_client_ids:
-                invalid = set(client_ids) - user_client_ids
-                if invalid:
-                    return _error_response(
-                        'Client access denied',
-                        status.HTTP_403_FORBIDDEN,
-                        detail=f'You are not assigned to clients: {list(invalid)}.',
-                    )
+        # Clients are checked against the batch OWNER (the member on an
+        # on-behalf import), and a non-admin owner needs at least one (D6, D8).
+        client_error = client_access_error(target, client_ids)
+        if client_error:
+            return client_error
 
         archived_message = archived_client_error(Client.objects.filter(pk__in=client_ids))
         if archived_message:
@@ -598,7 +656,7 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
             records, errors = mapper.apply_mapping(
                 df,
                 effective_mapping,
-                profile.value_transforms,
+                effective_transforms,
                 compute_resolution=profile.compute_resolution_time,
                 compute_sla=profile.compute_sla
             )
@@ -610,13 +668,12 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
                 )
         except UploadValidationError as exc:
             return _upload_error_response(exc)
-        except Exception as e:
+        except Exception:
+            logger.exception("Ticket import failed for user %s", request.user.username)
             return Response(
-                {'error': f'Import failed: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': 'Could not read this file with the selected profile.'},
+                status=status.HTTP_400_BAD_REQUEST
             )
-
-        is_admin = request.user.is_staff or request.user.is_superuser
 
         # Atomic check-and-create: lock the existing-batch row (if any) so two
         # concurrent uploads for the same user/month cannot both pass the
@@ -624,14 +681,18 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
         try:
             with transaction.atomic():
                 existing = TicketImportBatch.objects.select_for_update().filter(
-                    user=request.user, month=month
+                    user=target.owner, month=month, is_overridden=False
                 ).first()
 
                 if existing:
-                    if not is_admin:
+                    if not may_replace_existing(target, existing):
                         return Response(
                             {
-                                'error': 'Upload already exists for this month. Contact an administrator to override.',
+                                'error': (
+                                    'This month was already reviewed. Ask an administrator to replace it.'
+                                    if target.on_behalf else
+                                    'Upload already exists for this month. Contact an administrator to override.'
+                                ),
                                 'existing_id': existing.id,
                                 'existing_count': existing.record_count,
                             },
@@ -655,7 +716,8 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
 
                 # Create batch (rewind bytes so the saved file is not empty)
                 batch = TicketImportBatch.objects.create(
-                    user=request.user,
+                    user=target.owner,
+                    uploaded_by=request.user,
                     month=month,
                     profile=profile,
                     raw_file=ContentFile(file_bytes, name=file_obj.name),
@@ -686,7 +748,8 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
 
                 if save_mapping_overrides:
                     profile.field_mapping = effective_mapping
-                    profile.save(update_fields=['field_mapping', 'updated_at'])
+                    profile.value_transforms = effective_transforms
+                    profile.save(update_fields=['field_mapping', 'value_transforms', 'updated_at'])
         except IntegrityError:
             # Concurrent upload won the race despite select_for_update fallback
             return Response(
@@ -695,10 +758,12 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
             )
 
         logger.info(
-            "User %s imported batch %d (month=%s, records=%d, profile=%s)",
-            request.user.username, batch.id, month.strftime('%Y-%m'),
-            batch.record_count, batch.profile.name,
+            "User %s imported batch %d for %s (month=%s, records=%d, profile=%s)",
+            request.user.username, batch.id, target.owner.username,
+            month.strftime('%Y-%m'), batch.record_count, batch.profile.name,
         )
+        if target.on_behalf:
+            _audit_batch_import(request.user, batch)
 
         return Response({
             'batch_id': batch.id,
@@ -1065,7 +1130,9 @@ class TicketKPIDashboardViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, views
 
     @action(detail=False, methods=['get'])
     def categories(self, request):
-        """Get category breakdown for a month. Supports user_id for TL/HR/Admin drill-down."""
+        """Category, priority and status breakdown for a month, optionally for one client or status group.
+
+        Supports user_id for TL/HR/Admin drill-down."""
         month_str = request.query_params.get('month')
         target_user_id = request.query_params.get('user_id')
 
@@ -1089,22 +1156,19 @@ class TicketKPIDashboardViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, views
             if err:
                 return err
 
-        month_out = month.strftime('%Y-%m-%d')
-        try:
-            kpi = MonthlyKPI.objects.get(user=target_user, month=month)
-            return Response({
-                'has_data': True,
-                'month': month_out,
-                'by_category': kpi.by_category,
-                'by_priority': kpi.by_priority,
-            })
-        except MonthlyKPI.DoesNotExist:
-            return Response({
-                'has_data': False,
-                'month': month_out,
-                'by_category': {},
-                'by_priority': {},
-            })
+        client_id = None
+        raw_client = request.query_params.get('client_id')
+        if raw_client:
+            client_id, err = _safe_int(raw_client, 'client_id')
+            if err:
+                return err
+        group = request.query_params.get('status_group') or None
+        if group is not None and group not in ('open', 'closed', 'cancelled', 'other'):
+            return Response(
+                {'error': 'status_group must be open, closed, cancelled or other'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(get_breakdown(target_user, month, client_id, group))
 
     @action(detail=False, methods=['get'])
     def team_summary(self, request):
@@ -1512,7 +1576,12 @@ def _is_tl_for_user(tl_user, target_user):
         return False
     if not hasattr(tl_user, 'profile') or not tl_user.profile.is_team_leader:
         return False
-    return target_user.id in tl_user.profile.get_team_member_ids()
+    # Managers are the reporting line above measured people (item 40): the
+    # roster helper leaves them out, so this predicate must as well.
+    return (
+        target_user.id in tl_user.profile.get_team_member_ids()
+        and target_user.id not in italian_tl_user_ids()
+    )
 
 
 def _review_batch_or_reason(batch, user, reviewed_at) -> Optional[str]:

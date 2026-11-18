@@ -1,10 +1,11 @@
+import { currentBusinessMonthKey } from "@/lib/date-format-utils";
+
 export const getInitialMonth = (queryMonth: string | null) => {
   if (queryMonth && /^\d{4}-\d{2}(-\d{2})?$/.test(queryMonth)) {
     const [year, month] = queryMonth.split("-");
     return `${year}-${month}-01`;
   }
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  return `${currentBusinessMonthKey()}-01`;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -23,14 +24,7 @@ export const buildTrendChartData = (trendData: any[] | undefined) =>
   trendData?.map((d) => ({
     month: d.month,
     tickets: d.total_tickets,
-    avgHours: d.avg_resolution_hours ?? 0,
+    avgHours: d.avg_resolution_hours ?? null,
+    p50: d.p50_resolution_hours ?? null,
+    p90: d.p90_resolution_hours ?? null,
   })) ?? [];
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const buildCategoryChartData = (categoryData: any) =>
-  categoryData
-    ? Object.entries(categoryData.by_category || {}).map(([name, value]) => ({
-        name,
-        value: Number(value),
-      }))
-    : [];

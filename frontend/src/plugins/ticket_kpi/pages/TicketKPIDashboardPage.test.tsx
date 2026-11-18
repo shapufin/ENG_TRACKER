@@ -11,6 +11,10 @@ vi.mock("react-router-dom", async () => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
+vi.mock("@/context/PermissionContext", () => ({
+  usePermissions: () => ({ isTeamLeader: false }),
+}));
+
 vi.mock("./hooks/useTicketKPIDashboard", () => ({
   useTicketKPIDashboard: vi.fn(),
 }));
@@ -26,8 +30,8 @@ vi.mock("../components/TicketKPIStats", () => ({
 vi.mock("../components/KPITrendChart", () => ({
   KPITrendChart: () => <div data-testid="trend-chart" />,
 }));
-vi.mock("../components/CategoryPieChart", () => ({
-  CategoryPieChart: () => <div data-testid="pie-chart" />,
+vi.mock("../components/BreakdownSection", () => ({
+  BreakdownSection: () => <div data-testid="breakdown" />,
 }));
 vi.mock("../components/TicketKPIRecentUploads", () => ({
   TicketKPIRecentUploads: () => <div data-testid="recent-uploads" />,
@@ -60,7 +64,11 @@ const baseHook = {
   hasData: true,
   stats: { total: 10, closed: 5, avgRes: 2, sla: 95, p50: 1.5, p90: 4.0, comparison: null },
   trendChartData: [],
-  categoryChartData: [],
+  categoryData: undefined,
+  breakdownGroup: null,
+  breakdownClient: null,
+  setBreakdownGroup: vi.fn(),
+  setBreakdownClient: vi.fn(),
   batches: [],
   fieldBreakdowns: [],
 };

@@ -30,6 +30,7 @@ const baseProps = {
   detectedColumns: ["Number", "Short description", "State"],
   currentMapping: { ticket_id: "Number" },
   onRemap: vi.fn(),
+  onMapStatuses: vi.fn(),
   isRemapping: false,
   canSaveMapping: false,
   saveMappingOverrides: false,
@@ -37,6 +38,23 @@ const baseProps = {
 };
 
 describe("UploadPreviewPanel", () => {
+  it("lists unrecognised statuses and keeps the apply button off until one is chosen", () => {
+    render(
+      <UploadPreviewPanel
+        {...baseProps}
+        preview={{ ...basePreview, unmapped_statuses: [{ value: "Parked", count: 2 }] }}
+      />
+    );
+    expect(screen.getByText(/Some statuses are not recognised/)).toBeInTheDocument();
+    expect(screen.getByText("Parked (2 tickets)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply status mapping" })).toBeDisabled();
+  });
+
+  it("shows no status warning when every status is recognised", () => {
+    render(<UploadPreviewPanel {...baseProps} preview={basePreview} />);
+    expect(screen.queryByText(/Some statuses are not recognised/)).not.toBeInTheDocument();
+  });
+
   it("renders a warning banner listing missing-field issues", () => {
     render(
       <UploadPreviewPanel

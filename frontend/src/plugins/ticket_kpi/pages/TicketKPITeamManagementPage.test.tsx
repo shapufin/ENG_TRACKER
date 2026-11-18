@@ -73,6 +73,16 @@ describe("TicketKPITeamManagementPage — bulk review", () => {
     vi.unstubAllGlobals();
   });
 
+  it("names the importer only on a batch a leader imported for the member", async () => {
+    vi.mocked(ticketKPIService.getTeamBatches).mockResolvedValue([
+      { ...BATCHES[0], uploaded_by_username: "lead_lm" },
+      BATCHES[1],
+    ] as any);
+    render(<TicketKPITeamManagementPage />, { wrapper });
+    await screen.findByText("alice");
+    expect(screen.getAllByText("by lead_lm")).toHaveLength(1);
+  });
+
   it("shows the Review Selected action only once a row is checked", async () => {
     render(<TicketKPITeamManagementPage />, { wrapper });
     await screen.findByText("alice");

@@ -97,6 +97,13 @@ class TicketImportBatchSerializer(serializers.ModelSerializer):
     raw_file = serializers.SerializerMethodField()
     reviewed_by_username = serializers.CharField(source='reviewed_by.username', read_only=True, default=None)
     is_reviewed = serializers.SerializerMethodField()
+    uploaded_by_username = serializers.SerializerMethodField()
+
+    def get_uploaded_by_username(self, obj) -> str | None:
+        """Who imported it, only when that is not the owner (an on-behalf import)."""
+        if obj.uploaded_by_id and obj.uploaded_by_id != obj.user_id:
+            return obj.uploaded_by.username
+        return None
 
     def get_is_reviewed(self, obj) -> bool:
         return obj.reviewed_by_id is not None
@@ -109,7 +116,7 @@ class TicketImportBatchSerializer(serializers.ModelSerializer):
             'raw_file', 'record_count', 'is_overridden',
             'overridden_by', 'overridden_at',
             'reviewed_by', 'reviewed_by_username', 'reviewed_at', 'is_reviewed',
-            'created_at',
+            'uploaded_by_username', 'created_at',
         ]
         read_only_fields = [
             'user', 'record_count', 'is_overridden',

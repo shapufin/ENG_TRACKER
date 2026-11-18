@@ -1,15 +1,14 @@
-﻿import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
-import { userService } from "@/services/userService";
+import { useMemberIdentity } from "./useMemberIdentity";
 import { ticketKPIService } from "../../services/ticketKPIService";
-import {
-  getInitialMonth,
-  buildStats,
-  buildTrendChartData,
-  buildCategoryChartData,
-} from "./ticketKPIDashboardHelpers";
+import type { StatusGroupFilter } from "../../components/BreakdownSection";
+import { getInitialMonth, buildStats, buildTrendChartData } from "./ticketKPIDashboardHelpers";
+import { currentBusinessYear } from "@/lib/date-format-utils";
+
+const STATUS_GROUPS: StatusGroupFilter[] = ["open", "closed", "cancelled", "other"];
 
 // fallow-ignore-next-line complexity
 export const useTicketKPIDashboard = () => {
@@ -27,7 +26,7 @@ export const useTicketKPIDashboard = () => {
 
   // View mode for the ticket records table: "month" (default) or "year"
   const viewMode: "month" | "year" = queryViewMode === "year" ? "year" : "month";
-  const selectedYear = queryYear ? Number(queryYear) : new Date().getFullYear();
+  const selectedYear = queryYear ? Number(queryYear) : currentBusinessYear();
 
   const setSelectedMonth = useCallback(
     (month: string) => {
@@ -46,7 +45,7 @@ export const useTicketKPIDashboard = () => {
         const next = new URLSearchParams(prev);
         if (mode === "year") {
           next.set("view", "year");
-          if (!next.get("year")) next.set("year", String(new Date().getFullYear()));
+          if (!next.get("year")) next.set("year", String(currentBusinessYear()));
         } else {
           next.delete("view");
           next.delete("year");
@@ -98,9 +97,51 @@ export const useTicketKPIDashboard = () => {
     retry: 1,
   });
 
+  // Filters for the breakdown lists only (not the totals); kept in the URL so a
+  // filtered view survives a reload and can be shared.
+  const rawGroup = searchParams.get("group");
+  const breakdownGroup: StatusGroupFilter | null = STATUS_GROUPS.includes(
+    rawGroup as StatusGroupFilter
+  )
+    ? (rawGroup as StatusGroupFilter)
+    : null;
+  const breakdownClient = Number(searchParams.get("client")) || null;
+  const setBreakdownParam = useCallback(
+    (key: "group" | "client", value: string | null) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (value) next.set(key, value);
+        else next.delete(key);
+        return next;
+      });
+    },
+    [setSearchParams]
+  );
+  const setBreakdownGroup = useCallback(
+    (group: StatusGroupFilter | null) => setBreakdownParam("group", group),
+    [setBreakdownParam]
+  );
+  const setBreakdownClient = useCallback(
+    (clientId: number | null) => setBreakdownParam("client", clientId ? String(clientId) : null),
+    [setBreakdownParam]
+  );
+
   const { data: categoryData } = useQuery({
-    queryKey: ["ticket_kpi", "categories", selectedMonth, viewUserId ?? user?.id],
-    queryFn: () => ticketKPIService.getCategories(selectedMonth, viewUserId).then((r) => r.data),
+    queryKey: [
+      "ticket_kpi",
+      "categories",
+      selectedMonth,
+      viewUserId ?? user?.id,
+      breakdownClient,
+      breakdownGroup,
+    ],
+    queryFn: () =>
+      ticketKPIService
+        .getCategories(selectedMonth, viewUserId, {
+          clientId: breakdownClient,
+          statusGroup: breakdownGroup,
+        })
+        .then((r) => r.data),
     retry: 1,
   });
 
@@ -110,22 +151,14 @@ export const useTicketKPIDashboard = () => {
     enabled: !isFilteredView,
   });
 
-  // Fetch the target user's details (name, username) for the filtered view header
-  const { data: viewUser } = useQuery({
-    queryKey: ["users", "detail", viewUserId],
-    queryFn: () => userService.getUser(viewUserId!),
-    enabled: isFilteredView,
-  });
-
-  const viewUserDisplayName = viewUser
-    ? `${viewUser.first_name} ${viewUser.last_name}`.trim() || viewUser.username
-    : undefined;
+  // The member's name for the filtered view header (a leader cannot read the
+  // user record directly, so this goes through the squad list).
+  const { name: viewUserDisplayName } = useMemberIdentity(viewUserId);
 
   const hasData = monthlyKPI?.has_data || (trendData && trendData.length > 0);
 
   const stats = buildStats(monthlyKPI);
   const trendChartData = buildTrendChartData(trendData);
-  const categoryChartData = buildCategoryChartData(categoryData);
 
   return {
     selectedMonth,
@@ -137,7 +170,6 @@ export const useTicketKPIDashboard = () => {
     setSelectedYear,
     isFilteredView,
     viewUserId,
-    viewUser,
     viewUserDisplayName,
     monthlyKPI,
     kpiLoading,
@@ -147,7 +179,10 @@ export const useTicketKPIDashboard = () => {
     hasData,
     stats,
     trendChartData,
-    categoryChartData,
+    breakdownGroup,
+    breakdownClient,
+    setBreakdownGroup,
+    setBreakdownClient,
     fieldBreakdowns: monthlyKPI?.field_breakdowns || {},
   };
 };

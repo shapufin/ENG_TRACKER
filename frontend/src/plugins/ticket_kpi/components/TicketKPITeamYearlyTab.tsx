@@ -17,7 +17,7 @@ interface TicketKPITeamYearlyTabProps {
     avgRes: number | null;
     sla: number | null;
   };
-  yearlyTrendChartData: Array<{ month: string; tickets: number; avgHours: number }>;
+  yearlyTrendChartData: Array<{ month: string; tickets: number; avgHours: number | null }>;
   loading: boolean;
 }
 

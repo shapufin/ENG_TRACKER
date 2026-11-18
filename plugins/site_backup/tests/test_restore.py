@@ -627,3 +627,52 @@ def _rewrite(original, path, real_ct_pk):
             row['fields']['content_type'] = 99999
     with gzip.open(path, 'wb') as fh:
         fh.write(json.dumps(data).encode('utf-8'))
+
+
+class TicketKpiLeaderBatchRestoreTests(TestCase):
+    """A batch a leader imported for a member comes back with owner, importer, tickets and KPI."""
+
+    def test_leader_imported_batch_round_trips(self):
+        import datetime as dt
+
+        from plugins.ticket_kpi.analytics import compute_monthly_kpi
+        from plugins.ticket_kpi.models import MonthlyKPI, NormalizedTicket, TicketImportBatch
+
+        admin = User.objects.create_user(username='admin_kpi', password='x', is_superuser=True)
+        member = User.objects.create_user(username='member_kpi', password='x')
+        leader = User.objects.create_user(username='leader_kpi', password='x')
+        month = dt.date(2026, 3, 1)
+        batch = TicketImportBatch.objects.create(
+            user=member, uploaded_by=leader, month=month, raw_file='ticket_imports/r.csv', record_count=2)
+        for i, status in enumerate(('Done', 'Parked')):
+            NormalizedTicket.objects.create(batch=batch, row_index=i, ticket_id=f'T{i}', status=status)
+        compute_monthly_kpi(member, month)
+        def figures():
+            # timestamps lose their microseconds in the JSON dump; the numbers must not change
+            row = MonthlyKPI.objects.values().get(user=member, month=month)
+            return {k: v for k, v in row.items() if not isinstance(v, dt.datetime)}
+
+        before = figures()
+        batch_pk = batch.pk
+
+        with tempfile.TemporaryDirectory() as media:
+            with override_settings(MEDIA_ROOT=media):
+                record = backup_service.create_backup(admin, include_media=False)
+                TicketImportBatch.objects.filter(pk=batch_pk).delete()
+                self.assertFalse(MonthlyKPI.objects.filter(user=member).exists())
+                with record.file.open('rb') as fh:
+                    restore_service.commit(
+                        fh,
+                        approved_models=[
+                            'ticket_kpi.ticketimportbatch',
+                            'ticket_kpi.normalizedticket',
+                            'ticket_kpi.monthlykpi',
+                        ],
+                        confirmed=True,
+                        user=admin,
+                    )
+
+        restored = TicketImportBatch.objects.get(pk=batch_pk)
+        self.assertEqual((restored.user, restored.uploaded_by), (member, leader))
+        self.assertEqual(NormalizedTicket.objects.filter(batch=restored).count(), 2)
+        self.assertEqual(figures(), before)

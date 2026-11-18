@@ -441,6 +441,9 @@ class TicketKPIViewSetTests(TestCase):
         )
         cls.client_a = Client.objects.create(name='Client A', code='A')
         cls.client_b = Client.objects.create(name='Client B', code='B')
+        # Non-admins need an assigned client to import (owner ruling 2026-11-18).
+        for person in (cls.tl, cls.member, cls.other):
+            person.profile.clients.add(cls.client_a)
 
     def _upload(self, user, client_ids=None):
         """Upload a ticket CSV as the given user."""
@@ -548,6 +551,7 @@ class TicketKPIViewSetTests(TestCase):
         """A batch a TL cannot review is reported as skipped, not silently
         dropped and not allowed to fail the whole request."""
         outsider = User.objects.create_user(username='bulk_outsider', password='testpass123')
+        outsider.profile.clients.add(self.client_a)
         self._upload_as(outsider)
         in_team_response = self._upload(self.member)
         outsider_batch_id = TicketImportBatch.objects.get(user=outsider).id

@@ -15,6 +15,7 @@ import type {
   TicketSearchResult,
   TicketOvertimeLink,
 } from "../types/ticketKPI";
+import type { BreakdownData } from "../components/BreakdownSection";
 
 type TicketQueryParams = {
   month?: string;
@@ -116,7 +117,9 @@ export const ticketKPIService = {
     file: File,
     profileId: number,
     month: string,
-    fieldMappingOverrides?: Record<string, string>
+    fieldMappingOverrides?: Record<string, string>,
+    statusOverrides?: Record<string, string>,
+    targetUserId?: number
   ) => {
     const form = new FormData();
     form.append("file", file);
@@ -125,6 +128,10 @@ export const ticketKPIService = {
     if (fieldMappingOverrides && Object.keys(fieldMappingOverrides).length > 0) {
       form.append("field_mapping_overrides", JSON.stringify(fieldMappingOverrides));
     }
+    if (statusOverrides && Object.keys(statusOverrides).length > 0) {
+      form.append("status_overrides", JSON.stringify(statusOverrides));
+    }
+    if (targetUserId) form.append("target_user_id", String(targetUserId));
     return api.post<UploadPreview>("/plugins/ticket_kpi/upload/preview/", form, {
       headers: { "Content-Type": "multipart/form-data" },
     });
@@ -136,7 +143,9 @@ export const ticketKPIService = {
     override: boolean,
     clientIds?: number[],
     fieldMappingOverrides?: Record<string, string>,
-    saveMappingOverrides?: boolean
+    saveMappingOverrides?: boolean,
+    statusOverrides?: Record<string, string>,
+    targetUserId?: number
   ) => {
     const form = new FormData();
     form.append("file", file);
@@ -148,10 +157,14 @@ export const ticketKPIService = {
     }
     if (fieldMappingOverrides && Object.keys(fieldMappingOverrides).length > 0) {
       form.append("field_mapping_overrides", JSON.stringify(fieldMappingOverrides));
-      if (saveMappingOverrides) {
-        form.append("save_mapping_overrides", "true");
-      }
     }
+    if (statusOverrides && Object.keys(statusOverrides).length > 0) {
+      form.append("status_overrides", JSON.stringify(statusOverrides));
+    }
+    if (saveMappingOverrides) {
+      form.append("save_mapping_overrides", "true");
+    }
+    if (targetUserId) form.append("target_user_id", String(targetUserId));
     return api.post<{
       batch_id: number;
       record_count: number;
@@ -204,13 +217,18 @@ export const ticketKPIService = {
     );
     return normalizeList(data);
   },
-  getCategories: (month: string, userId?: number) =>
-    api.get<{
-      month: string;
-      by_category: Record<string, number>;
-      by_priority: Record<string, number>;
-    }>("/plugins/ticket_kpi/dashboard/categories/", {
-      params: { month, ...(userId ? { user_id: userId } : {}) },
+  getCategories: (
+    month: string,
+    userId?: number,
+    filters?: { clientId?: number | null; statusGroup?: string | null }
+  ) =>
+    api.get<BreakdownData>("/plugins/ticket_kpi/dashboard/categories/", {
+      params: {
+        month,
+        ...(userId ? { user_id: userId } : {}),
+        ...(filters?.clientId ? { client_id: filters.clientId } : {}),
+        ...(filters?.statusGroup ? { status_group: filters.statusGroup } : {}),
+      },
     }),
 
   // Team (TL)

@@ -1,6 +1,10 @@
-﻿import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useMemberIdentity } from "./hooks/useMemberIdentity";
 import { PageShell } from "@/components/layout/PageShell";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Ticket } from "lucide-react";
 import { UploadForm } from "../components/UploadForm";
 import { UploadPreviewPanel } from "../components/UploadPreviewPanel";
 import { ticketKPIService } from "../services/ticketKPIService";
@@ -13,7 +17,12 @@ import { getLastUploadSelection, saveLastUploadSelection } from "../utils/lastUp
 
 export const TicketUploadPage: React.FC = () => {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { user } = useAuth();
+  // `?for=<userId>`: a leader (or admin) importing a member's tickets. The
+  // backend decides who may; this only changes whose clients are offered.
+  const [searchParams] = useSearchParams();
+  const forUserId = Number(searchParams.get("for")) || undefined;
   const [month, setMonth] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -24,6 +33,7 @@ export const TicketUploadPage: React.FC = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [detectedColumns, setDetectedColumns] = useState<string[]>([]);
   const [mappingOverrides, setMappingOverrides] = useState<Record<string, string>>({});
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
   const [saveMappingOverrides, setSaveMappingOverrides] = useState(false);
   const [isRemapping, setIsRemapping] = useState(false);
 
@@ -38,12 +48,26 @@ export const TicketUploadPage: React.FC = () => {
   // backend also scopes ClientViewSet to user.profile.clients for non-admins).
   // Admin/staff have no client_ids restriction so they can tag uploads for
   // any client.
+  // A non-admin needs at least one assigned client to import (owner ruling
+  // 2026-11-18); "no clients" no longer means "every client".
+  const isAdmin = Boolean(user?.is_staff || user?.is_superuser);
+
+  const {
+    name: memberName,
+    clientIds: memberClientIds,
+    squadLoaded,
+  } = useMemberIdentity(forUserId);
+  // Whose clients decide what can be tagged: the member's on an on-behalf
+  // import (the backend checks the same), the importer's own otherwise.
+  const ownerClientIds = forUserId ? memberClientIds : user?.client_ids;
+  const ownerClientsKnown = !forUserId || isAdmin || squadLoaded;
   const clients = useMemo<Client[]>(() => {
-    const userClientIds = user?.client_ids;
-    if (!userClientIds || userClientIds.length === 0) return allClients ?? [];
-    const allowed = new Set(userClientIds);
+    if (isAdmin) return allClients ?? [];
+    const allowed = new Set(ownerClientIds ?? []);
     return (allClients ?? []).filter((c) => allowed.has(c.id));
-  }, [allClients, user?.client_ids]);
+  }, [allClients, ownerClientIds, isAdmin]);
+  const hasNoClient =
+    Boolean(user) && !isAdmin && ownerClientsKnown && (ownerClientIds?.length ?? 0) === 0;
 
   const selectedProfile = useMemo(
     () => profiles?.find((p) => p.id === selectedProfileId) ?? null,
@@ -74,7 +98,7 @@ export const TicketUploadPage: React.FC = () => {
     if (appliedLastSelection.current) return;
     // Gate on the queries having settled, not on non-empty results — a user
     // with zero assigned clients is a valid state, not "still loading".
-    if (!user?.id || !profiles || !allClients) return;
+    if (forUserId || !user?.id || !profiles || !allClients) return;
     appliedLastSelection.current = true;
     const last = getLastUploadSelection(
       user.id,
@@ -88,13 +112,14 @@ export const TicketUploadPage: React.FC = () => {
     if (last.profileId !== null) setSelectedProfileId(last.profileId);
     if (last.clientIds.length > 0) setSelectedClientIds(last.clientIds);
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [user?.id, profiles, allClients, clients]);
+  }, [user?.id, forUserId, profiles, allClients, clients]);
 
   const handleFileAccepted = (f: File) => {
     setFile(f);
     setPreview(null);
     setDetectedColumns([]);
     setMappingOverrides({});
+    setStatusOverrides({});
     setSaveMappingOverrides(false);
   };
 
@@ -134,7 +159,14 @@ export const TicketUploadPage: React.FC = () => {
       setSelectedProfileId(profileId);
 
       const monthDate = `${resolvedMonth}-01`;
-      const previewRes = await ticketKPIService.previewUpload(file, profileId, monthDate);
+      const previewRes = await ticketKPIService.previewUpload(
+        file,
+        profileId,
+        monthDate,
+        undefined,
+        undefined,
+        forUserId
+      );
       setPreview(previewRes.data);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
@@ -144,7 +176,10 @@ export const TicketUploadPage: React.FC = () => {
     }
   };
 
-  const handleRemapPreview = async (mapping: Record<string, string>) => {
+  const handleRemapPreview = async (
+    mapping: Record<string, string>,
+    statuses: Record<string, string> = statusOverrides
+  ) => {
     if (!file || !month || !selectedProfileId) return;
     setIsRemapping(true);
     try {
@@ -153,10 +188,13 @@ export const TicketUploadPage: React.FC = () => {
         file,
         selectedProfileId,
         monthDate,
-        mapping
+        mapping,
+        statuses,
+        forUserId
       );
       setPreview(previewRes.data);
       setMappingOverrides(mapping);
+      setStatusOverrides(statuses);
       toast.success("Mapping updated");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
@@ -179,10 +217,12 @@ export const TicketUploadPage: React.FC = () => {
         override,
         selectedClientIds,
         mappingOverrides,
-        saveMappingOverrides
+        saveMappingOverrides,
+        statusOverrides,
+        forUserId
       );
       toast.success(`Imported ${data.record_count} tickets for ${data.month}`);
-      if (user?.id) {
+      if (user?.id && !forUserId) {
         saveLastUploadSelection(user.id, {
           profileId: selectedProfileId,
           clientIds: selectedClientIds,
@@ -194,12 +234,14 @@ export const TicketUploadPage: React.FC = () => {
       setMonth("");
       setDetectedColumns([]);
       setMappingOverrides({});
+      setStatusOverrides({});
       setSaveMappingOverrides(false);
       qc.invalidateQueries({ queryKey: ["ticket_kpi", "my_batches"] });
       qc.invalidateQueries({ queryKey: ["ticket_kpi", "dashboard"] });
       qc.invalidateQueries({ queryKey: ["ticket_kpi", "team_summary"] });
       qc.invalidateQueries({ queryKey: ["ticket_kpi", "team_batches"] });
       qc.invalidateQueries({ queryKey: ["ticket_kpi", "monthly_summary"] });
+      if (forUserId) navigate(`/ticket-kpi/dashboard?user_id=${forUserId}&month=${monthDate}`);
       qc.invalidateQueries({ queryKey: ["ticket_kpi", "trend"] });
       qc.invalidateQueries({ queryKey: ["ticket_kpi", "categories"] });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -217,38 +259,70 @@ export const TicketUploadPage: React.FC = () => {
   };
 
   return (
-    <PageShell title="Import Tickets" subtitle="Import your monthly ticket export file.">
+    <PageShell
+      title="Import Tickets"
+      subtitle={
+        forUserId
+          ? `Importing the monthly ticket export for ${memberName ?? "this member"}.`
+          : "Import your monthly ticket export file."
+      }
+    >
       <div className="mx-auto max-w-4xl space-y-6">
-        <UploadForm
-          month={month}
-          onMonthChange={setMonth}
-          file={file}
-          onFileAccepted={handleFileAccepted}
-          isDragging={isDragging}
-          setIsDragging={setIsDragging}
-          selectedProfileId={selectedProfileId}
-          onProfileChange={setSelectedProfileId}
-          selectedClientIds={selectedClientIds}
-          onClientToggle={handleClientToggle}
-          profiles={profiles}
-          clients={clients}
-          onAnalyze={handleAnalyze}
-          isAnalyzing={isAnalyzing}
-        />
-
-        {preview && (
-          <UploadPreviewPanel
-            preview={preview}
-            onImport={handleImport}
-            isImporting={isImporting}
-            detectedColumns={detectedColumns}
-            currentMapping={currentMapping}
-            onRemap={handleRemapPreview}
-            isRemapping={isRemapping}
-            canSaveMapping={canSaveMapping}
-            saveMappingOverrides={saveMappingOverrides}
-            onSaveMappingOverridesChange={setSaveMappingOverrides}
+        {hasNoClient && (
+          <EmptyState
+            icon={Ticket}
+            title="No client assigned yet"
+            description={
+              forUserId
+                ? "This member has no client assigned. Assign one in Settings, Client Assignment, then import their tickets."
+                : "Ask your Line Manager to assign a client to you (Settings, Client Assignment). You can import tickets once a client is assigned."
+            }
           />
+        )}
+        {!hasNoClient && (
+          <>
+            {forUserId && (
+              <div className="border-tone-info-border bg-tone-info-surface text-tone-info-text rounded-lg border px-3 py-2 text-sm">
+                You are importing for <strong>{memberName ?? "this member"}</strong>. The tickets
+                will appear on their dashboard, and you stay recorded as the person who imported
+                them.
+              </div>
+            )}
+            <UploadForm
+              month={month}
+              onMonthChange={setMonth}
+              file={file}
+              onFileAccepted={handleFileAccepted}
+              isDragging={isDragging}
+              setIsDragging={setIsDragging}
+              selectedProfileId={selectedProfileId}
+              onProfileChange={setSelectedProfileId}
+              selectedClientIds={selectedClientIds}
+              onClientToggle={handleClientToggle}
+              profiles={profiles}
+              clients={clients}
+              onAnalyze={handleAnalyze}
+              isAnalyzing={isAnalyzing}
+            />
+
+            {preview && (
+              <UploadPreviewPanel
+                preview={preview}
+                onImport={handleImport}
+                isImporting={isImporting}
+                detectedColumns={detectedColumns}
+                currentMapping={currentMapping}
+                onRemap={handleRemapPreview}
+                onMapStatuses={(draft) =>
+                  handleRemapPreview(mappingOverrides, { ...statusOverrides, ...draft })
+                }
+                isRemapping={isRemapping}
+                canSaveMapping={canSaveMapping}
+                saveMappingOverrides={saveMappingOverrides}
+                onSaveMappingOverridesChange={setSaveMappingOverrides}
+              />
+            )}
+          </>
         )}
       </div>
     </PageShell>

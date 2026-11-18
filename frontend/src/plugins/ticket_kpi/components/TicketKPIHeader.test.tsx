@@ -15,8 +15,14 @@ describe("TicketKPIHeader", () => {
     expect(screen.getByRole("button", { name: /import tickets/i })).toBeInTheDocument();
   });
 
-  it("hides Import Tickets while a Line Manager views a member", () => {
+  it("hides the import button while someone who may not import views a member", () => {
     render(<TicketKPIHeader {...baseProps} isFilteredView memberName="Ana" />);
+    expect(screen.queryByRole("button", { name: /import/i })).not.toBeInTheDocument();
+  });
+
+  it("offers Import for member to a leader viewing a member", () => {
+    render(<TicketKPIHeader {...baseProps} isFilteredView memberName="Ana" canImportForMember />);
+    expect(screen.getByRole("button", { name: /import for member/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /import tickets/i })).not.toBeInTheDocument();
   });
 });

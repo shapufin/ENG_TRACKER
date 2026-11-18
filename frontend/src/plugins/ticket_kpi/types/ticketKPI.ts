@@ -62,6 +62,8 @@ export interface TicketImportBatch {
   reviewed_by_username?: string | null;
   reviewed_at?: string | null;
   is_reviewed?: boolean;
+  /** Set only when someone other than the owner imported the batch. */
+  uploaded_by_username?: string | null;
   created_at: string;
 }
 
@@ -116,6 +118,8 @@ export interface UploadPreview {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   preview_rows: Record<string, any>[];
   issues: Record<string, number>;
+  /** Statuses no group recognises; they count as "Other" until mapped. */
+  unmapped_statuses?: { value: string; count: number }[];
   status_breakdown: Record<string, number>;
   priority_breakdown: Record<string, number>;
   category_breakdown: Record<string, number>;

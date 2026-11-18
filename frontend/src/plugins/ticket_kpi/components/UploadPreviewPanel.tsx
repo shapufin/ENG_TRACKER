@@ -6,6 +6,13 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AlertTriangle, Eye, Wrench } from "lucide-react";
 import { FieldMappingGrid } from "./FieldMappingGrid";
 import { OUR_FIELDS } from "../constants/fields";
@@ -24,6 +31,8 @@ interface UploadPreviewPanelProps {
   currentMapping: Record<string, string>;
   /** Re-runs preview against the same file with a new field mapping. */
   onRemap: (mapping: Record<string, string>) => void;
+  /** Maps unrecognised status values to open, closed or cancelled and re-previews. */
+  onMapStatuses: (draft: Record<string, string>) => void;
   isRemapping: boolean;
   /** Only the profile's creator or an admin may persist a mapping fix back
    *  onto the shared profile — everyone else can still fix their own import. */
@@ -45,6 +54,7 @@ export const UploadPreviewPanel: React.FC<UploadPreviewPanelProps> = ({
   detectedColumns,
   currentMapping,
   onRemap,
+  onMapStatuses,
   isRemapping,
   canSaveMapping,
   saveMappingOverrides,
@@ -52,6 +62,8 @@ export const UploadPreviewPanel: React.FC<UploadPreviewPanelProps> = ({
 }) => {
   const [showMappingFix, setShowMappingFix] = useState(false);
   const [draftMapping, setDraftMapping] = useState(currentMapping);
+  const [statusDraft, setStatusDraft] = useState<Record<string, string>>({});
+  const unmapped = preview.unmapped_statuses ?? [];
   const issueEntries = Object.entries(preview.issues || {});
 
   const handleOpenMappingFix = () => {
@@ -94,6 +106,48 @@ export const UploadPreviewPanel: React.FC<UploadPreviewPanelProps> = ({
             <Button variant="outline" size="sm" onClick={handleOpenMappingFix}>
               <Wrench className="mr-2 h-4 w-4" />
               Fix column mapping
+            </Button>
+          </div>
+        )}
+
+        {unmapped.length > 0 && (
+          <div className="border-tone-warning-border bg-tone-warning-surface space-y-3 rounded-md border p-3 text-sm">
+            <div className="flex items-center gap-2 font-medium">
+              <AlertTriangle className="text-tone-warning-text h-4 w-4" />
+              Some statuses are not recognised and count as Other
+            </div>
+            <ul className="space-y-2">
+              {unmapped.map(({ value, count }) => (
+                <li key={value} className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs">
+                    {value} ({count} ticket{count === 1 ? "" : "s"})
+                  </span>
+                  <Select
+                    value={statusDraft[value] ?? ""}
+                    onValueChange={(group) => setStatusDraft((d) => ({ ...d, [value]: group }))}
+                  >
+                    <SelectTrigger className="w-[160px]" aria-label={`Map status ${value}`}>
+                      <SelectValue placeholder="Keep as Other" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="open">Open</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </li>
+              ))}
+            </ul>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isRemapping || Object.keys(statusDraft).length === 0}
+              onClick={() => {
+                onMapStatuses(statusDraft);
+                setStatusDraft({});
+              }}
+            >
+              Apply status mapping
             </Button>
           </div>
         )}

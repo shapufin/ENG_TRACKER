@@ -14,6 +14,8 @@ from django.db.models import Avg, Count, Max, Min, Sum
 from django.contrib.auth.models import User
 
 from .models import NormalizedTicket, TicketImportBatch, MonthlyKPI
+from .status_groups import status_group
+from apps.overtime.models.core import Client
 from core.utils.timezone_local import business_today
 
 # Maximum number of distinct values for a field to be considered categorical
@@ -97,9 +99,14 @@ def compute_monthly_kpi(user: User, month: datetime.date) -> Optional[MonthlyKPI
         MonthlyKPI.objects.filter(user=user, month=month).delete()
         return None
 
-    # Status counts (from standard field, now always populated at import time)
-    closed_count = tickets.filter(status='closed').count()
-    open_count = tickets.filter(status='open').count()
+    # Status counts are grouped by meaning, not by the source system's wording
+    # (audit B1): "Done" and "Completed" are closed, "In Progress" is open.
+    statuses = {}
+    for st in tickets.values('status').annotate(cnt=Count('id')):
+        if st['status']:
+            statuses[st['status']] = st['cnt']
+    closed_count = sum(c for s, c in statuses.items() if status_group(s) == 'closed')
+    open_count = sum(c for s, c in statuses.items() if status_group(s) == 'open')
 
     # Resolution time stats
     resolved_tickets = tickets.filter(time_to_resolution_hours__isnull=False)
@@ -151,11 +158,6 @@ def compute_monthly_kpi(user: User, month: datetime.date) -> Optional[MonthlyKPI
         if pri_name:
             priorities[pri_name] = pri['cnt']
 
-    statuses = {}
-    for st in tickets.values('status').annotate(cnt=Count('id')):
-        if st['status']:
-            statuses[st['status']] = st['cnt']
-
     # Dynamic field breakdowns (new canonical source)
     field_breakdowns = _build_field_breakdowns(tickets)
 
@@ -183,6 +185,51 @@ def compute_monthly_kpi(user: User, month: datetime.date) -> Optional[MonthlyKPI
     )
 
     return kpi
+
+
+def get_breakdown(user: User, month, client_id: Optional[int] = None,
+                  group: Optional[str] = None) -> Dict[str, Any]:
+    """Category, priority and status counts for one user and month.
+
+    With no filter this is the stored MonthlyKPI (fast path). A client filter
+    (through the batch's clients) or a status-group filter reads the tickets.
+    ``clients`` lists only the clients the month's batches carry, so the filter
+    never offers a choice that would be empty.
+    """
+    batches = TicketImportBatch.objects.filter(user=user, month=month, is_overridden=False)
+    clients = list(
+        Client.objects.filter(ticket_import_batches__in=batches)
+        .distinct().order_by('name').values('id', 'name')
+    )
+    base = {'month': month.strftime('%Y-%m-%d'), 'clients': clients}
+
+    if client_id is None and group is None:
+        kpi = MonthlyKPI.objects.filter(user=user, month=month).first()
+        if kpi is None:
+            return {**base, 'has_data': False, 'by_category': {}, 'by_priority': {}, 'by_status': {}}
+        return {**base, 'has_data': True, 'by_category': kpi.by_category,
+                'by_priority': kpi.by_priority, 'by_status': kpi.by_status}
+
+    if not batches.exists():
+        return {**base, 'has_data': False, 'by_category': {}, 'by_priority': {}, 'by_status': {}}
+    tickets = NormalizedTicket.objects.filter(batch__in=batches)
+    if client_id is not None:
+        tickets = tickets.filter(batch__clients=client_id)
+    if group is not None:
+        wanted = [s for s in tickets.values_list('status', flat=True).distinct()
+                  if status_group(s) == group]
+        tickets = tickets.filter(status__in=wanted)
+
+    def counts(field, blank):
+        out: Dict[str, int] = {}
+        for row in tickets.values(field).annotate(cnt=Count('id')):
+            label = row[field] or blank
+            if label:
+                out[label] = out.get(label, 0) + row['cnt']
+        return out
+
+    return {**base, 'has_data': True, 'by_category': counts('category', 'Uncategorized'),
+            'by_priority': counts('priority', 'Unspecified'), 'by_status': counts('status', '')}
 
 
 def get_user_monthly_summary(user: User, months: int = 12) -> List[Dict[str, Any]]:
@@ -234,8 +281,8 @@ def get_user_monthly_summary(user: User, months: int = 12) -> List[Dict[str, Any
                 'total_tickets': 0,
                 'closed_tickets': 0,
                 'open_tickets': 0,
-                'avg_resolution_hours': 0,
-                'sla_compliance_pct': 0,
+                'avg_resolution_hours': None,
+                'sla_compliance_pct': None,
                 'by_category': {},
                 'by_priority': {},
                 'by_status': {},

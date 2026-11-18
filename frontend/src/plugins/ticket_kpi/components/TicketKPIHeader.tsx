@@ -17,6 +17,8 @@ interface TicketKPIHeaderProps {
   onUpload: () => void;
   onBack: () => void;
   memberName?: string;
+  /** A leader (or admin) viewing a member may import that member's tickets. */
+  canImportForMember?: boolean;
 }
 
 export const TicketKPIHeader: React.FC<TicketKPIHeaderProps> = ({
@@ -26,6 +28,7 @@ export const TicketKPIHeader: React.FC<TicketKPIHeaderProps> = ({
   onUpload,
   onBack,
   memberName,
+  canImportForMember = false,
 }) => {
   const monthOptions = generateMonthOptions();
 
@@ -56,9 +59,10 @@ export const TicketKPIHeader: React.FC<TicketKPIHeaderProps> = ({
           </SelectContent>
         </Select>
       </div>
-      {!isFilteredView && (
+      {(!isFilteredView || canImportForMember) && (
         <Button variant="outline" size="sm" onClick={onUpload}>
-          <Upload className="mr-2 h-4 w-4" /> Import Tickets
+          <Upload className="mr-2 h-4 w-4" />
+          {isFilteredView ? "Import for member" : "Import Tickets"}
         </Button>
       )}
     </div>

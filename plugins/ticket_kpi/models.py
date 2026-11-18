@@ -93,6 +93,15 @@ class TicketImportBatch(models.Model):
     month = models.DateField(
         help_text="First day of the month this upload represents"
     )
+    # Who performed the import. Differs from ``user`` (the owner) when a
+    # Manager, Line Manager or admin imports on a member's behalf.
+    uploaded_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='uploaded_ticket_batches'
+    )
     profile = models.ForeignKey(
         ExportProfile,
         on_delete=models.SET_NULL,

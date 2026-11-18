@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { usePermissions } from "@/context/PermissionContext";
 import { PageShell } from "@/components/layout/PageShell";
 import { Button } from "@/components/ui/button";
 import { EmptyState as SharedEmptyState } from "@/components/ui/EmptyState";
@@ -13,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Ticket, Upload, ArrowLeft } from "lucide-react";
 import { KPITrendChart } from "../components/KPITrendChart";
-import { CategoryPieChart } from "../components/CategoryPieChart";
+import { BreakdownSection } from "../components/BreakdownSection";
 import { TicketKPIHeader } from "../components/TicketKPIHeader";
 import { TicketKPIStats } from "../components/TicketKPIStats";
 import { TicketKPIRecentUploads } from "../components/TicketKPIRecentUploads";
@@ -21,9 +22,12 @@ import { TicketKPIFieldBreakdowns } from "../components/TicketKPIFieldBreakdowns
 import { TicketKPIEvidenceSection } from "../components/evidence/TicketKPIEvidenceSection";
 import { MemberTicketRecordsTable } from "../components/MemberTicketRecordsTable";
 import { useTicketKPIDashboard } from "./hooks/useTicketKPIDashboard";
+import { currentBusinessYear } from "@/lib/date-format-utils";
+
+const SHOWN_ABOVE = new Set(["status", "priority", "category"]);
 
 const generateYearOptions = (): number[] => {
-  const currentYear = new Date().getFullYear();
+  const currentYear = currentBusinessYear();
   const years: number[] = [];
   for (let y = currentYear; y >= currentYear - 5; y--) {
     years.push(y);
@@ -66,10 +70,25 @@ export const TicketKPIDashboardPage: React.FC = () => {
     hasData,
     stats,
     trendChartData,
-    categoryChartData,
+    categoryData,
+    breakdownGroup,
+    breakdownClient,
+    setBreakdownGroup,
+    setBreakdownClient,
     batches,
     fieldBreakdowns,
   } = useTicketKPIDashboard();
+
+  // Status, priority and category already have their own section above.
+  const extraBreakdowns = React.useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(fieldBreakdowns ?? {}).filter(([key]) => !SHOWN_ABOVE.has(key.toLowerCase()))
+      ),
+    [fieldBreakdowns]
+  );
+  const { isTeamLeader } = usePermissions();
+  const isLeaderOrAdmin = Boolean(isTeamLeader || user?.is_staff || user?.is_superuser);
 
   const yearOptions = React.useMemo(() => generateYearOptions(), []);
 
@@ -88,7 +107,10 @@ export const TicketKPIDashboardPage: React.FC = () => {
           isFilteredView={isFilteredView}
           selectedMonth={selectedMonth}
           onMonthChange={setSelectedMonth}
-          onUpload={() => navigate("/ticket-kpi/upload")}
+          onUpload={() =>
+            navigate(isFilteredView ? `/ticket-kpi/upload?for=${viewUserId}` : "/ticket-kpi/upload")
+          }
+          canImportForMember={isLeaderOrAdmin}
           onBack={() => navigate("/ticket-kpi/team")}
           memberName={viewUserDisplayName}
         />
@@ -129,12 +151,17 @@ export const TicketKPIDashboardPage: React.FC = () => {
 
             <KPITrendChart title="12-Month Trend" data={trendChartData} gradientId="ticketsGrad" />
 
-            <div className="grid gap-6 md:grid-cols-2">
-              <CategoryPieChart title="Category Breakdown" data={categoryChartData} />
-              {!isFilteredView && <TicketKPIRecentUploads batches={batches} />}
-            </div>
+            <BreakdownSection
+              data={categoryData}
+              group={breakdownGroup}
+              clientId={breakdownClient}
+              onGroupChange={setBreakdownGroup}
+              onClientChange={setBreakdownClient}
+            />
 
-            <TicketKPIFieldBreakdowns breakdowns={fieldBreakdowns} />
+            {!isFilteredView && <TicketKPIRecentUploads batches={batches} />}
+
+            <TicketKPIFieldBreakdowns breakdowns={extraBreakdowns} />
 
             {/* Month/Year toggle for ticket records */}
             <div className="flex items-center gap-2">

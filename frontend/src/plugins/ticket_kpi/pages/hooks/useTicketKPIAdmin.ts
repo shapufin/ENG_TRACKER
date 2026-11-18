@@ -4,6 +4,7 @@ import { ticketKPIService } from "../../services/ticketKPIService";
 import { useActiveClients } from "@/hooks/useActiveClients";
 import { toast } from "sonner";
 import type { ExportProfile, UploadPreview } from "../../types/ticketKPI";
+import { currentBusinessYear } from "@/lib/date-format-utils";
 
 export const useTicketKPIAdmin = () => {
   const qc = useQueryClient();
@@ -13,7 +14,7 @@ export const useTicketKPIAdmin = () => {
   const [testFile, setTestFile] = useState<File | null>(null);
   const [testProfileId, setTestProfileId] = useState<number | null>(null);
   const [testResult, setTestResult] = useState<UploadPreview | null>(null);
-  const [reportYear, setReportYear] = useState(new Date().getFullYear());
+  const [reportYear, setReportYear] = useState(currentBusinessYear());
 
   const { data: profiles } = useQuery({
     queryKey: ["ticket_kpi", "profiles"],

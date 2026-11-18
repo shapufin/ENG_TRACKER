@@ -57,7 +57,7 @@ export const ReportsSection: React.FC<ReportsSectionProps> = ({ year, onYearChan
       reportPreview?.monthly_breakdown.map((m) => ({
         month: m.month,
         tickets: m.total_tickets,
-        avgHours: m.avg_resolution_hours ?? 0,
+        avgHours: m.avg_resolution_hours ?? null,
       })) ?? [],
     [reportPreview]
   );

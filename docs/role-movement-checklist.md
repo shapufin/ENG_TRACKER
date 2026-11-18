@@ -54,6 +54,7 @@ Then check by hand, for the employee, the old leader and the new leader:
 - [ ] Scorecard, engagement, year-close: counted once, frozen months untouched, Unassigned warning clean.
 - [ ] Notifications reach only leaders who can act; deactivated leaders are skipped.
 - [ ] Calendar, org chart, skills, Ticket KPI, control room follow live links; no archived-team leaks.
+- [ ] A leader-performed action on a member's data (Ticket KPI import on a member's behalf) re-checks the leader's current roster on every request and records the actor in its own column; the owner never changes.
 - [ ] HBPR: read-only, never one-on-ones, scope by stored assignment, records of a moved employee understood (open ruling).
 - [ ] Team confidentiality: employees see only themselves (plus the team vacation calendar).
 - [ ] Backup/restore: a new field or model is covered by `plugins/site_backup/tests/test_backup_coverage_guard.py`; signal receivers handle `raw=True`.

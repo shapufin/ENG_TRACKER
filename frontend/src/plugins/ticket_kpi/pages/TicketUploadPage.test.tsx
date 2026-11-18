@@ -5,6 +5,8 @@ import { TicketUploadPage } from "./TicketUploadPage";
 import { ticketKPIService } from "@/plugins/ticket_kpi/services/ticketKPIService";
 import { overtimeService } from "@/services/overtimeService";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
+import { userService } from "@/services/userService";
 import { saveLastUploadSelection } from "../utils/lastUploadSelection";
 
 vi.mock("@/plugins/ticket_kpi/services/ticketKPIService", () => ({
@@ -15,6 +17,10 @@ vi.mock("@/plugins/ticket_kpi/services/ticketKPIService", () => ({
     previewUpload: vi.fn(),
     commitUpload: vi.fn(),
   },
+}));
+
+vi.mock("@/services/userService", () => ({
+  userService: { getUser: vi.fn(), getMyTeamMembers: vi.fn() },
 }));
 
 vi.mock("@/services/overtimeService", () => ({
@@ -44,18 +50,118 @@ vi.mock("../components/UploadPreviewPanel", () => ({
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
+const auth = vi.hoisted(() => ({
+  user: { id: 1, client_ids: [3] as number[], is_staff: false, is_superuser: false },
+}));
 vi.mock("@/context/AuthContext", () => ({
-  useAuth: () => ({ user: { id: 1, client_ids: [] } }),
+  useAuth: () => ({ user: auth.user }),
 }));
 
-const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
-);
+const wrapperAt =
+  (entry: string) =>
+  ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={[entry]}>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
+const wrapper = wrapperAt("/ticket-kpi/upload");
 
 describe("TicketUploadPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
+    auth.user = { id: 1, client_ids: [3], is_staff: false, is_superuser: false };
+  });
+
+  it("shows an empty state instead of the form when the user has no client", async () => {
+    auth.user = { id: 1, client_ids: [], is_staff: false, is_superuser: false };
+    vi.mocked(ticketKPIService.getProfiles).mockResolvedValue([] as any);
+    vi.mocked(overtimeService.getActiveClients).mockResolvedValue([{ id: 3, name: "C" }] as any);
+
+    render(<TicketUploadPage />, { wrapper });
+
+    expect(screen.getByText("No client assigned yet")).toBeTruthy();
+    expect(screen.queryByText("Set File")).toBeNull();
+  });
+
+  describe("importing for a member (?for=)", () => {
+    const forMember = wrapperAt("/ticket-kpi/upload?for=9");
+    const setup = (memberClients: number[]) => {
+      vi.mocked(ticketKPIService.getProfiles).mockResolvedValue([{ id: 7, name: "P" }] as any);
+      vi.mocked(overtimeService.getActiveClients).mockResolvedValue([
+        { id: 3, name: "C3" },
+        { id: 4, name: "C4" },
+      ] as any);
+      vi.mocked(userService.getUser).mockResolvedValue({
+        id: 9,
+        username: "ana",
+        first_name: "Ana",
+        last_name: "Ndreu",
+      } as any);
+      vi.mocked(userService.getMyTeamMembers).mockResolvedValue([
+        {
+          user: { id: 9, username: "ana", first_name: "Ana", last_name: "Ndreu" },
+          clients: memberClients,
+        },
+      ] as any);
+      auth.user = { id: 1, client_ids: [3, 4], is_staff: false, is_superuser: false };
+    };
+
+    it("names the member and sends target_user_id with the preview", async () => {
+      setup([3]);
+      vi.mocked(ticketKPIService.analyzeFile).mockResolvedValue({
+        data: {
+          detected_columns: [],
+          total_rows: 2,
+          suggested_month: "2026-03-01",
+          suggested_profile: { id: 7 },
+        },
+      } as any);
+      vi.mocked(ticketKPIService.previewUpload).mockResolvedValue({ data: { errors: [] } } as any);
+
+      render(<TicketUploadPage />, { wrapper: forMember });
+      expect(
+        await screen.findByText(/Importing the monthly ticket export for Ana Ndreu/)
+      ).toBeTruthy();
+      fireEvent.click(screen.getByText("Set File"));
+      await act(async () => {
+        fireEvent.click(screen.getByText("Analyze"));
+      });
+      expect(ticketKPIService.previewUpload).toHaveBeenCalledWith(
+        expect.anything(),
+        7,
+        "2026-03-01",
+        undefined,
+        undefined,
+        9
+      );
+    });
+
+    it("shows the member's no-client state, not the leader's clients", async () => {
+      setup([]);
+      render(<TicketUploadPage />, { wrapper: forMember });
+      expect(await screen.findByText(/This member has no client assigned/)).toBeTruthy();
+      expect(screen.queryByText("Set File")).toBeNull();
+    });
+
+    it("does not read or write the remembered selection for a member import", async () => {
+      setup([3]);
+      saveLastUploadSelection(1, { profileId: 7, clientIds: [3] });
+      render(<TicketUploadPage />, { wrapper: forMember });
+      await screen.findByText(/Importing the monthly ticket export for/);
+      expect(screen.getByTestId("selected-profile-id").textContent).toBe("null");
+    });
+  });
+
+  it("lets an admin without assigned clients import", async () => {
+    auth.user = { id: 1, client_ids: [], is_staff: true, is_superuser: false };
+    vi.mocked(ticketKPIService.getProfiles).mockResolvedValue([] as any);
+    vi.mocked(overtimeService.getActiveClients).mockResolvedValue([{ id: 3, name: "C" }] as any);
+
+    render(<TicketUploadPage />, { wrapper });
+
+    expect(screen.queryByText("No client assigned yet")).toBeNull();
+    expect(screen.getByText("Set File")).toBeTruthy();
   });
 
   it("pre-fills the profile and clients from the last upload", async () => {
@@ -144,7 +250,14 @@ describe("TicketUploadPage", () => {
     await act(async () => {
       fireEvent.click(screen.getByText("Analyze"));
     });
-    expect(ticketKPIService.previewUpload).toHaveBeenCalledWith(expect.anything(), 1, "2026-03-01");
+    expect(ticketKPIService.previewUpload).toHaveBeenCalledWith(
+      expect.anything(),
+      1,
+      "2026-03-01",
+      undefined,
+      undefined,
+      undefined
+    );
   });
 
   it("errors instead of previewing when neither the user nor the file supplied a month", async () => {
@@ -214,7 +327,9 @@ describe("TicketUploadPage", () => {
       expect.anything(),
       1,
       "2026-03-01",
-      { status: "State" }
+      { status: "State" },
+      {},
+      undefined
     );
 
     await act(async () => {
@@ -227,7 +342,9 @@ describe("TicketUploadPage", () => {
       false,
       [],
       { status: "State" },
-      false
+      false,
+      {},
+      undefined
     );
   });
 

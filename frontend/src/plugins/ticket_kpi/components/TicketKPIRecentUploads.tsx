@@ -22,6 +22,7 @@ export const TicketKPIRecentUploads: React.FC<{ batches: any[] | undefined }> = 
                 </p>
                 <p className="text-muted-foreground text-xs">
                   {batch.record_count} tickets · {batch.profile_name}
+                  {batch.uploaded_by_username ? ` · imported by ${batch.uploaded_by_username}` : ""}
                 </p>
               </div>
               <p className="text-muted-foreground text-xs">

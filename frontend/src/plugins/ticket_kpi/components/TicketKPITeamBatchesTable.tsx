@@ -30,7 +30,7 @@ export const TicketKPITeamBatchesTable: React.FC<TicketKPITeamBatchesTableProps>
 
   // No manual "select" column here: DataTable renders its own select-all
   // header checkbox and per-row checkbox whenever enableRowSelection is
-  // true (see DataTable.tsx) — a second column defining the same thing
+  // true (see DataTable.tsx); a second column defining the same thing
   // rendered two checkboxes per row. See ControlRoomAccessPage.tsx for the
   // same enableRowSelection-only pattern.
   const columns = useMemo<AppColumnDef<BatchRow>[]>(
@@ -57,10 +57,18 @@ export const TicketKPITeamBatchesTable: React.FC<TicketKPITeamBatchesTableProps>
       {
         accessorKey: "created_at",
         header: "Imported",
-        cell: ({ row }) =>
-          row.original.created_at
-            ? formatDateDDMMYYYY(row.original.created_at.slice(0, 10))
-            : "N/A",
+        cell: ({ row }) => (
+          <div>
+            {row.original.created_at
+              ? formatDateDDMMYYYY(row.original.created_at.slice(0, 10))
+              : "N/A"}
+            {row.original.uploaded_by_username ? (
+              <div className="text-muted-foreground text-xs">
+                by {row.original.uploaded_by_username}
+              </div>
+            ) : null}
+          </div>
+        ),
       },
       {
         id: "reviewed",

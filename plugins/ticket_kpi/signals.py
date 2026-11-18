@@ -24,6 +24,11 @@ def compute_kpi_on_import(sender, instance, created, **kwargs):
     """
     if kwargs.get('raw'):
         return
+    # A partial save that touches none of the fields the KPI depends on (a
+    # review stamp, say) must not recompute the whole month (audit B7).
+    update_fields = kwargs.get('update_fields')
+    if update_fields is not None and not {'user', 'month', 'is_overridden'} & set(update_fields):
+        return
     from .analytics import compute_monthly_kpi
 
     def _compute():
@@ -43,6 +48,8 @@ def delete_kpi_on_batch_remove(sender, instance, **kwargs):
     the KPI delete (the delete itself is idempotent, but the atomic block
     prevents the redundant query).
     """
+    if kwargs.get('raw'):
+        return
     from .models import MonthlyKPI, TicketImportBatch
     with transaction.atomic():
         has_other = TicketImportBatch.objects.filter(

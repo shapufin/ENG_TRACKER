@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 from django.utils import timezone
 from dateutil import parser as date_parser
+from .status_groups import status_group
 from core.utils.tabular_file import (
     read_tabular_file,
     suggest_mapping,
@@ -95,6 +96,7 @@ class ColumnMapper:
     # (ServiceNow, Jira, Zendesk, Freshdesk, etc.). Profiles can override
     # these via value_transforms.
     DEFAULT_STATUS_TRANSFORMS = {
+        'open': 'open',
         'new': 'open',
         'in progress': 'open',
         'on hold': 'open',
@@ -488,9 +490,22 @@ class ColumnMapper:
             if counts and len(counts) <= 50:  # Only include if not too many unique values
                 field_breakdowns[field_name] = counts
 
+        # Statuses no group recognises are counted as "other" (D9). List them
+        # so the uploader can map them before importing; never block the import.
+        unmapped = {}
+        for r in records:
+            value = r.get('status')
+            if value and status_group(value) == 'other':
+                unmapped[value] = unmapped.get(value, 0) + 1
+        unmapped_statuses = [
+            {'value': v, 'count': c}
+            for v, c in sorted(unmapped.items(), key=lambda kv: (-kv[1], kv[0]))[:20]
+        ]
+
         return {
             'total_records': total,
             'preview_rows': preview_rows,
+            'unmapped_statuses': unmapped_statuses,
             'issues': issues,
             'field_breakdowns': field_breakdowns,
             'status_breakdown': field_breakdowns.get('status', {}),
