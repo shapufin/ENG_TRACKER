@@ -6,6 +6,7 @@ Spec: docs/superpowers/specs/2026-11-18-passkeys-design.md.
 import base64
 import json
 import logging
+import math
 import secrets
 from datetime import timedelta
 
@@ -14,20 +15,23 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 from webauthn import (
+    generate_authentication_options,
     generate_registration_options,
     options_to_json,
+    verify_authentication_response,
     verify_registration_response,
 )
 from webauthn.helpers.exceptions import WebAuthnException
 from webauthn.helpers.structs import (
     AttestationConveyancePreference,
     AuthenticatorSelectionCriteria,
+    AuthenticatorTransport,
     PublicKeyCredentialDescriptor,
     UserVerificationRequirement,
 )
 
-from ..models.mfa import WebAuthnChallenge, WebAuthnCredential
-from .mfa import MFAError
+from ..models.mfa import UserMFA, WebAuthnChallenge, WebAuthnCredential
+from .mfa import LOCK_MINUTES, MAX_FAILURES, MFAError, audit
 
 logger = logging.getLogger(__name__)
 
@@ -148,3 +152,108 @@ def register(user, response: dict, name: str) -> WebAuthnCredential:
             )
     except IntegrityError as exc:
         raise MFAError('credential_exists', 'This passkey is already registered.') from exc
+
+
+# --- Sign-in -----------------------------------------------------------------
+
+def _descriptor(credential: WebAuthnCredential) -> PublicKeyCredentialDescriptor:
+    transports = []
+    for value in credential.transports or []:
+        try:
+            transports.append(AuthenticatorTransport(value))
+        except ValueError:
+            continue
+    return PublicKeyCredentialDescriptor(id=bytes(credential.credential_id), transports=transports or None)
+
+
+def authentication_options(user) -> dict:
+    """Options for ``navigator.credentials.get`` limited to this user's passkeys."""
+    _require_available()
+    credentials = list(WebAuthnCredential.objects.filter(user=user))
+    if not credentials:
+        raise MFAError('not_enrolled', 'No passkey is set up for this account.')
+    options = generate_authentication_options(
+        rp_id=settings.WEBAUTHN_RP_ID,
+        challenge=new_challenge(user, WebAuthnChallenge.PURPOSE_LOGIN),
+        allow_credentials=[_descriptor(credential) for credential in credentials],
+        user_verification=UserVerificationRequirement.REQUIRED,
+    )
+    return json.loads(options_to_json(options))
+
+
+def _lock_row(user) -> UserMFA:
+    """The user's failure counter row (created seedless and disabled for a passkey-only user)."""
+    row, _ = UserMFA.objects.select_for_update().get_or_create(
+        user=user, defaults={'secret_ciphertext': '', 'is_enabled': False},
+    )
+    return row
+
+
+def _locked_error(locked_until) -> MFAError:
+    minutes = max(1, math.ceil((locked_until - timezone.now()).total_seconds() / 60))
+    unit = 'minute' if minutes == 1 else 'minutes'
+    return MFAError('locked', f'Too many wrong attempts. Try again in {minutes} {unit}.', reason='locked')
+
+
+def _record_failure(user, message: str, reason: str) -> MFAError:
+    """Count a failed attempt (shared with TOTP) and return the error to raise."""
+    with transaction.atomic():
+        row = _lock_row(user)
+        row.failed_attempts += 1
+        if row.failed_attempts >= MAX_FAILURES:
+            row.failed_attempts = 0
+            row.locked_until = timezone.now() + timedelta(minutes=LOCK_MINUTES)
+        row.save(update_fields=['failed_attempts', 'locked_until', 'updated_at'])
+        locked_until = row.locked_until if row.locked_until and row.locked_until > timezone.now() else None
+    if locked_until:
+        return _locked_error(locked_until)
+    return MFAError('passkey_invalid', message, reason=reason)
+
+
+def verify_assertion(user, response: dict) -> WebAuthnCredential:
+    """Verify a browser sign-in response for ``user``; raises ``MFAError`` on any failure."""
+    _require_available()
+    with transaction.atomic():
+        locked_until = _lock_row(user).locked_until
+    if locked_until and locked_until > timezone.now():
+        raise _locked_error(locked_until)
+
+    challenge = _challenge_from_response(response)
+    consume_challenge(user, WebAuthnChallenge.PURPOSE_LOGIN, challenge)
+    try:
+        raw_id = _b64url_decode(response['rawId'])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise _record_failure(user, _PASSKEY_INVALID, 'malformed') from exc
+    credential = WebAuthnCredential.objects.filter(user=user, credential_id=raw_id).first()
+    if credential is None:
+        raise _record_failure(user, _PASSKEY_INVALID, 'unknown_credential')
+
+    try:
+        verified = verify_authentication_response(
+            credential=response,
+            expected_challenge=challenge,
+            expected_rp_id=settings.WEBAUTHN_RP_ID,
+            expected_origin=list(settings.WEBAUTHN_ORIGINS),
+            credential_public_key=bytes(credential.public_key),
+            credential_current_sign_count=credential.sign_count,
+            require_user_verification=True,
+        )
+    except (WebAuthnException, KeyError, TypeError, ValueError) as exc:
+        logger.info('Passkey sign-in refused for user %s: %s', user.pk, exc)
+        # py_webauthn reports a non-increasing counter as "sign count ... not greater";
+        # test_counter_regression_is_rejected_and_audited pins that wording.
+        if 'sign count' in str(exc):
+            audit(user, 'mfa_passkey_clone_suspected',
+                  f"Passkey '{credential.name}' of {user.username} reported a lower sign counter", user)
+        raise _record_failure(user, _PASSKEY_INVALID, 'verification_failed') from exc
+
+    with transaction.atomic():
+        row = _lock_row(user)
+        row.failed_attempts = 0
+        row.locked_until = None
+        row.save(update_fields=['failed_attempts', 'locked_until', 'updated_at'])
+        WebAuthnCredential.objects.filter(pk=credential.pk).update(
+            sign_count=verified.new_sign_count, last_used_at=timezone.now(),
+        )
+    credential.refresh_from_db()
+    return credential

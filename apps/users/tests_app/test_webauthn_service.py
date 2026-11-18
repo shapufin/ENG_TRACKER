@@ -208,3 +208,121 @@ class PasskeyRegistrationTests(PasskeyServiceTestCase):
             with self.assertRaises(MFAError) as ctx:
                 service.registration_options(self.user)
         self.assertEqual(ctx.exception.code, 'unavailable')
+
+
+class PasskeyAssertionTests(PasskeyServiceTestCase):
+    def setUp(self):
+        super().setUp()
+        self.credential = self.register()
+
+    def options(self, user=None):
+        from apps.users.services import webauthn as service
+        return service.authentication_options(user or self.user)
+
+    def verify(self, response, user=None):
+        from apps.users.services import webauthn as service
+        return service.verify_assertion(user or self.user, response)
+
+    def assertRejected(self, response, code='passkey_invalid', user=None):
+        from apps.users.services.mfa import MFAError
+        with self.assertRaises(MFAError) as ctx:
+            self.verify(response, user)
+        self.assertEqual(ctx.exception.code, code)
+
+    def test_authentication_options_list_the_users_credentials(self):
+        from apps.users.tests_app.webauthn_helpers import b64url
+
+        options = self.options()
+        self.assertEqual([c['id'] for c in options['allowCredentials']], [b64url(self.device.credential_id)])
+        self.assertEqual(options['userVerification'], 'required')
+
+    def test_authentication_options_without_a_passkey_are_refused(self):
+        from apps.users.services import webauthn as service
+        from apps.users.services.mfa import MFAError
+
+        other = User.objects.create_user('nokey', password='x' * 12)
+        with self.assertRaises(MFAError) as ctx:
+            service.authentication_options(other)
+        self.assertEqual(ctx.exception.code, 'not_enrolled')
+
+    def test_valid_assertion_updates_counter_and_last_used(self):
+        credential = self.verify(self.device.get(self.options()))
+        credential.refresh_from_db()
+        self.assertEqual(credential.sign_count, 1)
+        self.assertIsNotNone(credential.last_used_at)
+
+    def test_replayed_assertion_is_rejected(self):
+        response = self.device.get(self.options())
+        self.verify(response)
+        self.assertRejected(response, code='challenge_invalid')
+
+    def test_expired_challenge_is_rejected(self):
+        response = self.device.get(self.options())
+        WebAuthnChallenge.objects.update(expires_at=timezone.now() - timedelta(seconds=1))
+        self.assertRejected(response, code='challenge_invalid')
+
+    def test_wrong_origin_is_rejected(self):
+        self.assertRejected(self.device.get(self.options(), origin='https://evil.example'))
+
+    def test_wrong_rp_id_is_rejected(self):
+        self.assertRejected(self.device.get(self.options(), rp_id='evil.example'))
+
+    def test_missing_user_verification_is_rejected(self):
+        self.assertRejected(self.device.get(self.options(), uv=False))
+
+    def test_unknown_credential_is_rejected(self):
+        from apps.users.tests_app.webauthn_helpers import FakeAuthenticator
+        stranger = FakeAuthenticator(self.device.rp_id, self.device.origin)
+        self.assertRejected(stranger.get(self.options()))
+
+    def test_another_users_credential_is_rejected(self):
+        other = User.objects.create_user('second', password='x' * 12)
+        from apps.users.tests_app.webauthn_helpers import FakeAuthenticator
+        theirs = FakeAuthenticator(self.device.rp_id, self.device.origin)
+        self.register(user=other, device=theirs)
+        self.assertRejected(theirs.get(self.options()))
+
+    def test_counter_regression_is_rejected_and_audited(self):
+        from apps.reports.models import AuditLog
+
+        self.verify(self.device.get(self.options(), sign_count=5))
+        self.assertRejected(self.device.get(self.options(), sign_count=3))
+        self.credential.refresh_from_db()
+        self.assertEqual(self.credential.sign_count, 5)
+        self.assertTrue(AuditLog.objects.filter(action='MFA_PASSKEY_CLONE_SUSPECTED').exists())
+
+    def test_counter_that_stays_zero_is_accepted(self):
+        self.verify(self.device.get(self.options(), sign_count=0))
+        self.verify(self.device.get(self.options(), sign_count=0))
+
+    def test_failures_share_the_totp_lockout(self):
+        from apps.users.models import UserMFA
+        from apps.users.services import mfa as mfa_service
+        from core.utils.crypto import encrypt_text
+
+        for _ in range(mfa_service.MAX_FAILURES - 1):
+            self.assertRejected(self.device.get(self.options(), origin='https://evil.example'))
+        self.assertRejected(self.device.get(self.options(), origin='https://evil.example'), code='locked')
+        self.assertRejected(self.device.get(self.options()), code='locked')
+        UserMFA.objects.filter(user=self.user).update(
+            is_enabled=True, secret_ciphertext=encrypt_text(mfa_service.generate_secret()),
+        )
+        with self.assertRaises(mfa_service.MFAError) as ctx:
+            mfa_service.verify_second_factor(self.user, '123456')
+        self.assertEqual(ctx.exception.code, 'locked')
+
+    def test_success_resets_the_failure_counter(self):
+        from apps.users.models import UserMFA
+
+        self.assertRejected(self.device.get(self.options(), origin='https://evil.example'))
+        self.assertEqual(UserMFA.objects.get(user=self.user).failed_attempts, 1)
+        self.verify(self.device.get(self.options()))
+        self.assertEqual(UserMFA.objects.get(user=self.user).failed_attempts, 0)
+
+    def test_a_passkey_only_user_gets_a_seedless_disabled_mfa_row(self):
+        from apps.users.models import UserMFA
+
+        self.assertRejected(self.device.get(self.options(), origin='https://evil.example'))
+        row = UserMFA.objects.get(user=self.user)
+        self.assertFalse(row.is_enabled)
+        self.assertEqual(row.secret_ciphertext, '')
