@@ -74,3 +74,12 @@ Splitting `viewsets.py`; one recompute per import instead of two (documented, de
 | F7 | partly checked | 320 px has no sideways overflow; 280 px and light mode not run |
 
 Open: Phase 4 (per-team import format, Backup team first) waits for the owner's export and column list. Render gates for light mode, 768 px and the accessibility audit are not run.
+
+## Round 2 (2026-11-18, HEAD `ec5b6dbb`, branch `feat/ticket-kpi-stabilise`)
+
+Re-read in code against every round-1 finding; none reappeared. Resolved items hold: B1 (`status_groups.py`, now also counts `Rejected` as cancelled, owner ruling), B2/B3/B5 (`upload_scope.py`), B6, B7/B9 (all three signal receivers carry a `raw` guard), B8, F1-F6. Remaining `?? 0` in the frontend are ticket counts, never hours.
+
+New findings: none above LOW. Deferred (LOW): the two admin mapping-test endpoints (`test_mapping`, `auto_detect`, `viewsets.py`) still return the parser's message in a 400; useful to the admin debugging a profile, revisit when they are next touched.
+Not run: Playwright e2e, the accessibility kit audit (kit not installed), 280 px width.
+Scorecard: round 1 had 18 findings (1 critical, 3 high, 10 medium, 3 low, 1 unknown); round 2 has 0 open above LOW, 1 new LOW, 0 false positives.
+Open by design: Phase 4 (per-team import format, Backup team first) waits for the owner's export and column list.
