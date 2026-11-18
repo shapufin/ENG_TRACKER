@@ -31,7 +31,7 @@ from webauthn.helpers.structs import (
 )
 
 from ..models.mfa import UserMFA, WebAuthnChallenge, WebAuthnCredential
-from .mfa import LOCK_MINUTES, MAX_FAILURES, MFAError, audit
+from .mfa import LOCK_MINUTES, MAX_FAILURES, MFAError, audit, required_source, totp_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -257,3 +257,38 @@ def verify_assertion(user, response: dict) -> WebAuthnCredential:
         )
     credential.refresh_from_db()
     return credential
+
+
+# --- Management --------------------------------------------------------------
+
+def list_credentials(user) -> list[WebAuthnCredential]:
+    return list(WebAuthnCredential.objects.filter(user=user))
+
+
+def _own(user, credential_id: int) -> WebAuthnCredential:
+    credential = WebAuthnCredential.objects.select_for_update().filter(user=user, pk=credential_id).first()
+    if credential is None:
+        raise MFAError('not_found', 'That passkey was not found.')
+    return credential
+
+
+def rename(user, credential_id: int, name: str) -> WebAuthnCredential:
+    with transaction.atomic():
+        credential = _own(user, credential_id)
+        credential.name = _clean_name(name)
+        credential.save(update_fields=['name', 'updated_at'])
+    return credential
+
+
+def remove(user, credential_id: int) -> None:
+    """Delete one passkey, unless it is the last factor of someone who must have one."""
+    with transaction.atomic():
+        credential = _own(user, credential_id)
+        others = WebAuthnCredential.objects.filter(user=user).exclude(pk=credential.pk).exists()
+        if not others and not totp_enabled(user) and required_source(user) is not None:
+            raise MFAError(
+                'last_factor',
+                'This is your only sign-in factor and two-factor authentication is required. '
+                'Add an authenticator app or another passkey first.',
+            )
+        credential.delete()

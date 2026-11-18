@@ -12,10 +12,8 @@ User = get_user_model()
 
 
 def make_credential(user, credential_id=b'cred-1', **extra):
-    return WebAuthnCredential.objects.create(
-        user=user, credential_id=credential_id, public_key=b'pk', sign_count=0,
-        transports=[], name='Phone', **extra,
-    )
+    fields = {'public_key': b'pk', 'sign_count': 0, 'transports': [], 'name': 'Phone', **extra}
+    return WebAuthnCredential.objects.create(user=user, credential_id=credential_id, **fields)
 
 
 class WebAuthnModelTests(TestCase):

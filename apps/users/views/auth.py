@@ -338,7 +338,7 @@ class MFABackupCodesView(_SignedInMFAView):
     def post(self, request):
         ip = get_client_ip(request)
         ua = request.META.get('HTTP_USER_AGENT', '')
-        if not mfa_service.is_enrolled(request.user):
+        if not mfa_service.totp_enabled(request.user):
             return _mfa_error(MFAError('not_enrolled', 'Two-factor authentication is not set up.'))
         try:
             mfa_service.check_step_up(

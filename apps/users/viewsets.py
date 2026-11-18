@@ -458,7 +458,7 @@ class UserViewSet(HRReadOnlyMixin, StaffFilterMixin, viewsets.ModelViewSet):
         self._forbid_staff_on_staff(request, user, 'Only a superuser can reset a staff or superuser second factor.')
         if not mfa_service.is_enrolled(user):
             return Response({'error': 'This user has no second factor to reset.'}, status=status.HTTP_400_BAD_REQUEST)
-        mfa_service.remove_mfa(user)
+        mfa_service.reset_all_factors(user)
         revoke_refresh_tokens(user)
         mfa_service.audit(
             request.user,

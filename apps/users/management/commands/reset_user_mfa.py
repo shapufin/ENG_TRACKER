@@ -26,7 +26,7 @@ class Command(BaseCommand):
         if not mfa_service.is_enrolled(user):
             self.stdout.write(f'{username} has no second factor; nothing to reset.')
             return
-        mfa_service.remove_mfa(user)
+        mfa_service.reset_all_factors(user)
         revoke_refresh_tokens(user)
         mfa_service.audit(None, 'mfa_reset', f'Second factor of {username} reset from the command line', user)
         self.stdout.write(self.style.SUCCESS(

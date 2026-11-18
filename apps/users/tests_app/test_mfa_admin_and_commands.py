@@ -76,6 +76,25 @@ class CommandTests(TestCase):
             OutstandingToken.objects.filter(user=self.user).count(),
         )
 
+    def test_reset_user_mfa_command_removes_passkeys(self):
+        from apps.users.models import WebAuthnCredential
+
+        WebAuthnCredential.objects.create(
+            user=self.user, credential_id=b'cmd-1', public_key=b'pk', sign_count=0, name='Phone',
+        )
+        call_command('reset_user_mfa', 'lost', stdout=StringIO())
+        self.assertFalse(WebAuthnCredential.objects.filter(user=self.user).exists())
+
+    def test_reset_user_mfa_handles_a_passkey_only_user(self):
+        from apps.users.models import WebAuthnCredential
+
+        solo = User.objects.create_user('solo', 'so@example.com', PASSWORD)
+        WebAuthnCredential.objects.create(
+            user=solo, credential_id=b'cmd-2', public_key=b'pk', sign_count=0, name='Phone',
+        )
+        call_command('reset_user_mfa', 'solo', stdout=StringIO())
+        self.assertFalse(WebAuthnCredential.objects.filter(user=solo).exists())
+
     def test_reset_unknown_user_is_an_error(self):
         with self.assertRaises(CommandError):
             call_command('reset_user_mfa', 'nobody')
