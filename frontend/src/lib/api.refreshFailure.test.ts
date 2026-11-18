@@ -109,4 +109,31 @@ describe("isAuthRejection", () => {
     expect(isAuthRejection(networkError())).toBe(false);
     expect(isAuthRejection(new Error("x"))).toBe(false);
   });
+
+  it("treats a 400 from the refresh endpoint (cookie missing or malformed) as a refusal", () => {
+    expect(isAuthRejection(withStatus(400))).toBe(true);
+  });
+
+  it("does not treat a 400 from any other endpoint as a refusal", () => {
+    const otherConfig = { method: "get", url: "/users/users/me/" } as InternalAxiosRequestConfig;
+    const other = new AxiosError("bad", "ERR_BAD_REQUEST", otherConfig, null, {
+      status: 400,
+      statusText: "x",
+      data: {},
+      headers: {},
+      config: otherConfig,
+    } as AxiosResponse);
+    expect(isAuthRejection(other)).toBe(false);
+  });
+});
+
+describe("a refresh answered with 400", () => {
+  it("clears the session and the queue", async () => {
+    vi.spyOn(axios, "post").mockRejectedValue(withStatus(400));
+
+    await expect(api.get("/users/users/me/")).rejects.toBeTruthy();
+
+    expect(localStorage.getItem("user")).toBeNull();
+    expect(getQueueCount("7")).toBe(0);
+  });
 });

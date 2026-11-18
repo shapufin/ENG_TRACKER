@@ -19,14 +19,16 @@ export function isMaintenanceError(error: unknown): boolean {
 }
 
 /**
- * A refresh the server actively refused (401/403): the credentials are gone, so the session
- * ends. Anything else (no response, timeout, 5xx, 429) is a transient failure and must keep
+ * A refresh the server actively refused (401/403, or 400 from the refresh endpoint when the
+ * refresh cookie is missing or malformed): the credentials are gone, so the session ends.
+ * Anything else (no response, timeout, 5xx, 429) is a transient failure and must keep
  * the session and the offline queue, which holds work the user has not sent yet.
  */
 export function isAuthRejection(error: unknown): boolean {
   if (!axios.isAxiosError(error)) return false;
   const status = error.response?.status;
-  return status === 401 || status === 403;
+  if (status === 401 || status === 403) return true;
+  return status === 400 && !!error.config?.url?.includes("/auth/token/refresh/");
 }
 
 const REFRESH_TIMEOUT_MS = 10_000;
