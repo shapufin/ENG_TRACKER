@@ -55,6 +55,8 @@ export interface MfaChallenge {
   mfa_required?: boolean;
   /** Required for this account but not set up: enrol before signing in. */
   mfa_setup_required?: boolean;
+  /** What the account can use for this step, best first (`passkey` only when the server allows it). */
+  methods?: Array<"passkey" | "totp">;
 }
 
 export type LoginResponse = AuthResponse | MfaChallenge;
@@ -68,8 +70,20 @@ export interface MfaSetupData {
   qr_svg: string;
 }
 
+/** A registered passkey as the server describes it (never the key material). */
+export interface Passkey {
+  id: number;
+  name: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
 export interface MfaStatus {
+  /** The authenticator app is on. */
   enabled: boolean;
+  /** At least one second factor (app or passkey). */
+  enrolled?: boolean;
+  passkeys?: Passkey[];
   required: boolean;
   required_by: "global" | "user" | null;
   backup_codes_remaining: number;
