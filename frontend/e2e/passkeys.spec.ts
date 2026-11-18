@@ -44,10 +44,13 @@ const currentStep = () => Math.floor(Date.now() / 1000 / 30);
 /** Break-glass reset used for cleanup: removes the app, backup codes and every passkey. */
 const resetFactors = () => {
   // Fail loudly: a silent failed reset leaves passkeys behind and the next run sees duplicates.
-  execFileSync("py", ["-3.14", "manage.py", "reset_user_mfa", USER.username], {
+  // Plain `python`, like playwright.config.ts: CI has no `py` launcher, and on Windows the local
+  // python.cmd shim (see the e2e runbook) needs a shell to resolve.
+  execFileSync("python", ["manage.py", "reset_user_mfa", USER.username], {
     cwd: "..",
     env: { ...process.env, DJANGO_SETTINGS_MODULE: "config.settings_e2e" },
     stdio: "pipe",
+    shell: process.platform === "win32",
   });
 };
 
