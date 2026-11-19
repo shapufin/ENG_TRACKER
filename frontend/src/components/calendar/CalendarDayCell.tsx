@@ -103,7 +103,7 @@ export const CalendarDayCell: React.FC<CalendarDayCellProps> = ({
         !isCurrentMonth && "bg-card text-muted-foreground/60",
         isCurrentMonth && hasHoliday && "bg-info/10 dark:bg-info/15",
         isCurrentMonth && !hasHoliday && isWeekend && "bg-muted/30",
-        conflict && "border-tone-warning-border z-10 border-2",
+        conflict && "border-tone-warning-border bg-tone-warning-surface/25 z-10 border-2",
         today && "calendar-today-glow border-info/40 border",
         isSelected && "border-primary/80 bg-primary/15 dark:bg-primary/[0.12] border",
         isRangeStart && "ring-primary/70 dark:ring-primary/50 ring-2 ring-inset",
