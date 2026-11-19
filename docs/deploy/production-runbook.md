@@ -484,6 +484,7 @@ the authenticator app and passkeys (workflow-invariants item 90, spec
   tabs (`PushSetupGuide`), and opens it by itself where notifications cannot work yet.
 - **Approval link host**: the link in the notification and the QR code uses the first entry of `WEBAUTHN_ORIGINS`;
   it must be the host users open the app on (the service worker only opens same-origin links).
+- **Before production** (all in git on `main`): (1) `.env` has `PHONE_APPROVAL_ENABLED=true` plus the `WEBAUTHN_*` and `VAPID_*` values; (2) deploy: the container start runs `users.0031_phone_approval` (two new tables) with the other migrations; (3) recreate `backend` and `scheduler` and run the check command above; (4) Site Backup needs no action: `users.pairedphone` and `users.phoneloginrequest` are excluded from archives on purpose (`EXCLUDED_MODELS`, guarded by `test_backup_coverage_guard.py`), a restore never touches or revives pairings, and a server move carries them in `pg_dump`; (5) pair one phone and run the rollout steps below.
 - **Rollback**: set the switch to false and restart. No migration to revert; paired phones stay in the
   database and work again when the switch returns.
 - **Locked-out or lost phone**: the user removes the phone under Settings (needs the password), or an admin
