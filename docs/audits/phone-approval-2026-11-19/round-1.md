@@ -21,7 +21,7 @@ Scope: PR #344 (feature) and PR #350 (compose passthrough, notification setup gu
 
 - The setup guide was not click-tested in a browser (other dev servers held ports 5173 and 8000); vitest covers tabs, toggle and auto-open.
 - Real push delivery needs one manual check on Android and one on iPhone (runbook 5.9).
-- `main` Frontend CI was red before this work on two `fallow dead-code` findings that are not from this feature: `ticket_kpi/components/CategoryPieChart.tsx` (unused file) and `UserLeaveSummary` in `LeaveUserGroupedTable.tsx` (unused type export). Left for their owners.
+- `main` Frontend CI was red before this work on two `fallow dead-code` findings that are not from this feature: `ticket_kpi/components/CategoryPieChart.tsx` (unused file) and `UserLeaveSummary` in `LeaveUserGroupedTable.tsx` (unused type export). Both removed afterwards in a dead-code cleanup (the file had no importers; the type is only used inside its file).
 - Owner ruling 2026-11-19: a password change keeps paired phones (sessions are revoked, pairings are not). Not covered by a test yet; the owner tests it before relying on it.
 
 ## Scorecard

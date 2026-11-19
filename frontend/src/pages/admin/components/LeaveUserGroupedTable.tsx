@@ -12,7 +12,7 @@ import type { DataTableCardSpec } from "@/components/ui/DataTableCards";
 import type { LeaveRequest } from "@/types";
 import type { SelectedUserTarget } from "./UserLeaveRequestsModal";
 
-export interface UserLeaveSummary extends SelectedUserTarget {
+interface UserLeaveSummary extends SelectedUserTarget {
   totalRequests: number;
   totalDays: number;
   pendingCount: number;
