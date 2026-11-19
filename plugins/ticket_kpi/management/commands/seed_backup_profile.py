@@ -46,9 +46,20 @@ BACKUP_PROFILE = {
 class Command(BaseCommand):
     help = 'Create or repair the Backup team import profile.'
 
-    def handle(self, *args, **options):
-        profile, created = ExportProfile.objects.update_or_create(
-            name=PROFILE_NAME, defaults=BACKUP_PROFILE
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--if-missing', action='store_true',
+            help='Create the profile only when absent; never touch an existing one (used at boot).',
         )
+
+    def handle(self, *args, **options):
+        if options.get('if_missing'):
+            profile, created = ExportProfile.objects.get_or_create(
+                name=PROFILE_NAME, defaults=BACKUP_PROFILE
+            )
+        else:
+            profile, created = ExportProfile.objects.update_or_create(
+                name=PROFILE_NAME, defaults=BACKUP_PROFILE
+            )
         if options.get('verbosity', 1):
             self.stdout.write(f"{'Created' if created else 'Updated'} profile '{profile.name}' (id {profile.id}).")

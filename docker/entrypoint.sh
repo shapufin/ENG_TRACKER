@@ -78,6 +78,12 @@ if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
     echo "[entrypoint] Purging HBPR assignment archive..."
     python manage.py purge_hbpr_archive || echo "[entrypoint] HBPR archive purge skipped (non-fatal)"
 
+    # The Backup team's import format is database data, so a fresh or upgraded server has
+    # none until it exists. Create it when absent; an existing profile (and any admin edit
+    # to it) is never touched. `seed_backup_profile` without the flag is the repair.
+    echo "[entrypoint] Ensuring the Backup team import profile..."
+    python manage.py seed_backup_profile --if-missing || echo "[entrypoint] Backup profile seed skipped (non-fatal)"
+
     # PERF-06 retention: read notifications older than 180 days are deleted (unread are
     # kept). Also a daily scheduler job (notifications.housekeeping), so no host cron is needed.
     echo "[entrypoint] Pruning old read notifications..."

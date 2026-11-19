@@ -11,10 +11,11 @@ Handles:
 - Data type coercion for known date columns
 - Value normalization when a profile is provided
 - Resolution time computation when dates are detectable
-- SLA breach detection
+- SLA breach from evidence in the file only (never guessed)
 - Graceful handling of any schema (no required fields)
 """
 
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -341,13 +342,12 @@ class ColumnMapper:
             if delta.total_seconds() >= 0:
                 record['time_to_resolution_hours'] = round(delta.total_seconds() / 3600, 2)
 
+        # An SLA verdict needs evidence in the file. No column, or a value we cannot
+        # read, leaves it None (shown as N/A): a guess here corrupts the KPI.
         if compute_sla:
-            sla_val = self._find_sla_value(row, mapping)
+            sla_val = self._find_sla_value(row, mapping, transforms.get('sla_breached') or {})
             if sla_val is not None:
                 record['sla_breached'] = sla_val
-            elif record.get('time_to_resolution_hours') is not None:
-                # Fallback: breach if resolution > 24 hours
-                record['sla_breached'] = record['time_to_resolution_hours'] > 24
 
         return record
 
@@ -434,41 +434,75 @@ class ColumnMapper:
 
         return str(value).strip()
 
-    def _find_sla_value(self, row: pd.Series, mapping: Dict[str, str]) -> Optional[bool]:
-        """
-        Try to find SLA breach info from columns not in the main mapping.
+    # Headers that unmistakably carry a breach verdict; read without a mapping.
+    SLA_IMPLICIT_HEADERS = frozenset({'sla breached', 'sla breach', 'made sla', 'sla met'})
+    # Values that mean the same whatever the column is called.
+    SLA_WORD_VALUES = {
+        'breached': True, 'overdue': True, 'violated': True, 'missed': True,
+        'not met': True, 'not made': True,
+        'met': False, 'made': False, 'achieved': False, 'within sla': False,
+        'within target': False, 'not breached': False,
+    }
+    SLA_YES = ('yes', 'y', 'true', '1')
+    SLA_NO = ('no', 'n', 'false', '0')
 
-        Handles both negative indicators (e.g. 'SLA Breached') and positive
-        indicators (e.g. 'Made SLA', 'SLA Met'). For positive indicators,
-        True/Yes means the SLA was met (not breached), so the result is inverted.
-        """
-        sla_match_keywords = ['sla']
-        positive_indicators = ['made', 'met', 'achieved', 'passed', 'within', 'not breached', 'ok', 'success']
-        negative_indicators = ['breached', 'overdue', 'violated', 'failed', 'missed', 'not met']
-        true_values = ('breached', 'overdue', 'violated', 'yes', 'true', '1')
-        false_values = ('met', 'not breached', 'within sla', 'no', 'false', '0')
+    @staticmethod
+    def _sla_header_polarity(header: str) -> Optional[bool]:
+        """What a bare Yes means in this column: True = breached, False = met, None = unclear.
 
+        Whole words only ("Token" is not "ok", "Metric" is not "met").
+        """
+        text = ' '.join(re.findall(r'[a-z]+', str(header).lower()))
+        padded = f' {text} '
+        if any(f' {p} ' in padded for p in ('not breached', 'not overdue')):
+            return False
+        if any(f' {p} ' in padded for p in ('not met', 'not made', 'not within', 'not achieved', 'missed')):
+            return True
+        words = set(text.split())
+        if words & {'breached', 'breach', 'overdue', 'violated', 'violation', 'failed'}:
+            return True
+        if words & {'made', 'met', 'achieved', 'within', 'compliant', 'passed'}:
+            return False
+        return None
+
+    def _read_sla_cell(self, raw: Any, header: str, transform: Dict[str, str]) -> Optional[bool]:
+        """True = breached, False = met, None = not a recognisable verdict."""
+        if pd.isna(raw):
+            return None
+        val = str(raw).strip().lower()
+        if not val:
+            return None
+        custom = {str(k).strip().lower(): v for k, v in transform.items()}.get(val)
+        if custom in ('breached', 'met'):
+            return custom == 'breached'
+        if val in self.SLA_WORD_VALUES:
+            return self.SLA_WORD_VALUES[val]
+        if val in self.SLA_YES or val in self.SLA_NO:
+            polarity = self._sla_header_polarity(header)
+            if polarity is None:
+                return None
+            return polarity if val in self.SLA_YES else not polarity
+        return None
+
+    def _find_sla_value(
+        self, row: pd.Series, mapping: Dict[str, str], transform: Optional[Dict[str, str]] = None
+    ) -> Optional[bool]:
+        """The SLA verdict for this row, from evidence only.
+
+        The column the profile maps to ``sla_breached`` is authoritative. Without a
+        mapping only a header that says so outright ("SLA Breached", "Made SLA") is
+        read; "SLA Tier", "SLA Priority" and the like never are. A value that is
+        not a recognisable verdict is None, never breached.
+        """
+        transform = transform or {}
+        mapped = mapping.get('sla_breached')
+        if mapped and mapped in row.index:
+            return self._read_sla_cell(row[mapped], mapped, transform)
         for col in row.index:
-            col_lower = str(col).lower().strip()
-            if any(kw in col_lower for kw in sla_match_keywords):
-                raw_val = row[col]
-                if pd.isna(raw_val):
-                    continue
-                val = str(raw_val).lower().strip()
-
-                # Determine whether the column is a positive or negative SLA indicator
-                is_positive = any(ind in col_lower for ind in positive_indicators)
-                is_negative = any(ind in col_lower for ind in negative_indicators)
-
-                if val in true_values:
-                    return False if is_positive else True
-                elif val in false_values:
-                    return True if is_positive else False
-                # Default for ambiguous columns: treat True/Yes as breached unless column looks positive
-                if not is_positive and not is_negative:
-                    return True
-                return False if is_positive else True
-
+            if ' '.join(re.findall(r'[a-z]+', str(col).lower())) in self.SLA_IMPLICIT_HEADERS:
+                verdict = self._read_sla_cell(row[col], str(col), transform)
+                if verdict is not None:
+                    return verdict
         return None
 
     def validate_preview(

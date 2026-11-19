@@ -143,6 +143,8 @@ export interface AnalyzeResponse {
   };
   /** YYYY-MM-01, the majority month across the file's own detected dates. */
   suggested_month?: string;
+  /** Why a team export format was not recognised (sent only when no profile matched). */
+  profile_hints?: { profile: string; reason: string }[];
 }
 
 export type EvidenceType = "document" | "certificate" | "email_thread" | "screenshot" | "other";

@@ -383,12 +383,15 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
             df = None
             best_profile = None
             best_score = 0
+            hints = []
             for profile in profiles:
                 if not profile.keep_columns:
                     continue
                 try:
                     df = read_export(file_bytes, file_obj.name, profile.keep_columns)
-                except ExportFormatError:
+                except ExportFormatError as exc:
+                    # Kept so the user is told why a format did not fit, not just "no match".
+                    hints.append({'profile': profile.name, 'reason': str(exc.detail)})
                     continue
                 best_profile, best_score = profile, len(profile.keep_columns)
                 mapper = ColumnMapper(profile=profile)
@@ -407,6 +410,8 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
             normalized_columns = [str(c).strip().lower() for c in df.columns]
 
             for profile in ([] if best_profile else profiles):
+                if profile.keep_columns:
+                    continue  # a team format matches by its header above, never by a partial score
                 score = sum(
                     1 for their_col in profile.field_mapping.values()
                     if str(their_col).strip().lower() in normalized_columns
@@ -426,7 +431,12 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
                 'total_rows': len(df),
             }
 
-            suggested_month = mapper.suggest_month(df, detected.get('created_at'))
+            # A rejected team format means the generic reader would misread its day-first
+            # dates, so no month is guessed then.
+            suggested_month = (
+                None if (hints and not best_profile)
+                else mapper.suggest_month(df, detected.get('created_at'))
+            )
             if suggested_month:
                 response_data['suggested_month'] = suggested_month
 
@@ -436,6 +446,8 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
                     'name': best_profile.name,
                     'match_score': best_score,
                 }
+            elif hints:
+                response_data['profile_hints'] = hints
 
             return Response(response_data, status=status.HTTP_200_OK)
 
