@@ -21,7 +21,7 @@ export const WeekViewDayHeader: React.FC<WeekViewDayHeaderProps> = ({ days, conf
           key={day.toISOString()}
           className={cn(
             "border-border/60 border-r px-4 py-3 text-center last:border-r-0",
-            conflict && "border-tone-warning-border border-2"
+            conflict && "border-tone-warning-border bg-tone-warning-surface/25 border-2"
           )}
         >
           <p className="text-muted-foreground text-xs tracking-[0.3em] uppercase">
