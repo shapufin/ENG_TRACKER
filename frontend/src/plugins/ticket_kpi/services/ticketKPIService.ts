@@ -194,6 +194,8 @@ export const ticketKPIService = {
     api.post<{ message: string; reviewed_at: string; reviewed_by: string }>(
       `/plugins/ticket_kpi/upload/${id}/review_batch/`
     ),
+  unreviewBatch: (id: number) =>
+    api.post<{ message: string }>(`/plugins/ticket_kpi/upload/${id}/unreview_batch/`),
   bulkReviewBatches: (batchIds: number[]) =>
     api.post<BulkReviewResult>("/plugins/ticket_kpi/upload/bulk_review_batches/", {
       batch_ids: batchIds,
