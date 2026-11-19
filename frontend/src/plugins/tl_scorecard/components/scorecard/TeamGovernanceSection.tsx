@@ -152,12 +152,14 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
             value={
               meetings.one_on_one_compliance_pct !== null
                 ? `${meetings.one_on_one_compliance_pct}%`
-                : "n/a"
+                : "—"
             }
             icon={Handshake}
             iconWellClass={slaWell(meetings.one_on_one_compliance_pct)}
             iconColorClass={slaTone(meetings.one_on_one_compliance_pct) ?? toneTextClass.neutral}
-            valueColorClass={slaTone(meetings.one_on_one_compliance_pct)}
+            valueColorClass={
+              slaTone(meetings.one_on_one_compliance_pct) ?? "text-muted-foreground font-normal"
+            }
             trend={[oneOnOneFraction, oneOnOneTarget].filter(Boolean).join(" · ")}
             footer={
               <span className="text-muted-foreground">
@@ -291,10 +293,13 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
           <StatCard
             label="Promotion ratio"
             labelClassName={MICRO_LABEL}
-            value={promotion.promoted_pct !== null ? `${promotion.promoted_pct}%` : "n/a"}
+            value={promotion.promoted_pct !== null ? `${promotion.promoted_pct}%` : "—"}
             icon={Award}
             iconWellClass={`border ${toneSurfaceClass.accent}`}
             iconColorClass={toneTextClass.accent}
+            valueColorClass={
+              promotion.promoted_pct !== null ? undefined : "text-muted-foreground font-normal"
+            }
             trend={`Target: ${promotion.target_pct}%/year · ${promotion.promoted_count} promoted`}
             progressPercent={promotion.promoted_pct ?? undefined}
           />

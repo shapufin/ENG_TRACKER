@@ -16,13 +16,18 @@ interface ReportingYearSelectProps {
 
 /** Picks which year the EPR and partnership figures cover, so a closed year stays reachable. */
 export const ReportingYearSelect: React.FC<ReportingYearSelectProps> = ({ year, onYearChange }) => (
-  <div className="flex items-center justify-end gap-2">
-    <Label htmlFor="scorecard-reporting-year" className="text-xs">
-      Reporting year
+  <div className="flex items-center gap-1.5 sm:gap-2">
+    <Label htmlFor="scorecard-reporting-year" className="sr-only text-xs sm:not-sr-only">
+      Year
     </Label>
     <Select value={String(year)} onValueChange={(value) => onYearChange(Number(value))}>
-      <SelectTrigger id="scorecard-reporting-year" className="w-28" controlSize="sm">
-        <SelectValue />
+      <SelectTrigger
+        id="scorecard-reporting-year"
+        className="w-24 sm:w-28"
+        controlSize="sm"
+        aria-label="Select year"
+      >
+        <SelectValue placeholder="Select year" />
       </SelectTrigger>
       <SelectContent>
         {reportingYearOptions(year).map((option) => (

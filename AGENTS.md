@@ -246,6 +246,12 @@ Rules:
 - Corrections now in the plan: Page-Gate stop rule (`wip(visual):` when G1–G5 cannot run, never a `feat:`/`fix:` that implies verification); D1 reframed as an identity/hue restoration (the replaced value was already AA at 5.19:1, so it is not an accessibility fix); sticky actions cells must compose with `TABLE_BODY_CELL_CLASS`/`TABLE_HEAD_CELL_CLASS`; `group/row` goes in `DataTable`'s base row class, not the `getRowClassName` ternary; `scopeLabel` = "All teams in your workspaces" while a workspace scope is active; Task 0 tabs are cross-checked against `admin-gui-screenshots/manifest.json`; F11 reworded (`GeneratedReportViewSet` does expose a REST create path — no producer calls it).
 - Traps (1)–(5) are appended to the CLAUDE.md "Admin visual lift (2026-10-10)" Hot Invariant, so they reach every agent without re-reading the plan.
 
+## 2026-11-19 — TL scorecard monthly filter, year reset & zero-metric presentation
+- Changing the reporting year on the TL scorecard (`?year=`) resets the active month to **January** (`${year}-01-01`) for non-current years, starting metrics and pacing from month 1 instead of defaulting to December; current year defaults to `currentBusinessMonthKey()`.
+- The action queue EPR cycle list is scoped to the selected reporting year (`cycles.filter(c => c.year === year)`).
+- Stat cards with zero events in the month display a typographic em-dash `"—"` in `text-muted-foreground font-normal` rather than raw `"n/a"`.
+- Toolbar actions (`ExportButton` + `Visualize`) are clustered as an inseparable pair with `sm:flex-nowrap`, and `ReportingYearSelect` uses the compact label `"Year"` (with `aria-label="Select year"`), eliminating orphaned button drops on intermediate viewports.
+
 ## 2026-10-11 — TL scorecard / payroll review follow-ups (Phase 8)
 - Wage writes are HR or staff only (`plugins/payroll/services/wage_access.py`). The payroll `manage` grant alone no longer lets a team leader create, change or delete a wage, and the wages importer uses the same check. TLs keep read access to their scoreable team's wage through the TL scorecard.
 - Team-scoped payroll: only staff, superusers and HR are company-wide viewers; the payroll `manage` grant alone grants nothing. `GET /api/plugins/payroll/runs/scope/` returns `run_scope: company|team`, and `PayrollRun.notes` is hidden from and not searchable by team scope.
