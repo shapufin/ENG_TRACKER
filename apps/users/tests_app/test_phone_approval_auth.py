@@ -2,10 +2,12 @@
 from unittest import mock
 
 from django.conf import settings
+from django.core.cache import cache
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient, APITestCase
+from rest_framework.throttling import SimpleRateThrottle
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
 
 from apps.reports.models import AuditLog
@@ -30,6 +32,15 @@ class PhoneApprovalHttpTestCase(APITestCase):
     pair = True
 
     def setUp(self):
+        # CI runs with DEBUG off, so the real throttle rates (auth 20/min, mfa 10/min) apply and
+        # the cache is shared by the whole run: these tests make many password steps and would
+        # throttle every later login test. Rates are off here; the scopes are pinned separately in
+        # ``test_throttle_scopes``, and the cache is cleared around each test.
+        rates = mock.patch.dict(SimpleRateThrottle.THROTTLE_RATES, {'auth': None, 'mfa': None, 'phone_poll': None})
+        rates.start()
+        self.addCleanup(rates.stop)
+        cache.clear()
+        self.addCleanup(cache.clear)
         self.user = User.objects.create_user('ann', 'ann@example.com', PASSWORD)
         self.device = FakeAuthenticator(settings.WEBAUTHN_RP_ID, settings.WEBAUTHN_ORIGINS[0])
         self.client.force_authenticate(self.user)

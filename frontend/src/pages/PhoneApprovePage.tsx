@@ -179,5 +179,3 @@ export const PhoneApprovePage: React.FC = () => {
     </div>
   );
 };
-
-export default PhoneApprovePage;

@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import type { AuthResponse, PhoneApprovalStart } from "@/types";
 
 /** The PC asks the server every 2 s; the request itself lives 120 s (item 90). */
-export const PHONE_POLL_MS = 2000;
+const PHONE_POLL_MS = 2000;
 const GRACE_SECONDS = 5;
 
 export type PhoneWaitEnd = "denied" | "expired";
