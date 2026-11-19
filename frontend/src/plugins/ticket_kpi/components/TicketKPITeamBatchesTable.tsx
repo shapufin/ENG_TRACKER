@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/DataTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RowActions } from "@/components/ui/RowActions";
-import { Eye, Trash2, CheckCircle2 } from "lucide-react";
+import { RowActions, type RowAction } from "@/components/ui/RowActions";
+import { Eye, Trash2, CheckCircle2, Undo2 } from "lucide-react";
 import { formatMonthLabel } from "@/lib/monthOptions";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import type { OnChangeFn, RowSelectionState } from "@tanstack/react-table";
@@ -15,6 +15,10 @@ interface TicketKPITeamBatchesTableProps {
   rows: BatchRow[];
   isLoading: boolean;
   onDelete: (batch: BatchRow) => void;
+  onReview: (batch: BatchRow) => void;
+  onUnreview: (batch: BatchRow) => void;
+  /** Whether the viewer may take this batch's review back (server enforces it too). */
+  canUnreview: (batch: BatchRow) => boolean;
   rowSelection: RowSelectionState;
   onRowSelectionChange: OnChangeFn<RowSelectionState>;
 }
@@ -23,6 +27,9 @@ export const TicketKPITeamBatchesTable: React.FC<TicketKPITeamBatchesTableProps>
   rows,
   isLoading,
   onDelete,
+  onReview,
+  onUnreview,
+  canUnreview,
   rowSelection,
   onRowSelectionChange,
 }) => {
@@ -89,28 +96,43 @@ export const TicketKPITeamBatchesTable: React.FC<TicketKPITeamBatchesTableProps>
         cell: ({ row }) => {
           const batch = row.original;
           const who = batch.user_name || `user ${batch.user}`;
-          return (
-            <RowActions
-              actions={[
-                {
-                  label: `View member dashboard for ${who}`,
-                  icon: Eye,
-                  onClick: () =>
-                    navigate(`/ticket-kpi/dashboard?user_id=${batch.user}&month=${batch.month}`),
-                },
-                {
-                  label: `Delete upload for ${who}`,
-                  icon: Trash2,
-                  tone: "danger",
-                  onClick: () => onDelete(batch),
-                },
-              ]}
-            />
-          );
+          const reviewAction: RowAction | null = batch.is_reviewed
+            ? canUnreview(batch)
+              ? {
+                  label: `Undo review for ${who}`,
+                  shortLabel: "Undo review",
+                  icon: Undo2,
+                  tone: "warning",
+                  onClick: () => onUnreview(batch),
+                }
+              : null
+            : {
+                label: `Review upload for ${who}`,
+                shortLabel: "Review",
+                icon: CheckCircle2,
+                tone: "success",
+                onClick: () => onReview(batch),
+              };
+          const actions: RowAction[] = [
+            {
+              label: `View member dashboard for ${who}`,
+              icon: Eye,
+              onClick: () =>
+                navigate(`/ticket-kpi/dashboard?user_id=${batch.user}&month=${batch.month}`),
+            },
+            ...(reviewAction ? [reviewAction] : []),
+            {
+              label: `Delete upload for ${who}`,
+              icon: Trash2,
+              tone: "danger",
+              onClick: () => onDelete(batch),
+            },
+          ];
+          return <RowActions actions={actions} />;
         },
       },
     ],
-    [navigate, onDelete]
+    [navigate, onDelete, onReview, onUnreview, canUnreview]
   );
 
   return (

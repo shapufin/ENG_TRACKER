@@ -1,5 +1,6 @@
 import React from "react";
 import { usePermissions } from "@/context/PermissionContext";
+import { useAuth } from "@/context/AuthContext";
 import { PageShell } from "@/components/layout/PageShell";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -14,6 +15,7 @@ import { formatMonthLabel } from "@/lib/monthOptions";
 
 export const TicketKPITeamManagementPage: React.FC = () => {
   const { isTeamLeader, isAdmin, isHR } = usePermissions();
+  const { user } = useAuth();
   const {
     selectedMonth,
     setSelectedMonth,
@@ -27,6 +29,8 @@ export const TicketKPITeamManagementPage: React.FC = () => {
     setRowSelection,
     selectedBatchIds,
     bulkReviewMutation,
+    reviewMutation,
+    unreviewMutation,
   } = useTicketKPITeamManagement(isTeamLeader);
 
   if (!isTeamLeader) {
@@ -77,6 +81,10 @@ export const TicketKPITeamManagementPage: React.FC = () => {
           rows={rows}
           isLoading={isLoading}
           onDelete={setBatchToDelete}
+          onReview={(b) => reviewMutation.mutate(b.id)}
+          onUnreview={(b) => unreviewMutation.mutate(b.id)}
+          // An admin takes back any review; a leader only their own (the server checks too).
+          canUnreview={(b) => isAdmin || (b.reviewed_by != null && b.reviewed_by === user?.id)}
           rowSelection={rowSelection}
           onRowSelectionChange={setRowSelection}
         />

@@ -63,6 +63,28 @@ export const useTicketKPITeamManagement = (isTeamLeader: boolean) => {
     },
   });
 
+  const reviewMutation = useMutation({
+    mutationFn: (id: number) => ticketKPIService.reviewBatch(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ticket_kpi", "team_batches"] });
+      toast.success("Import reviewed.");
+    },
+    onError: () => {
+      toast.error("Failed to review this import.");
+    },
+  });
+
+  const unreviewMutation = useMutation({
+    mutationFn: (id: number) => ticketKPIService.unreviewBatch(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ticket_kpi", "team_batches"] });
+      toast.success("Review taken back. The import is open again.");
+    },
+    onError: () => {
+      toast.error("Could not take the review back.");
+    },
+  });
+
   const rows: BatchRow[] = useMemo(() => {
     if (!batches) return [];
     return batches.map((b) => ({ ...b, user_name: b.username || `User ${b.user}` }));
@@ -88,5 +110,7 @@ export const useTicketKPITeamManagement = (isTeamLeader: boolean) => {
     setRowSelection,
     selectedBatchIds,
     bulkReviewMutation,
+    reviewMutation,
+    unreviewMutation,
   };
 };

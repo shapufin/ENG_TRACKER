@@ -6,6 +6,7 @@ import { TicketKPITeamManagementPage } from "./TicketKPITeamManagementPage";
 import { ticketKPIService } from "../services/ticketKPIService";
 import { toast } from "sonner";
 
+vi.mock("@/context/AuthContext", () => ({ useAuth: () => ({ user: { id: 1 } }) }));
 vi.mock("@/context/PermissionContext", () => ({
   usePermissions: () => ({ isTeamLeader: true, isAdmin: false, isHR: false }),
 }));
@@ -15,6 +16,8 @@ vi.mock("../services/ticketKPIService", () => ({
     getTeamBatches: vi.fn(),
     deleteTeamBatch: vi.fn(),
     bulkReviewBatches: vi.fn(),
+    reviewBatch: vi.fn(),
+    unreviewBatch: vi.fn(),
   },
 }));
 
@@ -118,6 +121,37 @@ describe("TicketKPITeamManagementPage — bulk review", () => {
     // Selection is cleared from the mutation's onSuccess, which react-query delivers on its
     // own scheduler tick — not necessarily inside the act() above under load.
     await waitFor(() => expect(screen.queryByText("Review Selected")).not.toBeInTheDocument());
+  });
+
+  it("reviews one batch from its row and takes a review of your own back", async () => {
+    vi.mocked(ticketKPIService.getTeamBatches).mockResolvedValue([
+      BATCHES[0],
+      { ...BATCHES[1], is_reviewed: true, reviewed_by: 1, reviewed_by_username: "me" },
+    ] as any);
+    vi.mocked(ticketKPIService.reviewBatch).mockResolvedValue({ data: {} } as any);
+    vi.mocked(ticketKPIService.unreviewBatch).mockResolvedValue({ data: {} } as any);
+
+    render(<TicketKPITeamManagementPage />, { wrapper });
+    await screen.findByText("alice");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Review upload for alice" }));
+    });
+    expect(ticketKPIService.reviewBatch).toHaveBeenCalledWith(1);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Undo review for bob" }));
+    });
+    expect(ticketKPIService.unreviewBatch).toHaveBeenCalledWith(2);
+  });
+
+  it("offers no way back for a review somebody else made", async () => {
+    vi.mocked(ticketKPIService.getTeamBatches).mockResolvedValue([
+      { ...BATCHES[1], is_reviewed: true, reviewed_by: 99, reviewed_by_username: "admin" },
+    ] as any);
+    render(<TicketKPITeamManagementPage />, { wrapper });
+    await screen.findByText("bob");
+    expect(screen.queryByRole("button", { name: "Undo review for bob" })).toBeNull();
   });
 
   it("warns with the skip reason when a batch could not be reviewed", async () => {

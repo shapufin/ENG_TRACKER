@@ -37,6 +37,9 @@ describe("ticket KPI upload dates", () => {
           rows={[ROW]}
           isLoading={false}
           onDelete={vi.fn()}
+          onReview={vi.fn()}
+          onUnreview={vi.fn()}
+          canUnreview={() => false}
           rowSelection={{}}
           onRowSelectionChange={vi.fn()}
         />
@@ -60,6 +63,9 @@ describe("ticket KPI upload dates", () => {
           rows={[{ ...ROW, id: 9 }]}
           isLoading={false}
           onDelete={onDelete}
+          onReview={vi.fn()}
+          onUnreview={vi.fn()}
+          canUnreview={() => false}
           rowSelection={{}}
           onRowSelectionChange={vi.fn()}
         />

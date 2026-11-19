@@ -956,6 +956,42 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
             status=status.HTTP_200_OK
         )
 
+    @action(detail=True, methods=['post'])
+    def unreview_batch(self, request, pk=None):
+        """Take a review back (rollback of ``review_batch``).
+
+        An admin may take back any review. A leader may take back only a review they
+        made themselves, so a month an admin reviewed stays admin-locked.
+        """
+        try:
+            batch = TicketImportBatch.objects.get(pk=pk)
+        except TicketImportBatch.DoesNotExist:
+            return Response({'error': 'Batch not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not batch.reviewed_by_id:
+            return Response(
+                {'error': 'This upload is not reviewed.'}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = request.user
+        is_admin = user.is_staff or user.is_superuser
+        own_review = batch.reviewed_by_id == user.id and _is_tl_for_user(user, batch.user)
+        if not (is_admin or own_review):
+            return Response(
+                {'error': 'Only an administrator, or the team leader who reviewed this upload, '
+                          'can take the review back.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        logger.info(
+            "User %s took back the review of batch %d (user=%s, month=%s, was reviewed by %s)",
+            user.username, batch.id, batch.user.username, batch.month, batch.reviewed_by.username,
+        )
+        batch.reviewed_by = None
+        batch.reviewed_at = None
+        batch.save(update_fields=['reviewed_by', 'reviewed_at'])
+        return Response({'message': 'Review taken back'}, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=['post'])
     def bulk_review_batches(self, request):
         """Review several batches in one call (TL/Admin).
