@@ -2,72 +2,27 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { CalendarBottomCards } from "./CalendarBottomCards";
 
-const metricBars = [
-  { label: "Remaining", value: "12d of 22d", progress: 55, colorClass: "bg-primary" },
-  { label: "Used", value: "8d of 22d", progress: 36, colorClass: "bg-info" },
-  { label: "Pending", value: "2d of 22d", progress: 9, colorClass: "bg-warning" },
-];
-
 const baseProps = {
-  vacationSummary: { remainingDays: 12, totalDays: 22 },
+  nextHoliday: { id: 1, name: "Flag Day", date: "2026-11-28", is_global: true },
   carryOverAndBalance: {},
-  metricBars,
   conflictEntries: [],
   onViewAllConflicts: vi.fn(),
 };
 
 describe("CalendarBottomCards", () => {
-  it("summarises the remaining balance against the annual allowance", () => {
+  it("displays the next upcoming public holiday name and date", () => {
     render(<CalendarBottomCards {...baseProps} />);
 
-    expect(screen.getByRole("button", { name: "Total vacation entitlement" })).toHaveTextContent(
-      "12d"
-    );
-    expect(screen.getByRole("button", { name: "Total vacation entitlement" })).toHaveTextContent(
-      "22d total"
-    );
+    const card = screen.getByRole("button", { name: "Upcoming holiday" });
+    expect(card).toHaveTextContent("Flag Day");
+    expect(card).toHaveTextContent("28 Nov");
   });
 
-  it("says how much has accrued so far while the year is not fully accrued", () => {
-    render(
-      <CalendarBottomCards
-        {...baseProps}
-        vacationSummary={{ remainingDays: 6, totalDays: 22, accruedDays: 9 }}
-      />
-    );
-    const card = screen.getByRole("button", { name: "Total vacation entitlement" });
-    expect(card).toHaveTextContent("9d of 22d accrued");
-    expect(card).not.toHaveTextContent("22d total");
-  });
+  it("handles when there are no upcoming holidays", () => {
+    render(<CalendarBottomCards {...baseProps} nextHoliday={null} />);
 
-  it("shows live accrued balance badge when present (both positive and negative)", () => {
-    const { rerender } = render(
-      <CalendarBottomCards
-        {...baseProps}
-        vacationSummary={{
-          remainingDays: 9,
-          totalDays: 22,
-          accruedDays: 6,
-          liveAccruedBalance: -7,
-        }}
-      />
-    );
-    const card = screen.getByRole("button", { name: "Total vacation entitlement" });
-    expect(card).toHaveTextContent("Live: -7d");
-    expect(card).toHaveTextContent("6d of 22d accrued");
-
-    rerender(
-      <CalendarBottomCards
-        {...baseProps}
-        vacationSummary={{
-          remainingDays: 16,
-          totalDays: 22,
-          accruedDays: 11,
-          liveAccruedBalance: 5,
-        }}
-      />
-    );
-    expect(card).toHaveTextContent("Live: +5d");
+    const card = screen.getByRole("button", { name: "Upcoming holiday" });
+    expect(card).toHaveTextContent("No upcoming holidays");
   });
 
   it("coerces decimal-string balances from the API before printing them", () => {
@@ -126,14 +81,21 @@ describe("CalendarBottomCards", () => {
     );
   });
 
-  it("opens the conflicts and balance surfaces", () => {
+  it("opens the conflicts and balance/holidays surfaces", () => {
     const onOpenBalanceModal = vi.fn();
-    render(<CalendarBottomCards {...baseProps} onOpenBalanceModal={onOpenBalanceModal} />);
+    const onOpenHolidaysModal = vi.fn();
+    render(
+      <CalendarBottomCards
+        {...baseProps}
+        onOpenBalanceModal={onOpenBalanceModal}
+        onOpenHolidaysModal={onOpenHolidaysModal}
+      />
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Upcoming conflicts" }));
     expect(baseProps.onViewAllConflicts).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole("button", { name: "Total vacation entitlement" }));
-    expect(onOpenBalanceModal).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Upcoming holiday" }));
+    expect(onOpenHolidaysModal).toHaveBeenCalledTimes(1);
   });
 });

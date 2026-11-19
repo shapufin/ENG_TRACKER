@@ -148,13 +148,13 @@ export const CalendarPageShell: React.FC<CalendarPageShellProps> = ({
             <CalendarPageMain data={data} />
           </div>
           <CalendarBottomCards
-            vacationSummary={data.vacationSummary}
+            nextHoliday={data.nextHoliday}
             carryOverAndBalance={data.carryOverAndBalance}
-            metricBars={data.metricBars}
             conflictEntries={data.conflictEntries}
             formatDays={data.formatDays}
             onViewAllConflicts={() => data.setConflictsModalOpen(true)}
             onOpenBalanceModal={() => user && data.handleUserClick(user.id)}
+            onOpenHolidaysModal={() => user && data.handleUserClick(user.id)}
           />
         </main>
       </div>

@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { leaveService } from "@/services/leaveService";
 import type { LeaveRequest, LeaveBalance, User } from "@/types";
 import { handleApiError } from "@/lib/error-handler";
-import { businessToday } from "@/lib/date-format-utils";
+import { businessToday, currentBusinessDateISO } from "@/lib/date-format-utils";
 import { toast } from "sonner";
 import { deriveFullName } from "@/lib/user-utils";
 import { deriveVacationBalanceFromBalances } from "@/lib/vacation-balance";
@@ -321,6 +321,14 @@ export const useCalendarPageData = (
     () => new Set((holidayData ?? []).map((h) => h.date.slice(0, 10))),
     [holidayData]
   );
+  const nextHoliday = useMemo(() => {
+    const today = currentBusinessDateISO().slice(0, 10);
+    return (
+      (holidayData ?? [])
+        .filter((h) => h.date.slice(0, 10) >= today)
+        .sort((a, b) => a.date.slice(0, 10).localeCompare(b.date.slice(0, 10)))[0] ?? null
+    );
+  }, [holidayData]);
   const dayConflicts = useMemo(
     () => buildDayConflicts({ leaves: leaveRequests, groups: groupedUsersWithNames, holidayDates }),
     [leaveRequests, groupedUsersWithNames, holidayDates]
@@ -442,6 +450,7 @@ export const useCalendarPageData = (
     metricBars,
     conflictEntries,
     allConflictEntries,
+    nextHoliday,
     queryClient,
   };
 };
