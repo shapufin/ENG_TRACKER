@@ -25,18 +25,23 @@ export const useUserStatusData = (
 
   const hasBalanceData = vacationBalances && vacationBalances.length > 0;
 
-  const remainingDays = vacationSummary?.remainingDays ?? 0;
   const usedDays = vacationSummary?.usedDays ?? 0;
   const pendingDays = vacationSummary?.pendingDays ?? 0;
-  const totalDays = vacationSummary?.yearlyEntitlement ?? vacationSummary?.totalDays ?? 0;
-  const liveAccruedBalance = vacationSummary?.liveAccruedBalance;
-  const accruedDays = vacationSummary?.accruedDays;
+  const totalYearlyEntitlement =
+    vacationSummary?.yearlyEntitlement ?? vacationSummary?.totalDays ?? 0;
+  // Real-time calculation: to the point in time we are currently at
+  const accruedDays = vacationSummary?.accruedDays ?? totalYearlyEntitlement;
+  const totalDays = accruedDays;
+  const liveAccruedBalance =
+    vacationSummary?.liveAccruedBalance ?? accruedDays - usedDays - pendingDays;
+  const remainingDays = liveAccruedBalance;
+
   const vacationYear = vacationSummary?.year ?? Number(currentBusinessDateISO().slice(0, 4));
   const carryOverDetail = vacationSummary?.carryOver;
   const currentDetail = vacationSummary?.current;
 
   const totalSafe = totalDays > 0 ? totalDays : 1;
-  const remainingProgress = computeProgress(remainingDays, totalSafe);
+  const remainingProgress = computeProgress(Math.max(0, remainingDays), totalSafe);
   const usedProgress = computeProgress(usedDays, totalSafe);
   const pendingProgress = computeProgress(pendingDays, totalSafe);
   const carryOverProgress = computeCarryOverProgress(carryOverDetail);
@@ -47,6 +52,7 @@ export const useUserStatusData = (
     usedDays,
     pendingDays,
     totalDays,
+    totalYearlyEntitlement,
     liveAccruedBalance,
     accruedDays,
     vacationSummary,

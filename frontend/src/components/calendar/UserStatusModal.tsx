@@ -38,8 +38,7 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
     usedDays,
     pendingDays,
     totalDays,
-    liveAccruedBalance,
-    accruedDays,
+    totalYearlyEntitlement,
     vacationYear,
     carryOverDetail,
     remainingProgress,
@@ -176,7 +175,7 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                               {formatCompactDays(remainingDays)}
                             </span>{" "}
                             <span className="text-muted-foreground text-sm">
-                              of {formatCompactDays(totalDays)} d remaining
+                              of {formatCompactDays(totalDays)} d remaining to date
                             </span>
                           </p>
                           <span
@@ -187,7 +186,7 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                         </div>
                         <div
                           role="img"
-                          aria-label={`Vacation balance: ${formatCompactDays(remainingDays)} of ${formatCompactDays(totalDays)} days remaining`}
+                          aria-label={`Vacation balance: ${formatCompactDays(remainingDays)} of ${formatCompactDays(totalDays)} days remaining to date`}
                           className="border-line-subtle bg-surface-sunken mt-3 flex h-2 w-full overflow-hidden rounded-full border"
                         >
                           <div
@@ -233,30 +232,15 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                           </span>
                         </div>
                         <p className="text-muted-foreground mt-2.5 text-xs">
-                          {vacationYear} allowance · resets 1 Jan · carry-over expires 31 Mar
-                          {liveAccruedBalance !== undefined && (
+                          {vacationYear} allowance to date
+                          {totalYearlyEntitlement > totalDays && (
                             <>
-                              {" · "}
-                              <span
-                                className={cn(
-                                  "font-semibold",
-                                  liveAccruedBalance < 0
-                                    ? toneTextClass.warning
-                                    : toneTextClass.success
-                                )}
-                              >
-                                Live accrued:{" "}
-                                {liveAccruedBalance >= 0
-                                  ? `+${formatCompactDays(liveAccruedBalance)}`
-                                  : formatCompactDays(liveAccruedBalance)}
-                                d (
-                                {accruedDays !== undefined
-                                  ? `${formatCompactDays(accruedDays)}d earned`
-                                  : "live"}
-                                )
-                              </span>
+                              {" "}
+                              ({formatCompactDays(totalYearlyEntitlement)}d total yearly
+                              entitlement)
                             </>
-                          )}
+                          )}{" "}
+                          · resets 1 Jan · carry-over expires 31 Mar
                         </p>
                       </div>
                       <div className="mt-3 mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -264,21 +248,21 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                           label="Remaining"
                           value={formatCompactDays(remainingDays)}
                           suffix="d"
-                          sub={`${Math.round(remainingProgress)}% of ${formatCompactDays(totalDays)} d`}
+                          sub={`${Math.round(remainingProgress)}% of ${formatCompactDays(totalDays)} d to date`}
                           tone="success"
                         />
                         <StatCard
                           label="Used"
                           value={formatCompactDays(usedDays)}
                           suffix="d"
-                          sub={`${Math.round(usedProgress)}% of ${formatCompactDays(totalDays)} d`}
+                          sub={`${Math.round(usedProgress)}% of ${formatCompactDays(totalDays)} d to date`}
                           tone="danger"
                         />
                         <StatCard
                           label="Pending"
                           value={formatCompactDays(pendingDays)}
                           suffix="d"
-                          sub={`${Math.round(pendingProgress)}% of ${formatCompactDays(totalDays)} d`}
+                          sub={`${Math.round(pendingProgress)}% of ${formatCompactDays(totalDays)} d to date`}
                           tone="warning"
                         />
                       </div>

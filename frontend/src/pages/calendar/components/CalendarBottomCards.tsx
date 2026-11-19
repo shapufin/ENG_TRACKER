@@ -1,15 +1,11 @@
 import React from "react";
 import { AlertTriangle, CheckCircle2, ChevronRight } from "lucide-react";
+import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
-import { toneFillClass, toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
+import { toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
 import { formatDays as formatDaysDefault } from "@/lib/calendarPageMetrics";
-
-interface Metric {
-  label: string;
-  value: string;
-  progress: number;
-  colorClass: string;
-}
+import { currentBusinessDateISO } from "@/lib/date-format-utils";
+import type { PublicHoliday } from "@/types";
 
 interface CarryOverData {
   carryOver?: {
@@ -26,25 +22,30 @@ interface ConflictEntry {
 }
 
 interface CalendarBottomCardsProps {
-  vacationSummary?: {
-    remainingDays?: number;
-    totalDays?: number;
-    accruedDays?: number;
-    liveAccruedBalance?: number;
-    yearlyEntitlement?: number;
-  } | null;
+  nextHoliday?: PublicHoliday | null;
   carryOverAndBalance: CarryOverData;
-  metricBars: Metric[];
   conflictEntries: ConflictEntry[];
   formatDays?: (value: number) => string;
   onViewAllConflicts: () => void;
   onOpenBalanceModal?: () => void;
+  onOpenHolidaysModal?: () => void;
 }
 
 /** Leave balances arrive from the API as decimal strings; never add them raw. */
 const num = (value: unknown): number => {
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatRelativeDays = (dateStr: string): string => {
+  const todayStr = currentBusinessDateISO().slice(0, 10);
+  if (dateStr === todayStr) return "Today";
+  const start = parseISO(todayStr);
+  const target = parseISO(dateStr);
+  const diff = differenceInCalendarDays(target, start);
+  if (diff === 1) return "Tomorrow";
+  if (diff > 1) return `in ${diff} days`;
+  return format(target, "d MMM");
 };
 
 const CardShell: React.FC<{
@@ -79,25 +80,14 @@ const CardShell: React.FC<{
  * grid as little height as possible while a month is on screen.
  */
 export const CalendarBottomCards: React.FC<CalendarBottomCardsProps> = ({
-  vacationSummary,
+  nextHoliday,
   carryOverAndBalance,
-  metricBars,
   conflictEntries,
   formatDays = formatDaysDefault,
   onViewAllConflicts,
   onOpenBalanceModal,
+  onOpenHolidaysModal,
 }) => {
-  const remaining = vacationSummary?.remainingDays ?? 0;
-  const total = vacationSummary?.yearlyEntitlement ?? vacationSummary?.totalDays ?? 0;
-  const accrued = vacationSummary?.accruedDays;
-  const liveAccrued = vacationSummary?.liveAccruedBalance;
-  const stillAccruing = accrued !== undefined && accrued < total;
-
-  // Used and pending are the filled part; whatever is left is the remainder.
-  const usedPct = Math.min(100, Math.max(0, metricBars[1]?.progress ?? 0));
-  const pendingPct = Math.min(100, Math.max(0, metricBars[2]?.progress ?? 0));
-  const remainingPct = Math.max(0, 100 - usedPct - pendingPct);
-
   const carried = carryOverAndBalance.carryOver;
   const carriedDays = num(carried?.effective_available_days ?? carried?.available_days);
   const carriedYear = carried?.year;
@@ -105,61 +95,49 @@ export const CalendarBottomCards: React.FC<CalendarBottomCardsProps> = ({
   const hasConflicts = conflictEntries.length > 0;
   const firstConflict = conflictEntries[0];
 
+  const holidayDateStr = nextHoliday?.date?.slice(0, 10);
+  const holidayDateObj = holidayDateStr ? parseISO(holidayDateStr) : null;
+  const formattedHolidayDate =
+    holidayDateObj && !Number.isNaN(holidayDateObj.getTime())
+      ? format(holidayDateObj, "d MMM")
+      : null;
+
   return (
     <div
       className="border-border/60 bg-card/40 hidden shrink-0 border-t px-2 py-1.5 md:block"
       aria-label="Calendar summary"
     >
       <div className="grid gap-2 md:grid-cols-3">
+        {/* Card 1: Replaces redundant vacation card with next public holiday */}
         <CardShell
-          label="Total vacation entitlement"
-          onClick={onOpenBalanceModal}
+          label="Upcoming holiday"
+          onClick={onOpenHolidaysModal ?? onOpenBalanceModal}
           trailing={
-            <span className="flex items-center gap-1.5 font-mono text-xs">
-              {liveAccrued !== undefined && (
-                <span
-                  className={cn(
-                    "font-bold",
-                    liveAccrued < 0 ? toneTextClass.warning : toneTextClass.success
-                  )}
-                >
-                  Live:{" "}
-                  {liveAccrued >= 0 ? `+${formatDays(liveAccrued)}` : `${formatDays(liveAccrued)}`}d
-                </span>
-              )}
-              <span className="text-muted-foreground">
-                {stillAccruing
-                  ? `${formatDays(accrued)}d of ${formatDays(total)}d accrued`
-                  : `${formatDays(total)}d total`}
+            formattedHolidayDate ? (
+              <span className="text-muted-foreground font-mono text-xs">
+                {formattedHolidayDate}
               </span>
-            </span>
+            ) : null
           }
         >
           <span className="flex w-full items-baseline justify-between gap-2">
-            <span className="text-foreground font-mono text-lg font-bold tracking-tight">
-              {formatDays(remaining)}d left
+            <span className="text-foreground truncate font-mono text-base font-bold tracking-tight">
+              {nextHoliday?.name ?? "No upcoming holidays"}
             </span>
             <span className="text-muted-foreground inline-flex items-center gap-1 text-xs font-semibold transition-transform group-hover:translate-x-0.5">
-              Details
+              {holidayDateStr ? (
+                <span className="text-tone-info-text font-semibold">
+                  {formatRelativeDays(holidayDateStr)}
+                </span>
+              ) : (
+                "—"
+              )}
               <ChevronRight className="h-3 w-3" aria-hidden="true" />
             </span>
           </span>
-          <span
-            className="bg-muted flex h-1 w-full overflow-hidden rounded-full"
-            aria-hidden="true"
-          >
-            <span className={cn("h-full", toneFillClass.info)} style={{ width: `${usedPct}%` }} />
-            <span
-              className={cn("h-full", toneFillClass.warning)}
-              style={{ width: `${pendingPct}%` }}
-            />
-            <span
-              className={cn("h-full", toneFillClass.success)}
-              style={{ width: `${remainingPct}%` }}
-            />
-          </span>
         </CardShell>
 
+        {/* Card 2: Carry-Over */}
         <CardShell
           label="Carry-over"
           onClick={onOpenBalanceModal}
@@ -179,6 +157,7 @@ export const CalendarBottomCards: React.FC<CalendarBottomCardsProps> = ({
           </span>
         </CardShell>
 
+        {/* Card 3: Upcoming Conflicts */}
         <CardShell
           label="Upcoming conflicts"
           onClick={onViewAllConflicts}
