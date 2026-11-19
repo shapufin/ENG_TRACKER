@@ -127,14 +127,18 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Leave decided ≤2 days"
+          label="Leave decided within 2 business days"
           labelClassName={MICRO_LABEL}
           value={leave.pct_within_2_days !== null ? `${leave.pct_within_2_days}%` : "—"}
           icon={CheckCircle2}
           iconWellClass={slaWell(leave.pct_within_2_days)}
           iconColorClass={slaTone(leave.pct_within_2_days) ?? "text-tone-info-text"}
           valueColorClass={slaTone(leave.pct_within_2_days)}
-          trend={`${leave.decided_count} decided this month`}
+          trend={
+            leave.within_2_days != null
+              ? `${leave.within_2_days} of ${leave.decided_count} decided in time · submitted this month`
+              : `${leave.decided_count} requests submitted this month`
+          }
           progressPercent={leave.pct_within_2_days ?? undefined}
           progressColorClass={slaBar(leave.pct_within_2_days)}
         />
@@ -161,7 +165,7 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
           icon={CalendarClock}
           iconWellClass={`border ${toneSurfaceClass.info}`}
           iconColorClass={toneTextClass.info}
-          trend={`${overtime.decided_count} decided this month`}
+          trend={`${overtime.decided_count} requests submitted this month`}
         />
         <StatCard
           label="Team size"
@@ -197,12 +201,16 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className={`text-muted-foreground text-xs ${MICRO_LABEL}`}>
-                    Approval-behavior engagement (proxy)
+                    Approval engagement (automated)
                   </p>
                   <p className="mt-1 font-mono text-2xl font-bold tabular-nums">
                     {engagement?.engagement_score != null
                       ? `${(engagement.engagement_score / 10).toFixed(1)}/10`
                       : "—"}
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Built from on-time decisions (40%), approval rate (20%), responsiveness (20%)
+                    and consistency (20%).
                   </p>
                 </div>
                 <EngagementRing score={engagement?.engagement_score} />

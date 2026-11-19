@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import copy
 import math
+from bisect import bisect_left
 from datetime import date, datetime, time, timedelta
 
 from django.utils import timezone
@@ -55,11 +56,23 @@ def _month_bounds(month: date) -> tuple[date, date]:
     return month, next_month
 
 
-def _business_days_elapsed(start, end) -> int:
+def _elapsed_working_days(first: date, last: date, holidays=frozenset()) -> int:
+    """Mon-Fri days from ``first`` to ``last`` inclusive, minus global public holidays, minus one.
+
+    Never below 0, so a same-day decision is 0 days. Holidays are excluded from the
+    leave SLA only (owner ruling 2026-11-19); overtime keeps weekday counting.
+    """
+    working = count_business_days(first, last) - sum(
+        1 for day in holidays if first <= day <= last and day.weekday() < 5
+    )
+    return max(working - 1, 0)
+
+
+def _business_days_elapsed(start, end, holidays=frozenset()) -> int:
     """Business days between two datetimes, 0 if decided the same day (Tirane dates)."""
     if start is None or end is None:
         return 0
-    return max(count_business_days(_local_date(start), _local_date(end)) - 1, 0)
+    return _elapsed_working_days(_local_date(start), _local_date(end), holidays)
 
 
 def _local_date(value):
@@ -136,7 +149,11 @@ class TrendWindow:
         ).prefetch_related('attendees'))
         # Approved whole-day leave and global holidays, for "away all month" (ruling R7).
         self.leave_ranges = _approved_leave_ranges(team_member_ids, first_month, end)
-        self.holidays = global_holiday_dates(first_month, end)
+        # One holiday read covers the leave SLA too: a request submitted in the window may be
+        # decided up to a year later, so the range runs past the window's end.
+        self.leave_holiday_end = end + timedelta(days=366)
+        self.leave_holidays = global_holiday_dates(first_month, self.leave_holiday_end)
+        self.holidays = {day for day in self.leave_holidays if day < end}
         # (employee id, slot date) of every 1-on-1 skipped with a reason: not a miss (ruling R1).
         self.skips = [
             (employee_id, slot_date) for employee_id, slot_date, reason in OneOnOneSkip.objects.filter(
@@ -181,7 +198,16 @@ def leave_sla_metrics(team_member_ids, month: date, window: TrendWindow | None =
         )
 
     decided = [r for r in rows if r.status in ('approved', 'rejected') and r.approved_at]
-    within_2_days = sum(1 for r in decided if _business_days_elapsed(r.submitted_at, r.approved_at) <= 2)
+    holidays = set()
+    if decided:
+        last_decided = max(_local_date(r.approved_at) for r in decided)
+        if window is not None and last_decided < window.leave_holiday_end:
+            holidays = window.leave_holidays  # the trend reads holidays once, not per month
+        else:
+            holidays = global_holiday_dates(min(_local_date(r.submitted_at) for r in decided), last_decided)
+    within_2_days = sum(
+        1 for r in decided if _business_days_elapsed(r.submitted_at, r.approved_at, holidays) <= 2
+    )
     pct_within_2_days = round((within_2_days / len(decided)) * 100, 1) if decided else None
 
     if window is not None:
@@ -193,6 +219,7 @@ def leave_sla_metrics(team_member_ids, month: date, window: TrendWindow | None =
 
     return {
         'decided_count': len(decided),
+        'within_2_days': within_2_days,
         'pct_within_2_days': pct_within_2_days,
         'pending_at_month_end': pending_at_month_end,
     }
@@ -273,6 +300,8 @@ def meeting_compliance_metrics(leader, team_member_ids, month: date, window: Tre
 
     return {
         'one_on_one_compliance_pct': one_on_one_pct,
+        'one_on_one_compliant': compliant_members,
+        'one_on_one_eligible': eligible,
         'tl_sync_count': tl_sync_count,
         'team_meetings_held': len(team_meetings),
         'team_meetings_with_hrbp': held_with_hrbp,
@@ -324,6 +353,10 @@ ESCALATION_PIP_PENDING_DAYS = 14
 ESCALATION_ABSENCE_SLA_DAYS = 5
 
 PROMOTION_TARGET_PCT = 3.0
+# Line Manager KPI targets (Enri's KPI). Hardcoded until a role-based target exists.
+TL_SYNC_TARGET_PER_YEAR = 45
+REVIEW_TARGET_PER_YEAR = 12
+ONE_ON_ONE_TARGET_PCT = 100.0
 
 
 def absence_metrics(team_member_ids) -> dict:
@@ -588,8 +621,14 @@ def escalation_candidates(leader, subject_ids=None, include_leave=True) -> list[
         LeaveRequest.objects.filter(user_id__in=team_member_ids, status='pending').select_related('user')
         if include_leave else []
     )
-    for r in pending_leave:
-        elapsed = count_business_days(_local_date(r.submitted_at), today) - 1 if r.submitted_at else 0
+    pending_rows = list(pending_leave)
+    submitted_days = [_local_date(r.submitted_at) for r in pending_rows if r.submitted_at]
+    leave_holidays = global_holiday_dates(min(submitted_days), today) if submitted_days else set()
+    for r in pending_rows:
+        elapsed = (
+            _elapsed_working_days(_local_date(r.submitted_at), today, leave_holidays)
+            if r.submitted_at else 0
+        )
         if elapsed > ESCALATION_LEAVE_SLA_DAYS:
             candidates.append({
                 'kind': 'leave_pending', 'subject_id': r.user_id, 'subject_name': str(r.user),
@@ -780,16 +819,30 @@ def build_scorecard(
         year_metrics[month.year] = {
             'review_deliveries_ytd': review_delivery_count(user, month.year),
             'promotion': promotion_ratio(team_member_ids, month.year),
+            'tl_sync_dates': list(Meeting.objects.filter(
+                organizer=user, meeting_type='tl_sync',
+                occurred_on__gte=date(month.year, 1, 1), occurred_on__lt=date(month.year + 1, 1, 1),
+            ).order_by('occurred_on').values_list('occurred_on', flat=True)),
         }
     year_part = copy.deepcopy(year_metrics[month.year])  # points are masked in place later
+    tl_sync_dates = year_part.pop('tl_sync_dates')
     month_part = snapshot_blocks(user, month, snapshots)
     frozen = month_part is not None
     if not frozen:
         month_part = month_blocks(user, month, team_member_ids, window)
+    # Live, never frozen: the year-to-date pace and the targets change without a month closing.
     return {
         'month': month.isoformat(),
         **month_part,
         'frozen': frozen,
         **year_part,
         **current_state,
+        'tl_sync_ytd': bisect_left(tl_sync_dates, _month_bounds(month)[1]),
+        'tl_sync_expected_ytd': math.ceil(TL_SYNC_TARGET_PER_YEAR * month.month / 12),
+        'targets': {
+            'tl_sync_per_year': TL_SYNC_TARGET_PER_YEAR,
+            'reviews_per_year': REVIEW_TARGET_PER_YEAR,
+            'one_on_one_pct': ONE_ON_ONE_TARGET_PCT,
+            'promotion_pct': PROMOTION_TARGET_PCT,
+        },
     }

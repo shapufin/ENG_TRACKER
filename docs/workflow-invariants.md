@@ -81,6 +81,25 @@ reserved and are not carried twice; days released later in a closed year flow ba
 year's carry row. Pinned by `test_carry_over.py` and, for cost, `test_carry_over_query_budget.py`.
 Plan: `docs/superpowers/plans/2026-10-13-leave-carryover-and-holidays.md`.
 
+## TL scorecard metrics (`plugins/tl_scorecard/services.py`, 2026-11-19)
+
+- **Leave SLA "decided within 2 business days"**: Mon-Fri days after the submission day up
+  to the decision day, minus global public holidays (`PublicHoliday.calendar IS NULL`), 0 on
+  the same day. Holidays are excluded here only; `count_business_days` and the overtime
+  turnaround keep weekday counting. Escalations for pending leave use the same rule.
+- **Counts behind every percentage** (`within_2_days`, `one_on_one_compliant`,
+  `one_on_one_eligible`) are sent beside it. The 1-on-1 pair is masked for HBPR with the
+  percentage (`_mask_one_on_one`). Months frozen before 2026-11-19 return these as null.
+- **Excused 1-on-1s**: approved leave covering every working day of the month, or a skip with
+  a reason. A slot pushed past month-end is a miss for the month it was due in. Rule kept as
+  is; any change is an owner ruling (item 84).
+- **Manager syncs** are meetings between the Line Manager and a Manager (`tl_sync`).
+  `tl_sync_ytd` and `tl_sync_expected_ytd` (ceil of 45 x month / 12) are live, never frozen.
+- **Targets** (`targets` in the payload): 45 syncs, 12 reviews, 100% 1-on-1, 3% promotion,
+  set for the Line Manager's KPI. Hardcoded until a role-based target exists.
+- Pinned by `plugins/tl_scorecard/test_tl_scorecard.py` (holiday, counts, YTD, targets),
+  `test_tl_scorecard_hbpr.py` (HBPR masks the fraction) and `test_trend_budget.py` (query budget 24).
+
 ## Notification delivery (`plugins/notifications/signals.py`)
 
 - Submission: the employee gets `own_*_submitted`; the TL gets `team_action_required` (link `/team/approvals`).

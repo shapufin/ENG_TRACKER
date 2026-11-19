@@ -114,7 +114,16 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
   onOpenPip,
   onStartEprCycle,
 }) => {
-  const { meetings, idle, absences, pip, promotion } = scorecard;
+  const { meetings, idle, absences, pip, promotion, targets } = scorecard;
+  const oneOnOneTarget = targets ? `Target: ${targets.one_on_one_pct}%` : undefined;
+  const oneOnOneFraction =
+    meetings.one_on_one_compliant != null && meetings.one_on_one_eligible != null
+      ? `${meetings.one_on_one_compliant} of ${meetings.one_on_one_eligible} met`
+      : undefined;
+  const syncYtd = scorecard.tl_sync_ytd;
+  const syncExpected = scorecard.tl_sync_expected_ytd;
+  const syncTarget = targets?.tl_sync_per_year;
+  const reviewTarget = targets?.reviews_per_year;
   return (
     <>
       <section aria-labelledby="tl-cadence" className="space-y-4">
@@ -149,7 +158,12 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
             iconWellClass={slaWell(meetings.one_on_one_compliance_pct)}
             iconColorClass={slaTone(meetings.one_on_one_compliance_pct) ?? toneTextClass.neutral}
             valueColorClass={slaTone(meetings.one_on_one_compliance_pct)}
-            trend="Target: 100%"
+            trend={[oneOnOneFraction, oneOnOneTarget].filter(Boolean).join(" · ")}
+            footer={
+              <span className="text-muted-foreground">
+                Excused: approved leave for the whole month, or a skip with a reason
+              </span>
+            }
             progressPercent={meetings.one_on_one_compliance_pct ?? undefined}
           />
           <StatCard
@@ -159,7 +173,20 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
             icon={PhoneCall}
             iconWellClass={`border ${toneSurfaceClass.info}`}
             iconColorClass={toneTextClass.info}
-            trend="This month · target ≥45/year"
+            trend={
+              syncYtd != null && syncExpected != null && syncTarget != null
+                ? `${syncYtd} of ${syncTarget} YTD · ${
+                    syncYtd >= syncExpected ? "on pace" : `${syncExpected} needed by now`
+                  }`
+                : "This month"
+            }
+            footer={
+              syncTarget != null ? (
+                <span className="text-muted-foreground">
+                  Annual target {syncTarget} · about {Math.round(syncTarget / 12)} a month
+                </span>
+              ) : undefined
+            }
           />
           <StatCard
             label="Team meetings with HRBP"
@@ -177,7 +204,7 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
             icon={ClipboardList}
             iconWellClass={`border ${toneSurfaceClass.info}`}
             iconColorClass={toneTextClass.info}
-            trend="Target: ≥12/year"
+            trend={reviewTarget != null ? `Target: ≥${reviewTarget}/year` : undefined}
           />
         </div>
       </section>

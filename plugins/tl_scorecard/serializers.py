@@ -35,6 +35,8 @@ _UNSET = object()
 
 class LeaveSlaSerializer(serializers.Serializer):
     decided_count = serializers.IntegerField()
+    # Absent from months frozen before the count was stored: null, not an error.
+    within_2_days = serializers.IntegerField(allow_null=True)
     pct_within_2_days = serializers.FloatField(allow_null=True)
     pending_at_month_end = serializers.IntegerField()
 
@@ -46,6 +48,8 @@ class OvertimeTurnaroundSerializer(serializers.Serializer):
 
 class MeetingComplianceSerializer(serializers.Serializer):
     one_on_one_compliance_pct = serializers.FloatField(allow_null=True)
+    one_on_one_compliant = serializers.IntegerField(allow_null=True)
+    one_on_one_eligible = serializers.IntegerField(allow_null=True)
     tl_sync_count = serializers.IntegerField()
     team_meetings_held = serializers.IntegerField()
     team_meetings_with_hrbp = serializers.IntegerField()
@@ -118,6 +122,9 @@ class ScorecardSerializer(serializers.Serializer):
     pip = PipMetricsSerializer()
     promotion = PromotionRatioSerializer()
     escalation_count = serializers.IntegerField()
+    tl_sync_ytd = serializers.IntegerField()
+    tl_sync_expected_ytd = serializers.IntegerField()
+    targets = serializers.DictField()
 
 
 def _viewer(serializer):
