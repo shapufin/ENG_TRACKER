@@ -239,6 +239,8 @@ export interface LeaveBalanceDetail {
   is_expired?: boolean;
   accrual_start_date?: string | null;
   monthly_accrued_days?: number;
+  yearly_entitlement?: number;
+  live_accrued_balance?: number;
 }
 
 export interface UserProfile {
@@ -432,6 +434,8 @@ export interface LeaveBalance {
   effective_available_days?: number;
   /** Earned so far this year (monthly accrual, rounded up); the whole allowance without accrual. */
   accrued_days?: number;
+  yearly_entitlement?: number;
+  live_accrued_balance?: number;
   is_carry_over?: boolean;
   expires_at?: string | null;
   accrual_start_date?: string | null;

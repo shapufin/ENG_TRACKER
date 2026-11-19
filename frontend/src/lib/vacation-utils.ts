@@ -17,6 +17,10 @@ const toBalanceDetailFromBalance = (balance: LeaveBalance): BalanceDetail => ({
   expiresAt: balance.expires_at ?? undefined,
   accrualStartDate: balance.accrual_start_date ?? undefined,
   monthlyAccruedDays: balance.accrued_days == null ? undefined : toNum(balance.accrued_days),
+  yearlyEntitlement:
+    balance.yearly_entitlement == null ? undefined : toNum(balance.yearly_entitlement),
+  liveAccruedBalance:
+    balance.live_accrued_balance == null ? undefined : toNum(balance.live_accrued_balance),
   year: balance.year,
 });
 
@@ -36,6 +40,8 @@ export const toBalanceDetailFromSummary = (
     isExpired: detail.is_expired,
     accrualStartDate: detail.accrual_start_date ?? undefined,
     monthlyAccruedDays: detail.monthly_accrued_days,
+    yearlyEntitlement: detail.yearly_entitlement,
+    liveAccruedBalance: detail.live_accrued_balance,
     year: opts.year,
   };
 };
@@ -60,13 +66,26 @@ const buildBreakdown = (
 ): VacationBalanceBreakdown | null => {
   if (!current && !carryOver) return null;
 
+  const usedDays = sumProp(current, carryOver, "usedDays");
+  const pendingDays = sumProp(current, carryOver, "pendingDays");
+  const accruedDays =
+    toNum(current?.monthlyAccruedDays ?? current?.totalDays) + toNum(carryOver?.totalDays);
+  const yearlyEntitlement =
+    (current?.yearlyEntitlement ?? toNum(current?.totalDays)) + toNum(carryOver?.totalDays);
+  const liveAccruedBalance =
+    current?.liveAccruedBalance !== undefined
+      ? current.liveAccruedBalance +
+        toNum(carryOver?.effectiveAvailableDays ?? carryOver?.availableDays)
+      : accruedDays - usedDays - pendingDays;
+
   return {
     remainingDays: getEffectiveAvailable(current) + getEffectiveAvailable(carryOver),
-    usedDays: sumProp(current, carryOver, "usedDays"),
-    pendingDays: sumProp(current, carryOver, "pendingDays"),
+    usedDays,
+    pendingDays,
     totalDays: sumProp(current, carryOver, "totalDays"),
-    accruedDays:
-      toNum(current?.monthlyAccruedDays ?? current?.totalDays) + toNum(carryOver?.totalDays),
+    accruedDays,
+    liveAccruedBalance,
+    yearlyEntitlement,
     year: resolveYear(current, carryOver),
     current: current ?? undefined,
     carryOver: carryOver ?? undefined,

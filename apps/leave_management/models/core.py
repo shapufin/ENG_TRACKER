@@ -271,36 +271,102 @@ class LeaveBalance(BaseModel):
             return False
         return business_today() > self.expires_at
 
-    def get_monthly_accrued_days(self, reference_date=None):
+    def get_yearly_entitlement(self) -> Decimal:
         """
-        Calculate accrued days based on hire_date.
-        Albanian law: 1.8 days per month, always round up.
+        Total vacation days the user is eligible for until the end of the year (Dec 31).
+        Existing staff (hired before current year) get the full statutory entitlement (22d, or self.total_days).
+        New hires in the current year get pro-rated entitlement from hire_date to Dec 31:
+        Partial start month is pro-rated by worked days in that month + remaining full months * 1.8.
         """
+        import calendar
         from decimal import Decimal, ROUND_UP
-        
+
+        if not self.accrual_start_date or self.is_carry_over:
+            return Decimal(str(self.total_days))
+
+        hire = self.accrual_start_date
+        year = self.year
+
+        # Hired in a previous year: full year entitlement
+        if hire.year < year:
+            return Decimal(str(self.total_days))
+
+        # Hired in a future year: 0 for this year
+        if hire.year > year:
+            return Decimal('0')
+
+        # Hired during this year: calculate pro-rata from hire date to Dec 31
+        start_m = hire.month
+        days_in_start = calendar.monthrange(year, start_m)[1]
+        days_worked_in_start = max(0, days_in_start - hire.day + 1)
+        start_fraction = Decimal(str(days_worked_in_start)) / Decimal(str(days_in_start))
+
+        remaining_full_months = 12 - start_m
+        total_months = start_fraction + Decimal(str(remaining_full_months))
+        entitlement = (Decimal('1.8') * total_months).quantize(Decimal('1'), rounding=ROUND_UP)
+        return min(entitlement, Decimal(str(self.total_days)))
+
+    def get_monthly_accrued_days(self, reference_date=None) -> Decimal:
+        """
+        Calculate accrued days earned up to reference_date (default: today).
+        Albanian law: 1.8 days per month, always round up.
+        Mid-month hires are pro-rated based on days worked in the starting month.
+        Ongoing month is pro-rated based on days elapsed up to reference_date.
+        """
+        import calendar
+        from decimal import Decimal, ROUND_UP
+
         if reference_date is None:
             reference_date = business_today()
+
+        if self.is_carry_over:
+            return Decimal(str(self.total_days))
+
         if not self.accrual_start_date:
-            return self.total_days  # fallback: full year if no hire date
-        # Calculate months between accrual_start_date and reference_date
-        start = self.accrual_start_date
-        months = (reference_date.year - start.year) * 12 + (reference_date.month - start.month)
+            return Decimal(str(self.total_days))
 
-        if months < 0:
-            months = 0
-        else:
-            # Count the current month if the employee has reached the hire day
-            if reference_date.day >= start.day:
-                months += 1
+        year = self.year
+        hire = self.accrual_start_date
 
-        months = max(0, months)
-        # Cap at 12 months for yearly cycle
-        months = min(months, 12)
-        # Albanian law: 1.8 days per month, always round up
-        accrued = Decimal('1.8') * Decimal(months)
-        # Always round up to whole days per Albanian law
-        rounded = accrued.quantize(Decimal('1'), rounding=ROUND_UP)
-        return rounded  # Return Decimal for consistency
+        if hire.year > year:
+            return Decimal('0')
+
+        effective_start = max(hire, date(year, 1, 1))
+        if reference_date < effective_start:
+            return Decimal('0')
+
+        ref = min(reference_date, date(year, 12, 31))
+        entitled = self.get_yearly_entitlement()
+
+        if effective_start.month == ref.month and effective_start.year == ref.year:
+            days_in_m = calendar.monthrange(year, effective_start.month)[1]
+            active_days = max(0, ref.day - effective_start.day + 1)
+            frac = Decimal(str(active_days)) / Decimal(str(days_in_m))
+            accrued = (frac * Decimal('1.8')).quantize(Decimal('1'), rounding=ROUND_UP)
+            return min(accrued, entitled)
+
+        days_in_start = calendar.monthrange(year, effective_start.month)[1]
+        days_worked_in_start = max(0, days_in_start - effective_start.day + 1)
+        start_frac = Decimal(str(days_worked_in_start)) / Decimal(str(days_in_start))
+
+        intermediate_months = max(0, ref.month - effective_start.month - 1)
+
+        days_in_ref = calendar.monthrange(year, ref.month)[1]
+        ref_frac = Decimal(str(min(ref.day, days_in_ref))) / Decimal(str(days_in_ref))
+
+        total_months = start_frac + Decimal(str(intermediate_months)) + ref_frac
+        accrued = (Decimal('1.8') * total_months).quantize(Decimal('1'), rounding=ROUND_UP)
+        return min(accrued, entitled)
+
+    def get_live_accrued_balance(self, reference_date=None) -> Decimal:
+        """
+        Live available balance to date: accrued so far minus used and pending.
+        Can be negative if the user has taken vacation ahead of monthly accrual.
+        """
+        from decimal import Decimal
+        accrued = self.get_monthly_accrued_days(reference_date)
+        used = Decimal(str(self.used_days)) + Decimal(str(self.pending_days))
+        return accrued - used
 
     def get_accrued_days(self):
         """Days earned so far this year: the monthly accrual for vacation, else the whole allowance."""
@@ -310,16 +376,16 @@ class LeaveBalance(BaseModel):
 
     def get_effective_available_days(self):
         """
-        Return available days considering carry-over expiry and accrual.
+        Return available days considering carry-over expiry and yearly entitlement.
         For carry-over: return 0 if expired.
-        For regular: return accrued amount if accrual_start_date set, else total.
+        For regular vacation: return remaining annual entitlement (yearly_entitlement - used - pending).
         """
         if self.is_carry_over and self.is_expired:
-            return 0
-        if self.leave_type == 'vacation' and self.accrual_start_date and not self.is_carry_over:
-            accrued = self.get_monthly_accrued_days()
-            used = self.used_days + self.pending_days
-            return max(0, accrued - used)
+            return Decimal('0')
+        if self.leave_type == 'vacation' and not self.is_carry_over:
+            entitled = self.get_yearly_entitlement()
+            used = Decimal(str(self.used_days)) + Decimal(str(self.pending_days))
+            return max(Decimal('0'), entitled - used)
         return self.available_days
     
     def can_request_days(self, days):

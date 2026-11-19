@@ -26,7 +26,13 @@ interface ConflictEntry {
 }
 
 interface CalendarBottomCardsProps {
-  vacationSummary?: { remainingDays?: number; totalDays?: number; accruedDays?: number } | null;
+  vacationSummary?: {
+    remainingDays?: number;
+    totalDays?: number;
+    accruedDays?: number;
+    liveAccruedBalance?: number;
+    yearlyEntitlement?: number;
+  } | null;
   carryOverAndBalance: CarryOverData;
   metricBars: Metric[];
   conflictEntries: ConflictEntry[];
@@ -82,8 +88,9 @@ export const CalendarBottomCards: React.FC<CalendarBottomCardsProps> = ({
   onOpenBalanceModal,
 }) => {
   const remaining = vacationSummary?.remainingDays ?? 0;
-  const total = vacationSummary?.totalDays ?? 0;
+  const total = vacationSummary?.yearlyEntitlement ?? vacationSummary?.totalDays ?? 0;
   const accrued = vacationSummary?.accruedDays;
+  const liveAccrued = vacationSummary?.liveAccruedBalance;
   const stillAccruing = accrued !== undefined && accrued < total;
 
   // Used and pending are the filled part; whatever is left is the remainder.
@@ -108,10 +115,23 @@ export const CalendarBottomCards: React.FC<CalendarBottomCardsProps> = ({
           label="Vacation balance"
           onClick={onOpenBalanceModal}
           trailing={
-            <span className="text-muted-foreground font-mono text-xs">
-              {stillAccruing
-                ? `${formatDays(accrued)}d of ${formatDays(total)}d accrued`
-                : `${formatDays(total)}d total`}
+            <span className="flex items-center gap-1.5 font-mono text-xs">
+              {liveAccrued !== undefined && (
+                <span
+                  className={cn(
+                    "font-bold",
+                    liveAccrued < 0 ? toneTextClass.warning : toneTextClass.success
+                  )}
+                >
+                  Live:{" "}
+                  {liveAccrued >= 0 ? `+${formatDays(liveAccrued)}` : `${formatDays(liveAccrued)}`}d
+                </span>
+              )}
+              <span className="text-muted-foreground">
+                {stillAccruing
+                  ? `${formatDays(accrued)}d of ${formatDays(total)}d accrued`
+                  : `${formatDays(total)}d total`}
+              </span>
             </span>
           }
         >

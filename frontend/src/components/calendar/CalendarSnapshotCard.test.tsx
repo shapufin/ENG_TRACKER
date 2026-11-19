@@ -28,6 +28,7 @@ describe("CalendarSnapshotCard", () => {
       <CalendarSnapshotCard summary={{ ...baseSummary, accruedDays: 22 }} formatDays={formatDays} />
     );
     expect(screen.queryByText(/accrued so far/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Fully accrued")).toBeInTheDocument();
   });
 
   it("renders segmented bar widths for remaining/pending/used", () => {
@@ -63,5 +64,46 @@ describe("CalendarSnapshotCard", () => {
   it("bar carries an accessible label", () => {
     render(<CalendarSnapshotCard summary={baseSummary} formatDays={formatDays} />);
     expect(screen.getByRole("img").getAttribute("aria-label")).toContain("days remaining");
+  });
+
+  it("renders negative live accrued balance when vacation is borrowed in advance", () => {
+    render(
+      <CalendarSnapshotCard
+        summary={{
+          ...baseSummary,
+          remainingDays: 9,
+          usedDays: 13,
+          pendingDays: 0,
+          totalDays: 22,
+          accruedDays: 6,
+          liveAccruedBalance: -7,
+        }}
+        formatDays={formatDays}
+      />
+    );
+    expect(screen.getByText("-7d")).toBeInTheDocument();
+    expect(screen.getByText("In advance")).toBeInTheDocument();
+    expect(screen.getByText("borrowed")).toBeInTheDocument();
+    expect(screen.getByText(/Accrued so far/)).toHaveTextContent("Accrued so far: 6 of 22d");
+  });
+
+  it("renders positive live accrued balance when earned to date exceeds usage", () => {
+    render(
+      <CalendarSnapshotCard
+        summary={{
+          ...baseSummary,
+          remainingDays: 15,
+          usedDays: 3,
+          pendingDays: 0,
+          totalDays: 22,
+          accruedDays: 9,
+          liveAccruedBalance: 6,
+        }}
+        formatDays={formatDays}
+      />
+    );
+    expect(screen.getByText("+6d")).toBeInTheDocument();
+    expect(screen.getByText("Earned to date")).toBeInTheDocument();
+    expect(screen.getByText("available")).toBeInTheDocument();
   });
 });

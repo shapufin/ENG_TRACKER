@@ -38,6 +38,8 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
     usedDays,
     pendingDays,
     totalDays,
+    liveAccruedBalance,
+    accruedDays,
     vacationYear,
     carryOverDetail,
     remainingProgress,
@@ -232,6 +234,29 @@ export const UserStatusModal: React.FC<UserStatusModalProps> = ({
                         </div>
                         <p className="text-muted-foreground mt-2.5 text-xs">
                           {vacationYear} allowance · resets 1 Jan · carry-over expires 31 Mar
+                          {liveAccruedBalance !== undefined && (
+                            <>
+                              {" · "}
+                              <span
+                                className={cn(
+                                  "font-semibold",
+                                  liveAccruedBalance < 0
+                                    ? toneTextClass.warning
+                                    : toneTextClass.success
+                                )}
+                              >
+                                Live accrued:{" "}
+                                {liveAccruedBalance >= 0
+                                  ? `+${formatCompactDays(liveAccruedBalance)}`
+                                  : formatCompactDays(liveAccruedBalance)}
+                                d (
+                                {accruedDays !== undefined
+                                  ? `${formatCompactDays(accruedDays)}d earned`
+                                  : "live"}
+                                )
+                              </span>
+                            </>
+                          )}
                         </p>
                       </div>
                       <div className="mt-3 mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">

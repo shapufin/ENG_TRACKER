@@ -36,6 +36,36 @@ describe("CalendarBottomCards", () => {
     expect(card).not.toHaveTextContent("22d total");
   });
 
+  it("shows live accrued balance badge when present (both positive and negative)", () => {
+    const { rerender } = render(
+      <CalendarBottomCards
+        {...baseProps}
+        vacationSummary={{
+          remainingDays: 9,
+          totalDays: 22,
+          accruedDays: 6,
+          liveAccruedBalance: -7,
+        }}
+      />
+    );
+    const card = screen.getByRole("button", { name: "Vacation balance" });
+    expect(card).toHaveTextContent("Live: -7d");
+    expect(card).toHaveTextContent("6d of 22d accrued");
+
+    rerender(
+      <CalendarBottomCards
+        {...baseProps}
+        vacationSummary={{
+          remainingDays: 16,
+          totalDays: 22,
+          accruedDays: 11,
+          liveAccruedBalance: 5,
+        }}
+      />
+    );
+    expect(card).toHaveTextContent("Live: +5d");
+  });
+
   it("coerces decimal-string balances from the API before printing them", () => {
     render(
       <CalendarBottomCards

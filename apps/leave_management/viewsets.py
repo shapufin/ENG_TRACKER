@@ -264,6 +264,8 @@ class LeaveBalanceViewSet(HbprBlockedMixin, CacheInvalidationMixin, SuperuserPer
                 'effective_available_days': float(current.get_effective_available_days()),
                 'accrual_start_date': current.accrual_start_date,
                 'monthly_accrued_days': float(current.get_monthly_accrued_days()),
+                'yearly_entitlement': float(current.get_yearly_entitlement()),
+                'live_accrued_balance': float(current.get_live_accrued_balance()),
             }
             summary['total_available'] += summary['current_year']['effective_available_days']
             summary['total_used'] += float(current.used_days)
