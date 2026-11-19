@@ -129,11 +129,11 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
         <StatCard
           label="Leave decided within 2 business days"
           labelClassName={MICRO_LABEL}
-          value={leave.pct_within_2_days !== null ? `${leave.pct_within_2_days}%` : "n/a"}
+          value={leave.pct_within_2_days !== null ? `${leave.pct_within_2_days}%` : "—"}
           icon={CheckCircle2}
           iconWellClass={slaWell(leave.pct_within_2_days)}
           iconColorClass={slaTone(leave.pct_within_2_days) ?? "text-tone-info-text"}
-          valueColorClass={slaTone(leave.pct_within_2_days)}
+          valueColorClass={slaTone(leave.pct_within_2_days) ?? "text-muted-foreground font-normal"}
           trend={
             leave.decided_count === 0
               ? "No decisions yet this month"
@@ -163,10 +163,13 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
         <StatCard
           label="OT approval turnaround"
           labelClassName={MICRO_LABEL}
-          value={overtime.avg_turnaround_days !== null ? `${overtime.avg_turnaround_days}d` : "n/a"}
+          value={overtime.avg_turnaround_days !== null ? `${overtime.avg_turnaround_days}d` : "—"}
           icon={CalendarClock}
           iconWellClass={`border ${toneSurfaceClass.info}`}
           iconColorClass={toneTextClass.info}
+          valueColorClass={
+            overtime.avg_turnaround_days !== null ? undefined : "text-muted-foreground font-normal"
+          }
           trend={`${overtime.decided_count} requests submitted this month`}
         />
         <StatCard
@@ -206,9 +209,11 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
                     Approval engagement (automated)
                   </p>
                   <p className="mt-1 font-mono text-2xl font-bold tabular-nums">
-                    {engagement?.engagement_score != null
-                      ? `${(engagement.engagement_score / 10).toFixed(1)}/10`
-                      : "n/a"}
+                    {engagement?.engagement_score != null ? (
+                      `${(engagement.engagement_score / 10).toFixed(1)}/10`
+                    ) : (
+                      <span className="text-muted-foreground font-normal">—</span>
+                    )}
                   </p>
                   <p className="text-muted-foreground mt-1 text-xs">
                     Built from on-time decisions (40%), approval rate (20%), responsiveness (20%)

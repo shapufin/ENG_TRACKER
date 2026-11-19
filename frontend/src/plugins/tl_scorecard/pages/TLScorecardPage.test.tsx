@@ -438,4 +438,40 @@ describe("TLScorecardPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Flag idle" }));
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
   });
+
+  it("starts non-current year data from scratch at January (01-01)", async () => {
+    mockDefaults();
+    renderPage("/tl-scorecard?year=2027");
+
+    await waitFor(() => {
+      expect(tlScorecardService.getScorecard).toHaveBeenCalledWith("2027-01-01");
+    });
+  });
+
+  it("renders em-dash instead of n/a when metrics have no decisions or data", async () => {
+    mockDefaults();
+    (tlScorecardService.getScorecard as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: {
+        ...SCORECARD,
+        leave: { decided_count: 0, within_2_days: null, pct_within_2_days: null, pending_at_month_end: 0 },
+        overtime: { decided_count: 0, avg_turnaround_days: null },
+        meetings: {
+          ...SCORECARD.meetings,
+          one_on_one_compliance_pct: null,
+          one_on_one_compliant: 0,
+          one_on_one_eligible: 0,
+        },
+        promotion: { ...SCORECARD.promotion, promoted_pct: null },
+      },
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("No decisions yet this month")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("n/a")).not.toBeInTheDocument();
+    const dashes = screen.getAllByText("—");
+    expect(dashes.length).toBeGreaterThanOrEqual(4);
+  });
 });

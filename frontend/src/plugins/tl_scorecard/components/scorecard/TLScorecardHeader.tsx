@@ -120,21 +120,23 @@ export const TLScorecardHeader: React.FC<TLScorecardHeaderProps> = ({
       </span>
     }
     actions={
-      <>
+      <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
         {year != null && onYearChange && month != null && onMonthChange && (
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <ReportingMonthSelect year={year} month={month} onMonthChange={onMonthChange} />
             <ReportingYearSelect year={year} onYearChange={onYearChange} />
           </div>
         )}
-        <ExportButton month={month} />
-        <Button size="sm" asChild>
-          <Link to="/tl-scorecard/visualize">
-            <LineChart className="mr-2 h-4 w-4" aria-hidden="true" />
-            Visualize
-          </Link>
-        </Button>
-      </>
+        <div className="flex items-center gap-2">
+          <ExportButton month={month} />
+          <Button size="sm" asChild>
+            <Link to="/tl-scorecard/visualize">
+              <LineChart className="mr-2 h-4 w-4" aria-hidden="true" />
+              Visualize
+            </Link>
+          </Button>
+        </div>
+      </div>
     }
   >
     <div className="space-y-6">

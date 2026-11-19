@@ -273,10 +273,10 @@ describe("EPRSection stage tracker", () => {
       expect(tracker).toHaveTextContent("due 31 Dec");
     });
 
-    it("ignores cycles from other years", () => {
+    it("ignores cycles from other years in tracker and cycle list", () => {
       vi.useFakeTimers({ toFake: ["Date"] });
       vi.setSystemTime(new Date("2026-10-15T09:00:00Z"));
-      const lastYear = { ...cycles[0], id: 99, year: 2025 };
+      const lastYear = { ...cycles[0], id: 99, year: 2025, user_name: "Last Year Employee" };
       render(
         <EPRSection
           cycles={[lastYear, ...cycles]}
@@ -290,6 +290,7 @@ describe("EPRSection stage tracker", () => {
       expect(screen.getByRole("group", { name: "EPR stage tracker" })).toHaveTextContent(
         /Goal Setting\s*2\/7/
       );
+      expect(screen.queryByText("Last Year Employee · 2025")).not.toBeInTheDocument();
     });
   });
 });

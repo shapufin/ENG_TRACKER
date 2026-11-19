@@ -62,12 +62,10 @@ const TLScorecardAuthoring: React.FC = () => {
   // Match the API's bounds (2000-2100); a hand-edited `?year=` falls back to the business year.
   const yearParam = Number(params.get("year"));
   const year =
-    Number.isInteger(yearParam) && yearParam >= 2000 && yearParam <= 2100
-      ? yearParam
-      : currentYear;
+    Number.isInteger(yearParam) && yearParam >= 2000 && yearParam <= 2100 ? yearParam : currentYear;
 
   const currentMonthKey = currentBusinessMonthKey();
-  const defaultMonth = year === currentYear ? `${currentMonthKey}-01` : `${year}-12-01`;
+  const defaultMonth = year === currentYear ? `${currentMonthKey}-01` : `${year}-01-01`;
   const rawMonth = params.get("month");
   const isValidMonth = (val: string | null): val is string => {
     if (!val) return false;
@@ -78,7 +76,9 @@ const TLScorecardAuthoring: React.FC = () => {
     return y === year && m >= 1 && m <= 12;
   };
   const month = isValidMonth(rawMonth)
-    ? (rawMonth.length === 7 ? `${rawMonth}-01` : rawMonth.slice(0, 7) + "-01")
+    ? rawMonth.length === 7
+      ? `${rawMonth}-01`
+      : rawMonth.slice(0, 7) + "-01"
     : defaultMonth;
 
   const setMonth = (nextMonth: string) =>
@@ -98,7 +98,7 @@ const TLScorecardAuthoring: React.FC = () => {
       (prev) => {
         const next = new URLSearchParams(prev);
         next.set("year", String(nextYear));
-        const nextMonth = nextYear === currentYear ? `${currentMonthKey}-01` : `${nextYear}-12-01`;
+        const nextMonth = nextYear === currentYear ? `${currentMonthKey}-01` : `${nextYear}-01-01`;
         next.set("month", nextMonth);
         return next;
       },

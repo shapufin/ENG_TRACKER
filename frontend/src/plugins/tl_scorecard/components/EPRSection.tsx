@@ -375,7 +375,8 @@ export const EPRSection: React.FC<EPRSectionProps> = ({
   const [query, setQuery] = useState("");
   const [visible, setVisible] = useState(PAGE_SIZE);
 
-  const phases = cycles.map((cycle) => ({ cycle, phase: phaseOf(cycle) }));
+  const scopedCycles = year === undefined ? cycles : cycles.filter((cycle) => cycle.year === year);
+  const phases = scopedCycles.map((cycle) => ({ cycle, phase: phaseOf(cycle) }));
   const counts = (value: PhaseFilter) =>
     value === "all" ? phases.length : phases.filter((item) => item.phase === value).length;
   const needle = query.trim().toLowerCase();
@@ -389,16 +390,12 @@ export const EPRSection: React.FC<EPRSectionProps> = ({
   return (
     <GlassCard animateOnMount={false} className="p-4">
       <h2 className="text-sm font-semibold">EPR cycles</h2>
-      {cycles.length === 0 ? (
+      {scopedCycles.length === 0 ? (
         <EmptyState icon={ClipboardCheck} title="No EPR cycles started" className="py-6" />
       ) : (
         <>
-          <StageTracker
-            cycles={year === undefined ? cycles : cycles.filter((cycle) => cycle.year === year)}
-            teamSize={teamSize}
-            dueDates={dueDates}
-          />
-          {cycles.length > 3 && (
+          <StageTracker cycles={scopedCycles} teamSize={teamSize} dueDates={dueDates} />
+          {scopedCycles.length > 3 && (
             <div className="mt-3 space-y-2">
               <SearchField
                 value={query}
