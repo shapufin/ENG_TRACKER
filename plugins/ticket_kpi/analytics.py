@@ -30,6 +30,7 @@ from core.utils.timezone_local import business_today
 # priority, category, assignee, requester) while still bounding payload
 # size against a genuinely free-text dynamic column.
 FIELD_BREAKDOWN_MAX_DISTINCT = 200
+STANDARD_BREAKDOWN_FIELDS = ('status', 'priority', 'category', 'assignee', 'requester')
 
 
 def _build_field_breakdowns(tickets) -> Dict[str, Dict[str, int]]:
@@ -43,7 +44,7 @@ def _build_field_breakdowns(tickets) -> Dict[str, Dict[str, int]]:
         # Standard fields — 'requester' included so the ticket-list filter
         # dropdown (viewsets.py's ``tickets`` action) can read it from here
         # instead of scanning every ticket.
-        for field in ['status', 'priority', 'category', 'assignee', 'requester']:
+        for field in STANDARD_BREAKDOWN_FIELDS:
             val = getattr(ticket, field, None)
             if val:
                 if field not in field_values:
@@ -61,7 +62,8 @@ def _build_field_breakdowns(tickets) -> Dict[str, Dict[str, int]]:
                 'description', 'short description', 'detailed description',
                 'comments', 'notes', 'resolution_notes', 'work notes',
                 'details', 'additional comments', 'activity',
-            }:
+                'code', 'summary', 'solution', 'solutions',
+            } or 'date' in k.lower():
                 continue
             if k not in field_values:
                 field_values[k] = []
@@ -70,7 +72,15 @@ def _build_field_breakdowns(tickets) -> Dict[str, Dict[str, int]]:
     field_breakdowns = {}
     for field_name, values in field_values.items():
         unique_count = len(set(values))
-        if unique_count <= FIELD_BREAKDOWN_MAX_DISTINCT and len(values) > 0:
+        # An extra column that is nearly unique per ticket (a code, a timestamp, a
+        # note) is not a category: it would chart as hundreds of one-ticket bars.
+        # The standard fields are exempt: their values feed the ticket-list filter
+        # dropdowns, where one entry per requester is wanted.
+        nearly_unique = (
+            field_name not in STANDARD_BREAKDOWN_FIELDS
+            and unique_count > 15 and unique_count / len(values) > 0.5
+        )
+        if unique_count <= FIELD_BREAKDOWN_MAX_DISTINCT and len(values) > 0 and not nearly_unique:
             counter = Counter(values)
             field_breakdowns[field_name] = dict(counter)
 

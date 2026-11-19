@@ -219,6 +219,8 @@ export interface TicketRecord {
   category: string;
   time_to_resolution_hours: number | null;
   sla_breached: boolean | null;
+  /** open / closed / cancelled / other, decided by the server from the status wording. */
+  status_group?: "open" | "closed" | "cancelled" | "other";
   /** Complete row data from the uploaded file (all columns). */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   raw_data: Record<string, any>;

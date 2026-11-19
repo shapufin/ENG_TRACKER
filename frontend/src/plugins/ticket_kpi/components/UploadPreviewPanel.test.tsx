@@ -50,6 +50,17 @@ describe("UploadPreviewPanel", () => {
     expect(screen.getByRole("button", { name: "Apply status mapping" })).toBeDisabled();
   });
 
+  it("says who may replace an import that already exists, without telling a leader to ask an admin", () => {
+    render(
+      <UploadPreviewPanel
+        {...baseProps}
+        preview={{ ...basePreview, has_existing_upload: true, existing_record_count: 82 }}
+      />
+    );
+    expect(screen.getByText(/82 tickets are already imported for this month/)).toBeInTheDocument();
+    expect(screen.getByText(/Manager, Line Manager or administrator/)).toBeInTheDocument();
+  });
+
   it("shows no status warning when every status is recognised", () => {
     render(<UploadPreviewPanel {...baseProps} preview={basePreview} />);
     expect(screen.queryByText(/Some statuses are not recognised/)).not.toBeInTheDocument();

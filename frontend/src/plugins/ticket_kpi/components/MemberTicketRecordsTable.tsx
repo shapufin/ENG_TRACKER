@@ -80,8 +80,11 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
 };
 
 const renderStatusCell = (row: TicketRecord): React.ReactNode => {
+  // The server's group first: "Closed Satisfaction Verified" is closed, whatever its wording.
   const cls =
-    STATUS_BADGE_CLASS[row.status?.toLowerCase()] ?? "bg-muted text-muted-foreground border-border";
+    STATUS_BADGE_CLASS[row.status_group ?? ""] ??
+    STATUS_BADGE_CLASS[row.status?.toLowerCase()] ??
+    "bg-muted text-muted-foreground border-border";
   return row.status ? (
     <Badge variant="outline" className={cn("font-medium", cls)}>
       {row.status}

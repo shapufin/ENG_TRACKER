@@ -5,6 +5,7 @@ Serializers for the Ticket KPI plugin — Dynamic Schema Edition.
 from datetime import timedelta
 
 from rest_framework import serializers
+from .status_groups import status_group
 from apps.overtime.models.core import Client
 from apps.overtime.services.client_lifecycle import archived_client_error
 from .models import (
@@ -151,6 +152,13 @@ class TicketImportBatchSerializer(serializers.ModelSerializer):
 
 class NormalizedTicketSerializer(serializers.ModelSerializer):
     """Serializer for individual normalized tickets."""
+    # open / closed / cancelled / other, decided once in status_groups so the UI
+    # colours "Closed Satisfaction Verified" like "Closed" without its own word list.
+    status_group = serializers.SerializerMethodField()
+
+    def get_status_group(self, obj):
+        return status_group(obj.status)
+
     class Meta:
         model = NormalizedTicket
         fields = [
@@ -159,7 +167,7 @@ class NormalizedTicketSerializer(serializers.ModelSerializer):
             'created_at', 'resolved_at',
             'assignee', 'requester', 'priority', 'category',
             'time_to_resolution_hours', 'sla_breached',
-            'raw_data',
+            'raw_data', 'status_group',
         ]
 
 

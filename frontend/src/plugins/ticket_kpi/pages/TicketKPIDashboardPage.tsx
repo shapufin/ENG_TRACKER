@@ -22,9 +22,14 @@ import { TicketKPIFieldBreakdowns } from "../components/TicketKPIFieldBreakdowns
 import { TicketKPIEvidenceSection } from "../components/evidence/TicketKPIEvidenceSection";
 import { MemberTicketRecordsTable } from "../components/MemberTicketRecordsTable";
 import { useTicketKPIDashboard } from "./hooks/useTicketKPIDashboard";
+import { dropRepeatedBreakdowns } from "../utils/rankBreakdown";
 import { currentBusinessYear } from "@/lib/date-format-utils";
 
 const SHOWN_ABOVE = new Set(["status", "priority", "category"]);
+const EXTRA_STANDARD = ["assignee", "requester"];
+
+const pick = <T,>(source: Record<string, T>, keys: string[]): Record<string, T> =>
+  Object.fromEntries(keys.map((key) => [key, source[key]]));
 
 const generateYearOptions = (): number[] => {
   const currentYear = currentBusinessYear();
@@ -79,14 +84,20 @@ export const TicketKPIDashboardPage: React.FC = () => {
     fieldBreakdowns,
   } = useTicketKPIDashboard();
 
-  // Status, priority and category already have their own section above.
-  const extraBreakdowns = React.useMemo(
-    () =>
-      Object.fromEntries(
-        Object.entries(fieldBreakdowns ?? {}).filter(([key]) => !SHOWN_ABOVE.has(key.toLowerCase()))
-      ),
-    [fieldBreakdowns]
-  );
+  // Status, priority and category already have their own section above. A column
+  // that repeats one of those, or an earlier chart, is not charted again. The
+  // order is explicit (standard fields first, then A-Z) because a JSON column
+  // does not keep key order on every database.
+  const extraBreakdowns = React.useMemo(() => {
+    const all = fieldBreakdowns ?? {};
+    const keys = Object.keys(all);
+    const shown = keys.filter((key) => SHOWN_ABOVE.has(key));
+    const standard = keys.filter((key) => EXTRA_STANDARD.includes(key));
+    const rest = keys
+      .filter((key) => !SHOWN_ABOVE.has(key.toLowerCase()) && !EXTRA_STANDARD.includes(key))
+      .sort((a, b) => a.localeCompare(b));
+    return dropRepeatedBreakdowns(pick(all, [...shown, ...standard, ...rest]), shown);
+  }, [fieldBreakdowns]);
   const { isTeamLeader } = usePermissions();
   const isLeaderOrAdmin = Boolean(isTeamLeader || user?.is_staff || user?.is_superuser);
 

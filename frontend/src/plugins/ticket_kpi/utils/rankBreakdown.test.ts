@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rankBreakdown } from "./rankBreakdown";
+import { dropRepeatedBreakdowns, rankBreakdown } from "./rankBreakdown";
 
 describe("rankBreakdown", () => {
   it("sorts by count, keeps the top rows and folds the rest into Other", () => {
@@ -23,5 +23,30 @@ describe("rankBreakdown", () => {
   it("returns nothing for an empty or zero breakdown", () => {
     expect(rankBreakdown({}, 8)).toEqual([]);
     expect(rankBreakdown({ a: 0 }, 8)).toEqual([]);
+  });
+});
+
+describe("dropRepeatedBreakdowns", () => {
+  const all = {
+    assignee: { "Jane Doe": 4 },
+    requester: { Alfa: 3, Beta: 1 },
+    "Analyst": { "jane doe": 4 },
+    "Requester Org.": { alfa: 3, beta: 1 },
+    CE: { Commvault: 3, Veeam: 1 },
+    "Driver Group": { Red: 3, Blue: 1 },
+    Validator: { red: 3, blue: 1 },
+    Origination: { BMS: 3, Email: 1 },
+  };
+
+  it("drops a field whose values and counts repeat a standard field or an earlier one", () => {
+    const kept = Object.keys(
+      dropRepeatedBreakdowns(all, ["assignee", "requester"])
+    );
+    expect(kept).toEqual(["CE", "Driver Group", "Origination"]);
+  });
+
+  it("keeps two fields that merely share a count shape", () => {
+    const kept = dropRepeatedBreakdowns({ a: { x: 3, y: 1 }, b: { p: 3, q: 1 } }, []);
+    expect(Object.keys(kept)).toEqual(["a", "b"]);
   });
 });

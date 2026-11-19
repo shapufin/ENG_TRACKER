@@ -20,6 +20,12 @@ interface BreakdownSectionProps {
   onClientChange: (clientId: number | null) => void;
 }
 
+/** A breakdown whose only value is "Unspecified" says nothing (the export has no such column). */
+const isUnspecifiedOnly = (data: Record<string, number> | undefined): boolean => {
+  const keys = Object.keys(data ?? {});
+  return keys.length === 1 && keys[0] === "Unspecified";
+};
+
 const GROUPS: { value: StatusGroupFilter; label: string }[] = [
   { value: "open", label: "Open" },
   { value: "closed", label: "Closed" },
@@ -76,18 +82,22 @@ export const BreakdownSection: React.FC<BreakdownSectionProps> = ({
           tone={1}
           emptyText="No tickets with this filter."
         />
-        <RankedBars
-          title="Priority"
-          data={data?.by_priority ?? {}}
-          tone={3}
-          emptyText="No tickets with this filter."
-        />
-        <RankedBars
-          title="Category"
-          data={data?.by_category ?? {}}
-          tone={2}
-          emptyText="No tickets with this filter."
-        />
+        {!isUnspecifiedOnly(data?.by_priority) && (
+          <RankedBars
+            title="Priority"
+            data={data?.by_priority ?? {}}
+            tone={3}
+            emptyText="No tickets with this filter."
+          />
+        )}
+        {!isUnspecifiedOnly(data?.by_category) && (
+          <RankedBars
+            title="Category"
+            data={data?.by_category ?? {}}
+            tone={2}
+            emptyText="No tickets with this filter."
+          />
+        )}
       </div>
     </section>
   );

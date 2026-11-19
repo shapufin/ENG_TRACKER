@@ -22,6 +22,7 @@ import pandas as pd
 from django.utils import timezone
 from dateutil import parser as date_parser
 from .status_groups import status_group
+from .export_reader import read_export
 from core.utils.tabular_file import (
     read_tabular_file,
     suggest_mapping,
@@ -161,7 +162,10 @@ class ColumnMapper:
         for raw in df[created_at_column]:
             if pd.isna(raw):
                 continue
-            parsed = self._parse_datetime(raw)
+            try:
+                parsed = self._parse_datetime(raw)
+            except ValueError:
+                continue
             if parsed is None:
                 continue
             key = parsed.strftime('%Y-%m-01')
@@ -173,7 +177,14 @@ class ColumnMapper:
     def read_file(self, file_bytes: bytes, filename: str = '') -> pd.DataFrame:
         """
         Read CSV or Excel file into a DataFrame.
+
+        A profile that lists ``keep_columns`` gets exactly those columns from the
+        real data sheet and header row (``export_reader``); otherwise the plain
+        reader keeps every column.
         """
+        keep = getattr(self.profile, 'keep_columns', None)
+        if keep:
+            return read_export(file_bytes, filename, keep)
         return read_tabular_file(file_bytes, filename=filename)
 
     def process_file(
@@ -296,13 +307,13 @@ class ColumnMapper:
         # created_at
         created_val = self._get_value(row, mapping.get('created_at'))
         if pd.notna(created_val):
-            record['created_at'] = self._parse_datetime(created_val)
+            record['created_at'] = self._parse_datetime(created_val, strict=True)
 
         # resolved_at
         if 'resolved_at' in mapping:
             val = self._get_value(row, mapping['resolved_at'])
             if pd.notna(val):
-                record['resolved_at'] = self._parse_datetime(val)
+                record['resolved_at'] = self._parse_datetime(val, strict=True)
 
         # assignee
         if 'assignee' in mapping:
@@ -359,8 +370,14 @@ class ColumnMapper:
         """Safely get a value from a DataFrame row."""
         return _shared_get_value(row, column, default=default)
 
-    def _parse_datetime(self, value: Any) -> Optional[datetime]:
-        """Parse various datetime formats into a timezone-aware datetime."""
+    def _parse_datetime(self, value: Any, strict: bool = False) -> Optional[datetime]:
+        """Parse various datetime formats into a timezone-aware datetime.
+
+        A profile with a ``date_format`` reads text dates with exactly that format
+        (day-first exports: the auto parser would read 05/10 as 10 May). With
+        ``strict`` a text that does not fit raises ValueError, so the row is
+        reported instead of silently losing its date.
+        """
         if value is None or (isinstance(value, float) and pd.isna(value)):
             return None
 
@@ -373,6 +390,16 @@ class ColumnMapper:
             value = value.strip()
             if not value:
                 return None
+
+        fmt = getattr(self.profile, 'date_format', '')
+        if fmt and isinstance(value, str):
+            try:
+                dt = datetime.strptime(value, fmt)
+            except ValueError:
+                if strict:
+                    raise ValueError(f"Unreadable date '{value}' (expected {fmt})") from None
+                return None
+            return timezone.make_aware(dt) if timezone.is_naive(dt) else dt
 
         try:
             dt = date_parser.parse(str(value))
@@ -444,10 +471,19 @@ class ColumnMapper:
 
         return None
 
-    def validate_preview(self, records: List[Dict], max_rows: int = 5) -> Dict[str, Any]:
+    def validate_preview(
+        self,
+        records: List[Dict],
+        max_rows: int = 5,
+        mapped_fields: Optional[Any] = None,
+    ) -> Dict[str, Any]:
         """
         Generate a preview summary from parsed records.
         Works with any available fields dynamically.
+
+        ``mapped_fields`` limits the missing-field warnings to the fields a team
+        format actually maps (a format with no priority column must not warn
+        about priority). None checks every standard field.
         """
         total = len(records)
         preview_rows = records[:max_rows]
@@ -460,6 +496,8 @@ class ColumnMapper:
         # Issues: count missing standard fields
         issues = {}
         for field in ['ticket_id', 'title', 'status', 'created_at', 'resolved_at', 'assignee', 'priority', 'category']:
+            if mapped_fields is not None and field not in mapped_fields:
+                continue
             missing = sum(1 for r in records if not r.get(field))
             if missing > 0:
                 issues[f'missing_{field}'] = missing

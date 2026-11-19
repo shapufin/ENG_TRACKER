@@ -84,8 +84,9 @@ export const UploadPreviewPanel: React.FC<UploadPreviewPanelProps> = ({
           <div className="border-tone-warning-border bg-tone-warning-surface flex items-center gap-2 rounded-md border p-3 text-sm">
             <AlertTriangle className="text-tone-warning-text h-4 w-4" />
             <span>
-              You already uploaded {preview.existing_record_count} tickets for this month. Contact
-              an administrator to override.
+              {preview.existing_record_count} tickets are already imported for this month. Replacing
+              them needs a Manager, Line Manager or administrator, and an import that was already
+              reviewed can only be replaced by an administrator.
             </span>
           </div>
         )}

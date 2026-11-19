@@ -36,6 +36,22 @@ class ExportProfile(models.Model):
         help_text="List of our field names that must be present in every upload"
     )
 
+    # Team export format. keep_columns: only these columns are read and stored
+    # (empty = the legacy reader that keeps every column). The data sheet and the
+    # header row are found by these names (export_reader.py).
+    keep_columns = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Columns to read and store, in this spelling. Empty = keep every column."
+    )
+    # strptime format of the export's date text, e.g. "%d/%m/%Y %H:%M". Blank =
+    # the legacy auto parser, which reads 05/10/2026 as 10 May (month first).
+    date_format = models.CharField(
+        max_length=40,
+        blank=True,
+        help_text="strptime format of text dates (day-first exports need this)"
+    )
+
     # Computed field toggles
     compute_resolution_time = models.BooleanField(
         default=True,

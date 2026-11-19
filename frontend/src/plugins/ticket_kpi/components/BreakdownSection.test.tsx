@@ -28,6 +28,17 @@ describe("BreakdownSection", () => {
     expect(screen.getAllByText(/60%/).length).toBeGreaterThan(0);
   });
 
+  it("hides a card whose only value is Unspecified, but keeps one with real values", () => {
+    render(
+      <BreakdownSection
+        {...baseProps}
+        data={{ ...data, by_priority: { Unspecified: 82 }, by_category: { Incident: 78, Change: 4 } }}
+      />
+    );
+    expect(screen.queryByText("Priority")).not.toBeInTheDocument();
+    expect(screen.getByText("Category")).toBeInTheDocument();
+  });
+
   it("toggles a status chip on and off", () => {
     const onGroupChange = vi.fn();
     const { rerender } = render(<BreakdownSection {...baseProps} onGroupChange={onGroupChange} />);

@@ -52,6 +52,7 @@ from .serializers import (
     TicketOvertimeLinkSerializer,
 )
 from .mapping_engine import ColumnMapper
+from .export_reader import ExportFormatError, read_export
 from .email_parser import parse_email_evidence
 from .upload_validation import (
     UploadValidationError,
@@ -375,21 +376,37 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
             validate_upload(file_obj, "ticket_import")
             mapper = ColumnMapper()
             file_bytes = file_obj.read()
-            df = mapper.read_file(file_bytes, filename=file_obj.name)
+            profiles = list(ExportProfile.objects.filter(is_active=True).order_by('-created_at'))
+
+            # A team export format (profile with keep_columns) is recognised by its
+            # header, on whatever sheet and row it sits, before the generic reader.
+            df = None
+            best_profile = None
+            best_score = 0
+            for profile in profiles:
+                if not profile.keep_columns:
+                    continue
+                try:
+                    df = read_export(file_bytes, file_obj.name, profile.keep_columns)
+                except ExportFormatError:
+                    continue
+                best_profile, best_score = profile, len(profile.keep_columns)
+                mapper = ColumnMapper(profile=profile)
+                break
+            if df is None:
+                df = mapper.read_file(file_bytes, filename=file_obj.name)
             enforce_table_dimensions(
                 df,
                 max_rows=policy_for("ticket_import")["max_rows"],
                 max_columns=policy_for("ticket_import")["max_columns"],
             )
-            detected = mapper.auto_detect_columns(list(df.columns))
-
-            # Suggest best-matching active profile
-            profiles = list(ExportProfile.objects.filter(is_active=True).order_by('-created_at'))
-            best_profile = None
-            best_score = 0
+            detected = (
+                dict(best_profile.field_mapping) if best_profile
+                else mapper.auto_detect_columns(list(df.columns))
+            )
             normalized_columns = [str(c).strip().lower() for c in df.columns]
 
-            for profile in profiles:
+            for profile in ([] if best_profile else profiles):
                 score = sum(
                     1 for their_col in profile.field_mapping.values()
                     if str(their_col).strip().lower() in normalized_columns
@@ -512,7 +529,10 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
                     user=target.owner, month=month, is_overridden=False
                 ).first()
 
-            preview = mapper.validate_preview(records)
+            preview = mapper.validate_preview(
+                records,
+                mapped_fields=set(effective_mapping) if profile.keep_columns else None,
+            )
             preview['errors'] = errors[:MAX_PREVIEW_ERRORS]
             preview['has_existing_upload'] = existing is not None
             preview['existing_record_count'] = existing.record_count if existing else 0

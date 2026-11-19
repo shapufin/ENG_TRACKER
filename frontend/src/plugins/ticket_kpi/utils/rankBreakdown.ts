@@ -46,3 +46,35 @@ export function rankBreakdown(data: Record<string, number>, limit: number): Rank
   }
   return rows;
 }
+
+const signature = (data: Record<string, number>): string =>
+  JSON.stringify(
+    Object.entries(data)
+      .map(([label, count]) => [label.trim().toLowerCase(), Number(count)] as const)
+      .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+  );
+
+/**
+ * Drops a field whose values and counts are identical to a field that is
+ * already on screen (`alreadyShown` names keys of `all`) or to an earlier field
+ * in `all`. Exports often carry the same column twice under two names ("Analyst"
+ * next to the assignee, "Validator" next to "Driver Group"); each would chart as
+ * a duplicate. Labels are compared case-insensitively.
+ */
+export function dropRepeatedBreakdowns(
+  all: Record<string, Record<string, number>>,
+  alreadyShown: string[]
+): Record<string, Record<string, number>> {
+  const seen = new Set(
+    alreadyShown.filter((key) => all[key]).map((key) => signature(all[key]))
+  );
+  const result: Record<string, Record<string, number>> = {};
+  for (const [key, data] of Object.entries(all)) {
+    if (alreadyShown.includes(key)) continue;
+    const sig = signature(data);
+    if (seen.has(sig)) continue;
+    seen.add(sig);
+    result[key] = data;
+  }
+  return result;
+}

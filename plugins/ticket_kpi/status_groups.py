@@ -20,7 +20,9 @@ CANCELLED_WORDS = frozenset({'cancelled', 'canceled', 'withdrawn', 'rejected'})
 def status_group(value) -> str:
     """Return 'closed', 'open', 'cancelled' or 'other' for a stored status."""
     word = str(value or '').strip().lower()
-    if word in CLOSED_WORDS:
+    # "Closed Satisfaction Verified", "Closed on first call": any wording that
+    # starts with "closed" is closed.
+    if word in CLOSED_WORDS or word.startswith('closed '):
         return 'closed'
     if word in OPEN_WORDS:
         return 'open'
