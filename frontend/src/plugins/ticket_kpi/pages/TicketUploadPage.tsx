@@ -138,6 +138,15 @@ export const TicketUploadPage: React.FC = () => {
       toast.success(`Analyzed ${data.total_rows} rows`);
       setDetectedColumns(data.detected_columns || []);
 
+      // A team format that was tried and rejected says why (a missing column, no
+      // header row); that is more useful than a generic "no match".
+      const hint = data.profile_hints?.[0];
+      if (hint && !selectedProfileId && !data.suggested_profile) {
+        toast.error(`${hint.profile}: ${hint.reason}`);
+        setIsAnalyzing(false);
+        return;
+      }
+
       // The file's own dates usually say what month this is — no need to
       // make the user pick it before they can even see what's in the file.
       // An explicit choice already made is never overridden.

@@ -8,4 +8,5 @@ export const OUR_FIELDS = [
   { key: "requester", label: "Requester", required: false },
   { key: "priority", label: "Priority", required: false },
   { key: "category", label: "Category", required: false },
+  { key: "sla_breached", label: "SLA breached (column)", required: false },
 ];

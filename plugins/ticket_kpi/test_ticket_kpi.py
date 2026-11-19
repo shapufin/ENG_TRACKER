@@ -1891,13 +1891,14 @@ class EndToEndUploadFlowTests(TestCase):
         # INC001: 6h, INC002: 2h, INC004: 0.5h, INC005: 4h → avg = 3.125
         self.assertGreater(kpi.avg_resolution_hours, 0)
 
-    def test_import_computes_sla_and_category_breakdown(self):
-        """SLA and category breakdown should be populated."""
+    def test_import_without_an_sla_column_leaves_sla_unknown(self):
+        """Category breakdown is populated; SLA stays N/A: no column, no verdict (was a 24h guess)."""
         self._import(self.member)
         kpi = MonthlyKPI.objects.get(user=self.member, month=date(2026, 3, 1))
         self.assertIn('Network', kpi.by_category)
         self.assertIn('Hardware', kpi.by_category)
-        self.assertIsNotNone(kpi.sla_compliance_pct)
+        self.assertIsNone(kpi.sla_compliance_pct)
+        self.assertEqual(kpi.sla_breached_count, 0)
 
     # --- Dashboard endpoints after upload ---
 

@@ -74,6 +74,26 @@ class SeedCommandTests(BackupProfileTestBase):
         self.profile.refresh_from_db()
         self.assertEqual(self.profile.keep_columns, list(BACKUP_COLUMNS))
 
+    def test_if_missing_creates_the_profile_on_a_fresh_database(self):
+        ExportProfile.objects.filter(name__startswith='Backup team').delete()
+        call_command('seed_backup_profile', '--if-missing', verbosity=0)
+        created = ExportProfile.objects.get(name__startswith='Backup team')
+        self.assertEqual(created.keep_columns, list(BACKUP_COLUMNS))
+        self.assertTrue(created.is_active)
+
+    def test_if_missing_never_overwrites_an_admin_edit(self):
+        ExportProfile.objects.filter(pk=self.profile.pk).update(keep_columns=['Code'], is_active=False)
+        call_command('seed_backup_profile', '--if-missing', verbosity=0)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.keep_columns, ['Code'])
+        self.assertFalse(self.profile.is_active)
+
+    def test_the_production_boot_creates_the_profile(self):
+        from pathlib import Path
+        from django.conf import settings
+        text = (Path(settings.BASE_DIR) / 'docker' / 'entrypoint.sh').read_text(encoding='utf-8')
+        self.assertIn('python manage.py seed_backup_profile --if-missing', text)
+
     def test_closed_keeps_its_capital_so_the_labels_read_alike(self):
         self.assertEqual(self.profile.value_transforms, {'status': {'closed': 'Closed'}})
         mapper = ColumnMapper(profile=self.profile)
@@ -198,6 +218,23 @@ class ImportEndToEndTests(BackupProfileTestBase):
         self.assertEqual(response.data['suggested_profile']['id'], self.profile.id)
         self.assertEqual(response.data['suggested_month'], '2026-10-01')
         self.assertEqual(response.data['total_rows'], 4)
+
+    def test_analyze_says_why_a_format_did_not_match(self):
+        wb = openpyxl.Workbook()
+        wb.active.append(['Code', 'Status', 'Open Date'])
+        wb.active.append(['RN:1', 'Closed', '01/10/2026 09:00'])
+        buf = io.BytesIO()
+        wb.save(buf)
+        response = self.call('analyze', buf.getvalue())
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertNotIn('suggested_profile', response.data)
+        self.assertNotIn('suggested_month', response.data)  # 01/10 must not become 10 January
+        hint = response.data['profile_hints'][0]
+        self.assertEqual(hint['profile'], self.profile.name)
+        self.assertIn('Close Date', hint['reason'])
+
+    def test_a_matching_file_carries_no_hints(self):
+        self.assertNotIn('profile_hints', self.call('analyze').data)
 
     def test_import_stores_four_tickets_and_the_right_figures(self):
         response = self.call('import_batch')
