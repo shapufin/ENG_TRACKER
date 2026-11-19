@@ -232,7 +232,7 @@ describe("TLScorecardPage", () => {
 
     await waitFor(() => expect(screen.getByText("3 of 4 met · Target: 100%")).toBeInTheDocument());
     expect(screen.getByText("9 of 45 YTD · 12 needed by now")).toBeInTheDocument();
-    expect(screen.getByText("2 of 3 decided in time · submitted this month")).toBeInTheDocument();
+    expect(screen.getByText("2 of 3 submitted this month, decided in time")).toBeInTheDocument();
     expect(screen.getByText("Annual target 45 · about 4 a month")).toBeInTheDocument();
   });
 
