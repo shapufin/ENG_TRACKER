@@ -457,3 +457,35 @@ A year closes by itself from 1 February of the next year (scheduler job `year_cl
       pip-compile --generate-hashes -o requirements.lock requirements.txt requirements-production.txt
 
   Commit `requirements.lock`, then change the Dockerfile to `pip install --require-hashes -r requirements.lock` and rebuild in CI before deploying. Do not switch the Dockerfile before the lock exists.
+
+
+### 5.9 Phone approval sign-in (push and QR)
+
+A paired phone approves a login: the PC shows a number, the phone gets a notification (or scans a QR code),
+the user taps the same number and confirms with a fingerprint or face. It is one more second factor beside
+the authenticator app and passkeys (workflow-invariants item 90, spec
+`docs/superpowers/specs/2026-11-19-phone-approval-login-design.md`).
+
+- **Switch**: `PHONE_APPROVAL_ENABLED=true` in `.env` (passed through `docker-compose.yml`). Unset or false it
+  is off: every phone endpoint answers 404 and the sign-in flow is exactly as before. Enabled without
+  `WEBAUTHN_RP_ID`/`WEBAUTHN_ORIGINS` the backend refuses to boot (an approval is a passkey assertion).
+- **Rollout order**: (1) passkeys already work (5.8, `check_webauthn_config --production`); (2) `VAPID_PUBLIC_KEY`
+  and `VAPID_PRIVATE_KEY` are set (push); (3) set the switch and restart the backend; (4) on one phone open
+  Settings, Security, "Set up this phone"; (5) sign in on a computer and approve with the notification, then
+  again with "Show QR code instead"; (6) tell users. **Android**: Chrome needs no install. **iPhone**: push needs
+  the app added to the Home Screen (iOS 16.4 or later); otherwise the QR code is the path.
+- **Approval link host**: the link in the notification and the QR code uses the first entry of `WEBAUTHN_ORIGINS`;
+  it must be the host users open the app on (the service worker only opens same-origin links).
+- **Rollback**: set the switch to false and restart. No migration to revert; paired phones stay in the
+  database and work again when the switch returns.
+- **Locked-out or lost phone**: the user removes the phone under Settings (needs the password), or an admin
+  runs `reset_user_mfa <username>`, which also removes every pairing and live request and ends the sessions.
+- **Throttle**: the PC polls `api/auth/token/phone-collect/` every 2 s under its own scope `phone_poll`
+  (240/min per IP); the other endpoints share `mfa` (10/min). Raise `phone_poll` only if an office behind one
+  address sees 429 while waiting.
+- **Watch the audit log** for `MFA_PHONE_WRONG_NUMBER` (someone approving blind, or an attacker who knows the
+  password), repeated `MFA_FAILED` rows from `phone` approvals, and `MFA_LOCKED`.
+- **Moving to a new server**: pairings are in the database (`users_paired_phone`) and travel with `pg_dump`.
+  The Site Backup archive leaves both phone tables out on purpose. The hostname (RP ID) and the `VAPID_*` keys
+  must stay, or push stops working and the QR code is the only path.
+- **Requests** live 120 s and are deleted lazily when the next one is created; there is no job to run.

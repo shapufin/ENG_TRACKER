@@ -35,3 +35,18 @@ def parse_webauthn_settings(rp_id: str, origins: str, *, production: bool) -> tu
                 f'WEBAUTHN_RP_ID {rp_id!r} must equal or be a parent domain of the host of {origin!r}.'
             )
     return rp_id, parsed
+
+
+def parse_phone_approval_setting(raw, rp_id: str, origins) -> bool:
+    """Whether phone approval sign-in is on (``PHONE_APPROVAL_ENABLED``).
+
+    Off unless explicitly enabled. Enabled without the passkey settings refuses to
+    boot: an approval is a passkey assertion, so it could never succeed.
+    """
+    enabled = str(raw or '').strip().lower() in ('1', 'true', 'yes', 'on')
+    if enabled and not (rp_id and origins):
+        raise ImproperlyConfigured(
+            'PHONE_APPROVAL_ENABLED needs WEBAUTHN_RP_ID and WEBAUTHN_ORIGINS '
+            '(phone approval is a passkey assertion).'
+        )
+    return enabled

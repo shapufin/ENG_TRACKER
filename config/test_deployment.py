@@ -1100,6 +1100,31 @@ class SchedulerFoundationContractTests(SimpleTestCase):
                 self.assertNotIn(str(settings.MEDIA_ROOT), str(root))
 
 
+class PhoneApprovalSettingsGuardTests(SimpleTestCase):
+    """Phone approval kill switch (docs/superpowers/specs/2026-11-19-phone-approval-login-design.md section 3)."""
+
+    def _parse(self, raw, rp_id="", origins=""):
+        from config.webauthn_config import parse_phone_approval_setting
+        return parse_phone_approval_setting(raw, rp_id, origins)
+
+    def test_phone_approval_defaults_off_in_production(self):
+        self.assertFalse(self._parse(None))
+        self.assertFalse(self._parse(""))
+        self.assertFalse(self._parse("false"))
+
+    def test_production_refuses_phone_approval_without_webauthn_settings(self):
+        from django.core.exceptions import ImproperlyConfigured
+        with self.assertRaises(ImproperlyConfigured):
+            self._parse("true")
+
+    def test_phone_approval_on_with_webauthn_settings_boots(self):
+        self.assertTrue(self._parse("true", "tracker2.integrit.org", ["https://tracker2.integrit.org"]))
+
+    def test_dev_settings_enable_it_by_default(self):
+        from django.conf import settings
+        self.assertTrue(settings.PHONE_APPROVAL_ENABLED)
+
+
 class WebAuthnSettingsGuardTests(TestCase):
     """Passkey settings (docs/superpowers/specs/2026-11-18-passkeys-design.md section 3)."""
 

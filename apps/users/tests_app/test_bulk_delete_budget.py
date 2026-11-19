@@ -53,7 +53,9 @@ class BulkDeleteQueryTests(TestCase):
         # collector visits three more relations per deleted user. Not a regression.
         # 2026-11-14: 196/user — the delete-blocker check counts each business relation
         # (one COUNT per CASCADE relation outside the housekeeping list) before deleting.
-        self.assertLessEqual((large - small) / 6, 205)
+        # 2026-11-19: 206/user — PairedPhone and PhoneLoginRequest each carry a User FK, so the
+        # collector visits two more relations per deleted user (phone approval, item 90). Not a regression.
+        self.assertLessEqual((large - small) / 6, 210)
 
 
 class ProtectedUserDeleteTests(TestCase):

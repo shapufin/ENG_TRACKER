@@ -62,6 +62,14 @@ WEBAUTHN_RP_ID, WEBAUTHN_ORIGINS = parse_webauthn_settings(
     production=False,
 )
 
+# Phone approval sign-in (push + QR, docs/superpowers/specs/2026-11-19-phone-approval-login-design.md).
+# On in dev; production defaults to off until the runbook 5.9 rollout.
+from .webauthn_config import parse_phone_approval_setting  # noqa: E402
+
+PHONE_APPROVAL_ENABLED = parse_phone_approval_setting(
+    os.getenv('PHONE_APPROVAL_ENABLED', 'true'), WEBAUTHN_RP_ID, WEBAUTHN_ORIGINS,
+)
+
 # Site backup archives are encrypted at rest (AES-256-GCM). Comma-separated
 # urlsafe-base64 32-byte keys (Fernet.generate_key() format): the first
 # encrypts, all decrypt. Production requires it; dev/test derive one from
@@ -271,6 +279,8 @@ REST_FRAMEWORK = {
         # when the production settings profile is built.
         'auth': '20/min' if not DEBUG else None,          # login/token refresh
         'mfa': '10/min' if not DEBUG else None,           # second-factor verify/enrol
+        # The PC polls phone-collect every 2 s while it waits; sized for an office behind one NAT.
+        'phone_poll': '240/min' if not DEBUG else None,
         'upload': '30/hour' if not DEBUG else None,       # file parsing endpoints
         'export': '20/hour' if not DEBUG else None,       # report/export endpoints
         'evidence_upload': '60/hour' if not DEBUG else None,

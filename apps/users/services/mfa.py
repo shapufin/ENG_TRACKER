@@ -24,7 +24,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from core.utils.crypto import SecretDecryptError, decrypt_text, encrypt_text
-from ..models.mfa import MFABackupCode, UserMFA, WebAuthnChallenge, WebAuthnCredential
+from ..models.mfa import MFABackupCode, PairedPhone, UserMFA, WebAuthnChallenge, WebAuthnCredential
 
 logger = logging.getLogger(__name__)
 
@@ -162,11 +162,13 @@ def is_enrolled(user) -> bool:
 
 
 def status_for(user) -> dict:
+    from .phone_approval import phone_approval_enabled
+    from .phone_pairing import list_phones
     from .webauthn import summary
 
     totp = totp_enabled(user)
     passkeys = WebAuthnCredential.objects.filter(user=user)
-    return {
+    data = {
         'enabled': totp,  # the authenticator app; the Settings TOTP controls read this
         'enrolled': totp or passkeys.exists(),
         'required': required_source(user) is not None,
@@ -176,6 +178,10 @@ def status_for(user) -> dict:
         ),
         'passkeys': [summary(p) for p in passkeys],
     }
+    if phone_approval_enabled():  # absent (not false) while the switch is off, so the payload is unchanged
+        data['phone_approval'] = True
+        data['phones'] = list_phones(user)
+    return data
 
 
 # --- Login challenge ---------------------------------------------------------
@@ -209,9 +215,18 @@ def _methods(user) -> list[str]:
     methods = []
     if is_available() and has_passkey(user):
         methods.append('passkey')
+    if is_available() and _phone_methods(user):
+        methods.append('phone')
     if totp_enabled(user):
         methods.append('totp')
     return methods
+
+
+def _phone_methods(user) -> bool:
+    """A paired phone can approve this user's sign-in (item 90). Costs no query while the switch is off."""
+    from .phone_approval import phone_approval_enabled
+
+    return phone_approval_enabled() and PairedPhone.objects.filter(user=user).exists()
 
 
 def login_challenge(user) -> dict | None:
@@ -421,8 +436,11 @@ def remove_mfa(user) -> None:
 
 
 def reset_all_factors(user) -> None:
-    """Admin and command reset: the authenticator app, backup codes and every passkey."""
+    """Admin and command reset: the authenticator app, backup codes, every passkey and paired phone."""
+    from .phone_pairing import remove_all as remove_all_phones
+
     with transaction.atomic():
         remove_mfa(user)
+        remove_all_phones(user)
         WebAuthnCredential.objects.filter(user=user).delete()
         WebAuthnChallenge.objects.filter(user=user).delete()

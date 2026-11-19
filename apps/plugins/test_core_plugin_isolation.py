@@ -42,6 +42,9 @@ ALLOWED_IMPORTS = {
     # Demo seeder: loaded only when invoked by name, so it cannot break startup.
     "apps/users/management/commands/seed_skills_demo.py": {"skills"},
     # Security-event audit trail; every import is inside a fail-closed ``try`` (no plugin, no trail).
+    # Phone approval push (item 90): lazy, inside ``try/except ImportError``; no plugin, QR only.
+    "apps/users/services/phone_approval.py": {"notifications"},
+    "apps/users/services/phone_pairing.py": {"notifications"},
     "apps/users/serializers.py": {"control_room"},
     "apps/users/viewsets.py": {"audit_log", "control_room"},
     "core/mixins/permissions.py": {"control_room"},

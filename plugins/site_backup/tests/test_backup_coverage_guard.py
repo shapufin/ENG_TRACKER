@@ -61,6 +61,33 @@ class BackupCoverageGuardTests(TestCase):
         kpi = {m for m in backup_service.dumpable_model_labels() if m.startswith('ticket_kpi.')}
         self.assertTrue({'ticket_kpi.kpievidence', 'ticket_kpi.ticketimportbatch'} <= kpi)
 
+    def test_every_second_factor_model_is_excluded_from_backup(self):
+        """A new table in ``apps/users/models/mfa.py`` is a credential or live factor state.
+
+        A restore must not roll a user's second factor back, so it is excluded by default;
+        add it to EXCLUDED_MODELS (and docs/site-backup-and-restore.md) on purpose.
+        """
+        mfa_models = [
+            model for model in django_apps.get_app_config('users').get_models()
+            if model.__module__ == 'apps.users.models.mfa'
+        ]
+        self.assertGreaterEqual(len(mfa_models), 6)  # usermfa, backup code, passkey x2, phone x2
+        for model in mfa_models:
+            self.assertTrue(is_excluded(model), f'{model._meta.label} is a second-factor table but is in the backup')
+
+    def test_second_factor_models_have_no_save_receivers(self):
+        """No ``pre_save``/``post_save`` receiver on them; a future one needs a ``raw=True`` guard on purpose."""
+        from django.db.models.signals import post_save, pre_save
+
+        from apps.users.models import PairedPhone, PhoneLoginRequest
+
+        for model in (PairedPhone, PhoneLoginRequest):
+            for signal in (pre_save, post_save):
+                self.assertFalse(
+                    signal.has_listeners(model),
+                    f'{model.__name__} gained a save receiver: guard it with raw=True and update this test',
+                )
+
     def test_every_backed_up_model_has_a_save_order(self):
         labels = set(backup_service.dumpable_model_labels())
         order = set(topological_save_order(labels, build_dependents_map()))

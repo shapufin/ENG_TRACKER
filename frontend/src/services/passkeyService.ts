@@ -92,7 +92,7 @@ async function createCredential(options: CreationOptionsJSON) {
   };
 }
 
-async function getAssertion(options: RequestOptionsJSON) {
+export async function getAssertion(options: RequestOptionsJSON) {
   const publicKey = {
     ...options,
     challenge: base64urlToBuffer(options.challenge),

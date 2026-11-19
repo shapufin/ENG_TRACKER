@@ -1,5 +1,12 @@
 import { createContext } from "react";
-import type { User, LoginCredentials, AuthResponse, LoginResponse, MfaSetupData } from "@/types";
+import type {
+  User,
+  LoginCredentials,
+  AuthResponse,
+  LoginResponse,
+  MfaSetupData,
+  PhoneApprovalState,
+} from "@/types";
 
 export interface AuthContextType {
   user: User | null;
@@ -9,6 +16,12 @@ export interface AuthContextType {
   verifyMfa: (mfaToken: string, code: string) => Promise<AuthResponse>;
   /** Finish an MFA sign-in with a passkey (Face ID, fingerprint or device PIN). */
   verifyPasskey: (mfaToken: string) => Promise<AuthResponse>;
+  /** Poll a phone approval: a status while waiting, or the session once the phone approved. */
+  completePhoneApproval: (
+    mfaToken: string,
+    requestId: string,
+    collectKey: string
+  ) => Promise<{ status: PhoneApprovalState } | AuthResponse>;
   /** Enrol a passkey as the required second factor and sign in. */
   finishLoginPasskeySetup: (mfaToken: string, name: string) => Promise<AuthResponse>;
   /** Seed + QR for an account that must enrol before it can sign in. */

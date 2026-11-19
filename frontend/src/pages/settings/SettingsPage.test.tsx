@@ -22,6 +22,9 @@ vi.mock("./components/ClientAssignmentSection", () => ({
 vi.mock("./components/PasswordRow", () => ({
   PasswordRow: () => <div data-testid="password-row" />,
 }));
+vi.mock("./components/PairedPhonesSection", () => ({
+  PairedPhonesSection: () => <div data-testid="paired-phones" />,
+}));
 vi.mock("./components/PasskeysSection", () => ({
   PasskeysSection: () => <div data-testid="passkeys" />,
 }));

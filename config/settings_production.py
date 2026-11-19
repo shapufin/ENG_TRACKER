@@ -39,6 +39,14 @@ WEBAUTHN_RP_ID, WEBAUTHN_ORIGINS = parse_webauthn_settings(
     production=True,
 )
 
+# Phone approval sign-in: off until the runbook 5.9 rollout; on without the passkey
+# settings refuses to boot.
+from .webauthn_config import parse_phone_approval_setting  # noqa: E402
+
+PHONE_APPROVAL_ENABLED = parse_phone_approval_setting(
+    os.getenv('PHONE_APPROVAL_ENABLED', ''), WEBAUTHN_RP_ID, WEBAUTHN_ORIGINS,
+)
+
 # Site backups are encrypted at rest; a dev key derived from SECRET_KEY would
 # die with a SECRET_KEY rotation, so production must carry its own key.
 if not os.getenv('BACKUP_ENCRYPTION_KEYS', '').strip():
@@ -134,6 +142,7 @@ REST_FRAMEWORK = {
         **REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'],  # noqa: F405
         'auth': '20/min',
         'mfa': '10/min',
+        'phone_poll': '240/min',  # the PC polls phone-collect every 2 s (item 90)
         'upload': '30/hour',
         'export': '20/hour',
         'evidence_upload': '60/hour',

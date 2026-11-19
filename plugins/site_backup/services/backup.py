@@ -34,6 +34,8 @@ EXCLUDED_APPS = ['contenttypes', 'sessions', 'site_backup', 'year_close']
 EXCLUDED_MODELS = [
     'users.usermfa', 'users.mfabackupcode',
     'users.webauthncredential', 'users.webauthnchallenge',
+    # Phone approval (item 90): a pairing is a second-factor credential, a request is live state.
+    'users.pairedphone', 'users.phoneloginrequest',
     # Live refresh tokens: an archive must not hand out sessions, and a restore must
     # not revive revoked ones (same reason ``sessions`` is excluded).
     'token_blacklist.outstandingtoken', 'token_blacklist.blacklistedtoken',
