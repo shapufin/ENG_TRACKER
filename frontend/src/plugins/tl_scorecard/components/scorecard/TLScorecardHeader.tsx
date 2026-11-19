@@ -10,6 +10,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toneSurfaceClass } from "@/components/ui/tone";
 import { userService } from "@/services/userService";
 import { ExportButton } from "../ExportButton";
+import { ReportingMonthSelect } from "./ReportingMonthSelect";
+import { ReportingYearSelect } from "./ReportingYearSelect";
 
 export type TLScorecardTab = "overview" | "team" | "records" | "evidence";
 
@@ -80,6 +82,9 @@ interface TLScorecardHeaderProps {
   onTabChange: (tab: TLScorecardTab) => void;
   /** ISO date inside the exported month; defaults to the current month. */
   month?: string;
+  year?: number;
+  onMonthChange?: (month: string) => void;
+  onYearChange?: (year: number) => void;
   children: React.ReactNode;
 }
 
@@ -89,6 +94,9 @@ export const TLScorecardHeader: React.FC<TLScorecardHeaderProps> = ({
   tab,
   onTabChange,
   month,
+  year,
+  onMonthChange,
+  onYearChange,
   children,
 }) => (
   <PageShell
@@ -113,6 +121,12 @@ export const TLScorecardHeader: React.FC<TLScorecardHeaderProps> = ({
     }
     actions={
       <>
+        {year != null && onYearChange && month != null && onMonthChange && (
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <ReportingMonthSelect year={year} month={month} onMonthChange={onMonthChange} />
+            <ReportingYearSelect year={year} onYearChange={onYearChange} />
+          </div>
+        )}
         <ExportButton month={month} />
         <Button size="sm" asChild>
           <Link to="/tl-scorecard/visualize">

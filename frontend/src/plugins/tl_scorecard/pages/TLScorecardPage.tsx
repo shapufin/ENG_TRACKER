@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { currentBusinessYear } from "@/lib/date-format-utils";
+import { currentBusinessMonthKey, currentBusinessYear } from "@/lib/date-format-utils";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { usePermissions } from "@/context/PermissionContext";
 import { EvidenceExportSection } from "../components/scorecard/EvidenceExportSection";
@@ -58,18 +58,49 @@ const TLScorecardAuthoring: React.FC = () => {
   const rawTab = params.get("tab");
   const tab: TLScorecardTab =
     rawTab === "records" || rawTab === "evidence" || rawTab === "team" ? rawTab : "overview";
+  const currentYear = currentBusinessYear();
   // Match the API's bounds (2000-2100); a hand-edited `?year=` falls back to the business year.
   const yearParam = Number(params.get("year"));
   const year =
     Number.isInteger(yearParam) && yearParam >= 2000 && yearParam <= 2100
       ? yearParam
-      : currentBusinessYear();
-  const setYear = (next: number) =>
+      : currentYear;
+
+  const currentMonthKey = currentBusinessMonthKey();
+  const defaultMonth = year === currentYear ? `${currentMonthKey}-01` : `${year}-12-01`;
+  const rawMonth = params.get("month");
+  const isValidMonth = (val: string | null): val is string => {
+    if (!val) return false;
+    const match = /^(\d{4})-(\d{2})(?:-\d{2})?$/.exec(val);
+    if (!match) return false;
+    const y = Number(match[1]);
+    const m = Number(match[2]);
+    return y === year && m >= 1 && m <= 12;
+  };
+  const month = isValidMonth(rawMonth)
+    ? (rawMonth.length === 7 ? `${rawMonth}-01` : rawMonth.slice(0, 7) + "-01")
+    : defaultMonth;
+
+  const setMonth = (nextMonth: string) =>
     setParams(
       (prev) => {
-        const params = new URLSearchParams(prev);
-        params.set("year", String(next));
-        return params;
+        const next = new URLSearchParams(prev);
+        const norm = nextMonth.length === 7 ? `${nextMonth}-01` : nextMonth;
+        next.set("month", norm);
+        next.set("year", norm.slice(0, 4));
+        return next;
+      },
+      { replace: true }
+    );
+
+  const setYear = (nextYear: number) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("year", String(nextYear));
+        const nextMonth = nextYear === currentYear ? `${currentMonthKey}-01` : `${nextYear}-12-01`;
+        next.set("month", nextMonth);
+        return next;
       },
       { replace: true }
     );
@@ -193,8 +224,8 @@ const TLScorecardAuthoring: React.FC = () => {
   const onOverview = tab === "overview";
   const onEvidence = tab === "evidence";
   const scorecardQuery = useQuery({
-    queryKey: ["tl-scorecard", "scorecard", "self"],
-    queryFn: async () => (await tlScorecardService.getScorecard()).data,
+    queryKey: ["tl-scorecard", "scorecard", "self", month],
+    queryFn: async () => (await tlScorecardService.getScorecard(month)).data,
     enabled: onOverview,
   });
   const engagementQuery = useQuery({
@@ -399,7 +430,10 @@ const TLScorecardAuthoring: React.FC = () => {
       subtitle={`${monthLabel} · ${scorecard.team_size} team member(s)${scorecard.frozen ? " · Frozen" : ""}`}
       tab={tab}
       onTabChange={setTab}
-      month={scorecard.month}
+      month={month}
+      year={year}
+      onMonthChange={setMonth}
+      onYearChange={setYear}
     >
       <HbprCadenceMissingBanner
         assignment={scorecard.hbpr_cadence}
@@ -421,7 +455,6 @@ const TLScorecardAuthoring: React.FC = () => {
         survey={surveyQuery.data}
       />
 
-      <ReportingYearSelect year={year} onYearChange={setYear} />
       <TeamGovernanceSection
         scorecard={scorecard}
         escalations={escalationsQuery.data}
