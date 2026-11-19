@@ -867,19 +867,20 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
 
     @action(detail=False, methods=['get'])
     def team_batches(self, request):
-        """List upload batches for team members (TL only, paginated)."""
-        team_members = _get_tl_team_members(request.user)
-        if not team_members:
+        """List upload batches for team members (TL), or every team's (admin); paginated."""
+        is_admin = request.user.is_staff or request.user.is_superuser
+        team_members = None if is_admin else _get_tl_team_members(request.user)
+        if not is_admin and not team_members:
             return Response(
                 {'error': 'You are not assigned as a team leader'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
         month_str = request.query_params.get('month')
-        queryset = TicketImportBatch.objects.filter(
-            user__in=team_members,
-            is_overridden=False
-        ).select_related('profile', 'user', 'reviewed_by').order_by('-month', 'user__username')
+        queryset = TicketImportBatch.objects.filter(is_overridden=False)
+        if not is_admin:
+            queryset = queryset.filter(user__in=team_members)
+        queryset = queryset.select_related('profile', 'user', 'reviewed_by').order_by('-month', 'user__username')
 
         if month_str:
             month, err = _parse_month_param(month_str)
@@ -896,16 +897,18 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
 
     @action(detail=True, methods=['delete'])
     def delete_team_batch(self, request, pk=None):
-        """Allow a team leader to delete a team member's batch."""
-        team_members = _get_tl_team_members(request.user)
-        if not team_members:
+        """Allow a team leader to delete a team member's batch (an admin, any batch)."""
+        is_admin = request.user.is_staff or request.user.is_superuser
+        team_members = None if is_admin else _get_tl_team_members(request.user)
+        if not is_admin and not team_members:
             return Response(
                 {'error': 'You are not assigned as a team leader'},
                 status=status.HTTP_403_FORBIDDEN
             )
 
         try:
-            batch = TicketImportBatch.objects.get(pk=pk, user__in=team_members)
+            batches = TicketImportBatch.objects.all() if is_admin else TicketImportBatch.objects.filter(user__in=team_members)
+            batch = batches.get(pk=pk)
         except TicketImportBatch.DoesNotExist:
             return Response(
                 {'error': 'Batch not found or not in your team'},

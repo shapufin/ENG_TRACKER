@@ -10,6 +10,7 @@ describe("useAdminNavItems", () => {
     const labels = result.current.map((i) => i.label);
     expect(labels).toContain("Data Import");
     expect(labels).toContain("Ticket KPI");
+    expect(labels).toContain("Ticket Review");
     expect(labels).toContain("Users");
     expect(labels).toContain("Dashboard");
   });
@@ -19,6 +20,7 @@ describe("useAdminNavItems", () => {
     const labels = result.current.map((i) => i.label);
     expect(labels).not.toContain("Data Import");
     expect(labels).not.toContain("Ticket KPI");
+    expect(labels).not.toContain("Ticket Review");
     // Non-plugin items are still visible
     expect(labels).toContain("Users");
     expect(labels).toContain("Dashboard");

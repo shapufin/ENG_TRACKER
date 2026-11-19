@@ -181,6 +181,14 @@ export const allAdminNavItems: AdminNavItem[] = [
     fullAdminOnly: true,
     pluginName: "ticket_kpi",
   },
+  {
+    path: "/admin/ticket-kpi/review",
+    label: "Ticket Review",
+    icon: Ticket,
+    group: "Skills & KPI",
+    fullAdminOnly: true,
+    pluginName: "ticket_kpi",
+  },
 
   // Governance (Access policies & permissions)
   {

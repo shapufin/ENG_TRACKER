@@ -36,6 +36,10 @@ describe("resolveAdminCrumbs", () => {
       { label: "Skills & KPI" },
       { label: "Ticket KPI" },
     ]);
+    expect(r("/admin/ticket-kpi/review")).toEqual([
+      { label: "Skills & KPI" },
+      { label: "Ticket Review" },
+    ]);
     expect(r("/admin/reports")).toEqual([{ label: "Overview" }, { label: "Reports" }]);
   });
   it("falls back to plugin crumbs", () => {

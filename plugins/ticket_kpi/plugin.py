@@ -86,6 +86,11 @@ class TicketKPIPlugin(BasePlugin):
                     "component": "TicketKPIAdminPage",
                     "layout": "admin"
                 },
+                {
+                    "path": "/admin/ticket-kpi/review",
+                    "component": "TicketKPITeamManagementPage",
+                    "layout": "admin"
+                },
             ]
         })
         return metadata
