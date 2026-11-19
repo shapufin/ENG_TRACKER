@@ -20,8 +20,12 @@ describe("CalendarBottomCards", () => {
   it("summarises the remaining balance against the annual allowance", () => {
     render(<CalendarBottomCards {...baseProps} />);
 
-    expect(screen.getByRole("button", { name: "Vacation balance" })).toHaveTextContent("12d");
-    expect(screen.getByRole("button", { name: "Vacation balance" })).toHaveTextContent("22d total");
+    expect(screen.getByRole("button", { name: "Total vacation entitlement" })).toHaveTextContent(
+      "12d"
+    );
+    expect(screen.getByRole("button", { name: "Total vacation entitlement" })).toHaveTextContent(
+      "22d total"
+    );
   });
 
   it("says how much has accrued so far while the year is not fully accrued", () => {
@@ -31,7 +35,7 @@ describe("CalendarBottomCards", () => {
         vacationSummary={{ remainingDays: 6, totalDays: 22, accruedDays: 9 }}
       />
     );
-    const card = screen.getByRole("button", { name: "Vacation balance" });
+    const card = screen.getByRole("button", { name: "Total vacation entitlement" });
     expect(card).toHaveTextContent("9d of 22d accrued");
     expect(card).not.toHaveTextContent("22d total");
   });
@@ -48,7 +52,7 @@ describe("CalendarBottomCards", () => {
         }}
       />
     );
-    const card = screen.getByRole("button", { name: "Vacation balance" });
+    const card = screen.getByRole("button", { name: "Total vacation entitlement" });
     expect(card).toHaveTextContent("Live: -7d");
     expect(card).toHaveTextContent("6d of 22d accrued");
 
@@ -129,7 +133,7 @@ describe("CalendarBottomCards", () => {
     fireEvent.click(screen.getByRole("button", { name: "Upcoming conflicts" }));
     expect(baseProps.onViewAllConflicts).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole("button", { name: "Vacation balance" }));
+    fireEvent.click(screen.getByRole("button", { name: "Total vacation entitlement" }));
     expect(onOpenBalanceModal).toHaveBeenCalledTimes(1);
   });
 });

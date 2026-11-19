@@ -112,7 +112,7 @@ export const CalendarBottomCards: React.FC<CalendarBottomCardsProps> = ({
     >
       <div className="grid gap-2 md:grid-cols-3">
         <CardShell
-          label="Vacation balance"
+          label="Total vacation entitlement"
           onClick={onOpenBalanceModal}
           trailing={
             <span className="flex items-center gap-1.5 font-mono text-xs">
@@ -137,7 +137,7 @@ export const CalendarBottomCards: React.FC<CalendarBottomCardsProps> = ({
         >
           <span className="flex w-full items-baseline justify-between gap-2">
             <span className="text-foreground font-mono text-lg font-bold tracking-tight">
-              {formatDays(remaining)}d
+              {formatDays(remaining)}d left
             </span>
             <span className="text-muted-foreground inline-flex items-center gap-1 text-xs font-semibold transition-transform group-hover:translate-x-0.5">
               Details
