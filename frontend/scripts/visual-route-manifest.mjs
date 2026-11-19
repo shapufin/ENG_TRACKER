@@ -590,6 +590,15 @@ export const ROUTES = [
     mockup: "NONE",
     extraction: "admin-ticket-kpi-mappings",
   },
+  {
+    path: "/admin/ticket-kpi/review",
+    label: "admin-ticket-kpi-review",
+    layout: "admin",
+    roles: ["admin"],
+    expectedHeading: "Ticket Review",
+    mockup: "NONE",
+    extraction: "NONE",
+  },
   // ---- Added 2026-10-17 (route-manifest drift repair). Roles follow the plugin
   // permission manifests / route guards and are re-asserted at capture time. ----
   {
