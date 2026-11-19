@@ -28,7 +28,9 @@ export const useUserStatusData = (
   const remainingDays = vacationSummary?.remainingDays ?? 0;
   const usedDays = vacationSummary?.usedDays ?? 0;
   const pendingDays = vacationSummary?.pendingDays ?? 0;
-  const totalDays = vacationSummary?.totalDays ?? 0;
+  const totalDays = vacationSummary?.yearlyEntitlement ?? vacationSummary?.totalDays ?? 0;
+  const liveAccruedBalance = vacationSummary?.liveAccruedBalance;
+  const accruedDays = vacationSummary?.accruedDays;
   const vacationYear = vacationSummary?.year ?? Number(currentBusinessDateISO().slice(0, 4));
   const carryOverDetail = vacationSummary?.carryOver;
   const currentDetail = vacationSummary?.current;
@@ -45,6 +47,9 @@ export const useUserStatusData = (
     usedDays,
     pendingDays,
     totalDays,
+    liveAccruedBalance,
+    accruedDays,
+    vacationSummary,
     vacationYear,
     carryOverDetail,
     currentDetail,

@@ -77,6 +77,12 @@ class LeaveBalanceSerializer(serializers.ModelSerializer):
     accrued_days = serializers.DecimalField(
         source='get_accrued_days', max_digits=5, decimal_places=1, read_only=True
     )
+    yearly_entitlement = serializers.DecimalField(
+        source='get_yearly_entitlement', max_digits=5, decimal_places=1, read_only=True
+    )
+    live_accrued_balance = serializers.DecimalField(
+        source='get_live_accrued_balance', max_digits=5, decimal_places=1, read_only=True
+    )
 
     class Meta:
         model = LeaveBalance
@@ -84,7 +90,7 @@ class LeaveBalanceSerializer(serializers.ModelSerializer):
             'id', 'user', 'user_name', 'leave_type', 'year',
             'total_days', 'used_days', 'pending_days', 'available_days',
             'effective_available_days', 'is_carry_over', 'expires_at',
-            'accrual_start_date', 'accrued_days',
+            'accrual_start_date', 'accrued_days', 'yearly_entitlement', 'live_accrued_balance',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -106,6 +112,8 @@ class LeaveBalanceDetailSerializer(serializers.Serializer):
     is_expired = serializers.BooleanField(required=False)
     accrual_start_date = serializers.DateField(allow_null=True, required=False)
     monthly_accrued_days = serializers.FloatField(required=False)
+    yearly_entitlement = serializers.FloatField(required=False)
+    live_accrued_balance = serializers.FloatField(required=False)
 
 
 class LeaveBalanceTypeSummarySerializer(serializers.Serializer):
