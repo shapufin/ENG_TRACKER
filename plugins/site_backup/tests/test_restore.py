@@ -676,3 +676,36 @@ class TicketKpiLeaderBatchRestoreTests(TestCase):
         self.assertEqual((restored.user, restored.uploaded_by), (member, leader))
         self.assertEqual(NormalizedTicket.objects.filter(batch=restored).count(), 2)
         self.assertEqual(figures(), before)
+
+
+class TicketKpiTeamFormatRestoreTests(TestCase):
+    """The Backup team profile (columns to keep, date format, status wording) survives a restore."""
+
+    def test_team_format_profile_round_trips(self):
+        from django.core.management import call_command
+
+        from plugins.ticket_kpi.models import ExportProfile
+
+        admin = User.objects.create_user(username='admin_fmt', password='x', is_superuser=True)
+        call_command('seed_backup_profile', verbosity=0)
+        profile = ExportProfile.objects.get(name__startswith='Backup team')
+        wanted = {
+            'keep_columns': list(profile.keep_columns),
+            'date_format': profile.date_format,
+            'value_transforms': profile.value_transforms,
+            'field_mapping': profile.field_mapping,
+        }
+        self.assertEqual(len(wanted['keep_columns']), 13)
+        pk = profile.pk
+
+        with tempfile.TemporaryDirectory() as media:
+            with override_settings(MEDIA_ROOT=media):
+                record = backup_service.create_backup(admin, include_media=False)
+                ExportProfile.objects.filter(pk=pk).delete()
+                with record.file.open('rb') as fh:
+                    restore_service.commit(
+                        fh, approved_models=['ticket_kpi.exportprofile'], confirmed=True, user=admin)
+
+        restored = ExportProfile.objects.get(pk=pk)
+        for field, value in wanted.items():
+            self.assertEqual(getattr(restored, field), value, field)
