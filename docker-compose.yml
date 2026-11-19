@@ -15,6 +15,7 @@
 #
 # Optional:
 #   EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD
+#   PHONE_APPROVAL_ENABLED - true turns on phone approval sign-in (default: false; runbook 5.9)
 #   DB_SSL_MODE - PostgreSQL SSL mode (default: prefer)
 #   DB_CONN_MAX_AGE - seconds a DB connection is kept open per worker (default: 60)
 #   GUNICORN_WORKERS - sync workers per backend container (default: 3). Each
@@ -119,6 +120,8 @@ services:
       WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
       WEBAUTHN_ORIGINS: ${WEBAUTHN_ORIGINS:-}
       WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Engineering Tracker}
+      # Phone approval sign-in (push + QR); off unless set to true. Needs the WEBAUTHN_* values above.
+      PHONE_APPROVAL_ENABLED: ${PHONE_APPROVAL_ENABLED:-false}
       # Encrypts site backup archives at rest; without it no backup can be restored.
       BACKUP_ENCRYPTION_KEYS: ${BACKUP_ENCRYPTION_KEYS:?BACKUP_ENCRYPTION_KEYS is required}
       ONLYOFFICE_DOCUMENT_SERVER_URL: ${ONLYOFFICE_DOCUMENT_SERVER_URL:-}
@@ -214,6 +217,8 @@ services:
       WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
       WEBAUTHN_ORIGINS: ${WEBAUTHN_ORIGINS:-}
       WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Engineering Tracker}
+      # Phone approval sign-in (push + QR); off unless set to true. Needs the WEBAUTHN_* values above.
+      PHONE_APPROVAL_ENABLED: ${PHONE_APPROVAL_ENABLED:-false}
       # Encrypts site backup archives at rest; without it no backup can be restored.
       BACKUP_ENCRYPTION_KEYS: ${BACKUP_ENCRYPTION_KEYS:?BACKUP_ENCRYPTION_KEYS is required}
       ONLYOFFICE_DOCUMENT_SERVER_URL: ${ONLYOFFICE_DOCUMENT_SERVER_URL:-}

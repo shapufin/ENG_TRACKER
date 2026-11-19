@@ -8,7 +8,9 @@
  * exercised; the push payload is covered by the backend tests and runbook 5.9.
  *
  * WebAuthn refuses an IP address as the RP ID, so everything runs at http://localhost:5173 (the
- * dev defaults of WEBAUTHN_RP_ID/WEBAUTHN_ORIGINS), like passkeys.spec.ts. Each project uses its own
+ * dev defaults of WEBAUTHN_RP_ID/WEBAUTHN_ORIGINS), like passkeys.spec.ts. `resetFactors` shells out to
+ * plain `python`: put the Python 3.14 shim first on PATH (see the e2e runbook), or the default 3.11 +
+ * Django 5.2 interpreter runs it. Ports 5173 and 8000 must be free of other dev servers. Each project uses its own
  * account because the desktop and mobile projects run in parallel against one database.
  */
 import { execFileSync } from "node:child_process";
@@ -66,7 +68,9 @@ async function pairedPhone(browser: Browser): Promise<Page> {
 /** The "PC": password step, then "Approve on my phone"; returns the request the server created. */
 async function askForApproval(pc: Page) {
   await passwordStep(pc);
-  const requested = pc.waitForResponse((r) => r.url().includes("/auth/token/phone-request/") && r.ok());
+  const requested = pc.waitForResponse(
+    (r) => r.url().includes("/auth/token/phone-request/") && r.ok()
+  );
   await pc.getByRole("button", { name: "Approve on my phone" }).click();
   const request = (await (await requested).json()) as { number: number; approve_url: string };
   await expect(pc.getByLabel(`Your number is ${request.number}`)).toBeVisible();
@@ -81,7 +85,10 @@ test.describe("Phone approval", () => {
   // Playwright requires the destructuring pattern in the first argument, even when it is empty.
   // eslint-disable-next-line no-empty-pattern
   test.beforeAll(({}, testInfo) => {
-    USER = testInfo.project.name === "mobile-chromium" ? E2E_CREDENTIALS.hbpr : E2E_CREDENTIALS.controlRoom;
+    USER =
+      testInfo.project.name === "mobile-chromium"
+        ? E2E_CREDENTIALS.hbpr
+        : E2E_CREDENTIALS.controlRoom;
     resetFactors();
   });
   test.afterAll(resetFactors);
@@ -91,7 +98,8 @@ test.describe("Phone approval", () => {
     const pc = await (await browser.newContext()).newPage();
     const errors: string[] = [];
     pc.on("console", (m) => {
-      if (m.type() === "error" && !/favicon|Failed to load resource/i.test(m.text())) errors.push(m.text());
+      if (m.type() === "error" && !/favicon|Failed to load resource/i.test(m.text()))
+        errors.push(m.text());
     });
 
     const request = await askForApproval(pc);
@@ -119,7 +127,8 @@ test.describe("Phone approval", () => {
     const options = await numbers.all();
     let wrongButton = null;
     for (const option of options) {
-      if ((await option.getAttribute("aria-label")) !== `Number ${request.number}`) wrongButton = option;
+      if ((await option.getAttribute("aria-label")) !== `Number ${request.number}`)
+        wrongButton = option;
     }
     await wrongButton!.click();
     await expect(phone.getByRole("alert")).toContainText(/not the number on your computer/i);
