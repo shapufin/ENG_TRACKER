@@ -7,8 +7,11 @@ import { ticketKPIService } from "../services/ticketKPIService";
 import { toast } from "sonner";
 
 vi.mock("@/context/AuthContext", () => ({ useAuth: () => ({ user: { id: 1 } }) }));
+const perms = vi.hoisted(() => ({
+  value: { isTeamLeader: true, isAdmin: false, isHR: false },
+}));
 vi.mock("@/context/PermissionContext", () => ({
-  usePermissions: () => ({ isTeamLeader: true, isAdmin: false, isHR: false }),
+  usePermissions: () => perms.value,
 }));
 
 vi.mock("../services/ticketKPIService", () => ({
@@ -61,6 +64,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 describe("TicketKPITeamManagementPage — bulk review", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    perms.value = { isTeamLeader: true, isAdmin: false, isHR: false };
     vi.mocked(ticketKPIService.getTeamBatches).mockResolvedValue(BATCHES as any);
     vi.stubGlobal(
       "ResizeObserver",
@@ -143,6 +147,20 @@ describe("TicketKPITeamManagementPage — bulk review", () => {
       fireEvent.click(screen.getByRole("button", { name: "Undo review for bob" }));
     });
     expect(ticketKPIService.unreviewBatch).toHaveBeenCalledWith(2);
+  });
+
+  it("opens for an admin who leads no team, and for nobody else without a role", async () => {
+    perms.value = { isTeamLeader: false, isAdmin: true, isHR: false };
+    render(<TicketKPITeamManagementPage />, { wrapper });
+    await screen.findByText("alice");
+    expect(screen.queryByText("You do not have team leader permissions.")).toBeNull();
+  });
+
+  it("still refuses a user who is neither a leader nor an admin", () => {
+    perms.value = { isTeamLeader: false, isAdmin: false, isHR: true };
+    render(<TicketKPITeamManagementPage />, { wrapper });
+    expect(screen.getByText("You do not have team leader permissions.")).toBeInTheDocument();
+    expect(ticketKPIService.getTeamBatches).not.toHaveBeenCalled();
   });
 
   it("offers no way back for a review somebody else made", async () => {

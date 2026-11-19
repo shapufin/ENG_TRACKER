@@ -16,6 +16,8 @@ import { formatMonthLabel } from "@/lib/monthOptions";
 export const TicketKPITeamManagementPage: React.FC = () => {
   const { isTeamLeader, isAdmin, isHR } = usePermissions();
   const { user } = useAuth();
+  // Admins review every team's imports; a team leader only their own team's.
+  const canOpen = isTeamLeader || isAdmin;
   const {
     selectedMonth,
     setSelectedMonth,
@@ -31,9 +33,9 @@ export const TicketKPITeamManagementPage: React.FC = () => {
     bulkReviewMutation,
     reviewMutation,
     unreviewMutation,
-  } = useTicketKPITeamManagement(isTeamLeader);
+  } = useTicketKPITeamManagement(canOpen);
 
-  if (!isTeamLeader) {
+  if (!canOpen) {
     return (
       <PageShell title="Ticket Review">
         <EmptyState
