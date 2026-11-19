@@ -7,7 +7,8 @@ from datetime import date
 
 from .services import PROMOTION_TARGET_PCT
 
-# Targets mirror the scorecard payload (services.TL_SYNC/REVIEW/ONE_ON_ONE constants, served as `targets`):
+# Fallback targets, used only when a scorecard carries no `targets`. Live exports read the viewer's
+# targets from the scorecard payload (services.SCORECARD_TARGETS_BY_ROLE):
 # - ScorecardOverview.tsx: pending leave "Target: 0".
 # - TeamGovernanceSection.tsx: 1:1 "Target: 100%", reviews "Target: ≥12/year",
 #   promotion "Target: {promotion.target_pct}%/year" (3.0, services.PROMOTION_TARGET_PCT),
@@ -51,12 +52,14 @@ def status_for(value, target, nonzero='Off track'):
     return OFF_TRACK
 
 
-def reviews_target(month: str | None) -> int:
+def reviews_target(month: str | None, targets: dict | None = None) -> int:
     """Pro-rata review target up to ``month`` (ISO date): 12 a year is 1 a month,
-    so by month M the target is M. Without a month, the full-year target."""
+    so by month M the target is M. Without a month, the full-year target.
+    ``targets`` is the viewer's scorecard targets; the static set is the fallback."""
+    per_year = (targets or TARGETS)['reviews_per_year']
     if not month:
-        return TARGETS['reviews_per_year']
-    return TARGETS['reviews_per_year'] * date.fromisoformat(month).month // 12
+        return per_year
+    return per_year * date.fromisoformat(month).month // 12
 
 
 def kpi_rows(scorecard, *, include_leave_overtime=True) -> list[dict]:
@@ -71,7 +74,8 @@ def kpi_rows(scorecard, *, include_leave_overtime=True) -> list[dict]:
     leave = scorecard['leave']
     meetings = scorecard['meetings']
     promotion = scorecard['promotion']
-    reviews_goal = reviews_target(scorecard.get('month'))
+    targets = scorecard.get('targets') or TARGETS
+    reviews_goal = reviews_target(scorecard.get('month'), targets)
     pip_pending = scorecard['pip']['pending_approval_count']
     breached = scorecard['absences']['breached_5_day_sla']
     escalations = scorecard['escalation_count']
@@ -92,10 +96,10 @@ def kpi_rows(scorecard, *, include_leave_overtime=True) -> list[dict]:
         row('Leave', 'Pending leave at month-end', leave['pending_at_month_end'], 'count'),
         row('Overtime', 'OT approval turnaround (days)', scorecard['overtime']['avg_turnaround_days'], 'num'),
         row('Meetings', '1:1 compliance', meetings['one_on_one_compliance_pct'], 'pct',
-            TARGETS['one_on_one_pct']),
+            targets['one_on_one_pct']),
         row('Meetings', 'Manager syncs', meetings['tl_sync_count'], 'count'),
         row('Meetings', 'Team meetings with HRBP', meetings['team_meetings_with_hrbp'], 'count'),
-        row('Reviews', f'Management reviews (YTD, pro-rata of {TARGETS["reviews_per_year"]}/year)',
+        row('Reviews', f'Management reviews (YTD, pro-rata of {targets["reviews_per_year"]}/year)',
             reviews, 'count', reviews_goal),
         row('Governance', 'Open idle flags', scorecard['idle']['open_count'], 'count'),
         row('Governance', 'Absences unaddressed over 5 days', breached, 'count',
@@ -103,7 +107,7 @@ def kpi_rows(scorecard, *, include_leave_overtime=True) -> list[dict]:
         row('Governance', 'PIPs pending HR approval', pip_pending, 'count',
             TARGETS['pip_pending'], target_nonzero=WATCH),
         row('Promotion', 'Promotion ratio', promotion['promoted_pct'], 'pct',
-            TARGETS['promotion_pct']),
+            targets['promotion_pct']),
         row('Risk', 'Escalation risks', escalations, 'count', TARGETS['escalations']),
     ]
     if include_leave_overtime:

@@ -216,6 +216,24 @@ class ReportKpiStatusTests(SimpleTestCase):
         self.assertEqual(reviews['target'], 6)
         self.assertEqual(reviews['status'], 'On track')
 
+    def test_export_targets_come_from_the_viewers_scorecard(self):
+        role_targets = {'tl_sync_per_year': 24, 'reviews_per_year': 4, 'one_on_one_pct': 80.0, 'promotion_pct': 2.0}
+        rows = kpi_rows({
+            'month': '2026-06-01', 'team_size': 1, 'targets': role_targets,
+            'review_deliveries_ytd': 2,
+            'leave': {'pct_within_2_days': None, 'pending_at_month_end': 0},
+            'overtime': {'avg_turnaround_days': None},
+            'meetings': {'one_on_one_compliance_pct': None, 'tl_sync_count': 0,
+                         'team_meetings_with_hrbp': 0},
+            'idle': {'open_count': 0}, 'absences': {'breached_5_day_sla': 0},
+            'pip': {'pending_approval_count': 0}, 'promotion': {'promoted_pct': None},
+            'escalation_count': 0,
+        })
+        reviews = next(r for r in rows if r['metric'].startswith('Management reviews'))
+        self.assertEqual(reviews['target'], 2)  # 4 a year, pro-rata to June
+        one_on_one = next(r for r in rows if r['metric'].startswith('1:1'))
+        self.assertEqual(one_on_one['target'], 80.0)
+
 
 class EprEvidenceExportTests(HbprScorecardBase):
     """Stage dates, who recorded them and HBPR attendance are exported; review

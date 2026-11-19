@@ -23,6 +23,7 @@ from core.utils.timezone_local import business_today
 from apps.leave_management.models import LeaveRequest, count_business_days
 from apps.leave_management.models.core import global_holiday_dates
 from apps.overtime.models.core import OvertimeLog
+from apps.permissions.services.role_service import has_role
 from apps.users.services.leader_ownership import owned_by_leader_q
 
 from .scope import scoreable_member_ids
@@ -353,10 +354,26 @@ ESCALATION_PIP_PENDING_DAYS = 14
 ESCALATION_ABSENCE_SLA_DAYS = 5
 
 PROMOTION_TARGET_PCT = 3.0
-# Line Manager KPI targets (Enri's KPI). Hardcoded until a role-based target exists.
-TL_SYNC_TARGET_PER_YEAR = 45
-REVIEW_TARGET_PER_YEAR = 12
-ONE_ON_ONE_TARGET_PCT = 100.0
+# Scorecard targets per role code. The first role the viewer holds wins, in this order.
+# Line Manager (albanian_tl) is the KPI owner's set (Enri). A new role such as PM gets its
+# own entry here; a viewer with no listed role gets the Line Manager set.
+SCORECARD_TARGETS_BY_ROLE = {
+    'albanian_tl': {
+        'tl_sync_per_year': 45,
+        'reviews_per_year': 12,
+        'one_on_one_pct': 100.0,
+        'promotion_pct': PROMOTION_TARGET_PCT,
+    },
+}
+DEFAULT_TARGET_ROLE = 'albanian_tl'
+
+
+def scorecard_targets(user) -> dict:
+    """The targets for this viewer's role (see ``SCORECARD_TARGETS_BY_ROLE``)."""
+    for role_code, targets in SCORECARD_TARGETS_BY_ROLE.items():
+        if has_role(user, role_code):
+            return dict(targets)
+    return dict(SCORECARD_TARGETS_BY_ROLE[DEFAULT_TARGET_ROLE])
 
 
 def absence_metrics(team_member_ids) -> dict:
@@ -831,6 +848,7 @@ def build_scorecard(
     if not frozen:
         month_part = month_blocks(user, month, team_member_ids, window)
     # Live, never frozen: the year-to-date pace and the targets change without a month closing.
+    targets = scorecard_targets(user)
     return {
         'month': month.isoformat(),
         **month_part,
@@ -838,11 +856,6 @@ def build_scorecard(
         **year_part,
         **current_state,
         'tl_sync_ytd': bisect_left(tl_sync_dates, _month_bounds(month)[1]),
-        'tl_sync_expected_ytd': math.ceil(TL_SYNC_TARGET_PER_YEAR * month.month / 12),
-        'targets': {
-            'tl_sync_per_year': TL_SYNC_TARGET_PER_YEAR,
-            'reviews_per_year': REVIEW_TARGET_PER_YEAR,
-            'one_on_one_pct': ONE_ON_ONE_TARGET_PCT,
-            'promotion_pct': PROMOTION_TARGET_PCT,
-        },
+        'tl_sync_expected_ytd': math.ceil(targets['tl_sync_per_year'] * month.month / 12),
+        'targets': targets,
     }

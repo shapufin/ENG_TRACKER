@@ -143,6 +143,21 @@ class TLScorecardServiceTests(TestCase):
             'one_on_one_pct': 100.0, 'promotion_pct': 3.0,
         })
 
+    def test_targets_follow_the_viewers_role(self):
+        pm_targets = {
+            'tl_sync_per_year': 24, 'reviews_per_year': 4, 'one_on_one_pct': 100.0, 'promotion_pct': 3.0,
+        }
+        with mock.patch.dict('plugins.tl_scorecard.services.SCORECARD_TARGETS_BY_ROLE', {'pm': pm_targets}):
+            _assign_tl_role(self.leader, 'pm')
+            data = build_scorecard(self.leader, date(2026, 3, 1))
+        self.assertEqual(data['targets'], pm_targets)
+        self.assertEqual(data['tl_sync_expected_ytd'], 6)  # ceil(24 * 3 / 12)
+
+    def test_targets_fall_back_to_the_line_manager_kpi_without_a_mapped_role(self):
+        data = build_scorecard(self.leader, date(2026, 3, 1))
+        self.assertEqual(data['targets']['tl_sync_per_year'], 45)
+        self.assertEqual(data['targets']['reviews_per_year'], 12)
+
     def test_ot_turnaround_average(self):
         _overtime(self.member, self.month, approved_at=self.month)
         result = ot_turnaround_metrics(self.leader.id, self.month_start)

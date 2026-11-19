@@ -35,10 +35,12 @@ def _cover(story, scorecard, leader_name, period_label, rows):
         subtitle=f"Scorecard for {period_label} · Team size {scorecard['team_size']}",
         kpis=tiles,
     )
+    targets = scorecard.get('targets') or TARGETS
     pdf.paragraph(
         story,
-        'Targets: 1:1 compliance 100%; management reviews 12 a year (pro-rata to the month); '
-        f"promotion {TARGETS['promotion_pct']:g}% a year; PIPs pending approval, absences over "
+        f"Targets: 1:1 compliance {targets['one_on_one_pct']:g}%; management reviews "
+        f"{targets['reviews_per_year']} a year (pro-rata to the month); "
+        f"promotion {targets['promotion_pct']:g}% a year; PIPs pending approval, absences over "
         '5 days and escalations 0. Green is on track, amber is watch, red is off track.',
     )
     pdf.section_title(story, 'Summary')
@@ -74,7 +76,7 @@ def _meetings_section(story, trend):
         story, categories=months,
         series={
             'Management reviews (YTD)': [p['review_deliveries_ytd'] for p in trend],
-            'Pro-rata target': [reviews_target(p['month']) for p in trend],
+            'Pro-rata target': [reviews_target(p['month'], p.get('targets')) for p in trend],
         },
     )
     pdf.data_table(
