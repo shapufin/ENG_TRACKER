@@ -29,7 +29,7 @@ interface ScorecardOverviewProps {
 const MICRO_LABEL = "font-semibold uppercase tracking-wider";
 
 /**
- * Small engagement ring: the score (0-10) as a 0-100% arc. Decorative — the
+ * Small engagement ring: the score (0-10) as a 0-100% arc. Decorative. The
  * numeric score next to it carries the meaning, so this is aria-hidden.
  */
 const EngagementRing: React.FC<{ score: number | null | undefined }> = ({ score }) => {
@@ -129,15 +129,17 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
         <StatCard
           label="Leave decided within 2 business days"
           labelClassName={MICRO_LABEL}
-          value={leave.pct_within_2_days !== null ? `${leave.pct_within_2_days}%` : "—"}
+          value={leave.pct_within_2_days !== null ? `${leave.pct_within_2_days}%` : "n/a"}
           icon={CheckCircle2}
           iconWellClass={slaWell(leave.pct_within_2_days)}
           iconColorClass={slaTone(leave.pct_within_2_days) ?? "text-tone-info-text"}
           valueColorClass={slaTone(leave.pct_within_2_days)}
           trend={
-            leave.within_2_days != null
-              ? `${leave.within_2_days} of ${leave.decided_count} decided in time · submitted this month`
-              : `${leave.decided_count} requests submitted this month`
+            leave.decided_count === 0
+              ? "No decisions yet this month"
+              : leave.within_2_days != null
+                ? `${leave.within_2_days} of ${leave.decided_count} submitted this month, decided in time`
+                : `${leave.decided_count} requests submitted this month`
           }
           progressPercent={leave.pct_within_2_days ?? undefined}
           progressColorClass={slaBar(leave.pct_within_2_days)}
@@ -161,7 +163,7 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
         <StatCard
           label="OT approval turnaround"
           labelClassName={MICRO_LABEL}
-          value={overtime.avg_turnaround_days !== null ? `${overtime.avg_turnaround_days}d` : "—"}
+          value={overtime.avg_turnaround_days !== null ? `${overtime.avg_turnaround_days}d` : "n/a"}
           icon={CalendarClock}
           iconWellClass={`border ${toneSurfaceClass.info}`}
           iconColorClass={toneTextClass.info}
@@ -206,7 +208,7 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
                   <p className="mt-1 font-mono text-2xl font-bold tabular-nums">
                     {engagement?.engagement_score != null
                       ? `${(engagement.engagement_score / 10).toFixed(1)}/10`
-                      : "—"}
+                      : "n/a"}
                   </p>
                   <p className="text-muted-foreground mt-1 text-xs">
                     Built from on-time decisions (40%), approval rate (20%), responsiveness (20%)

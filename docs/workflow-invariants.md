@@ -90,6 +90,10 @@ Plan: `docs/superpowers/plans/2026-10-13-leave-carryover-and-holidays.md`.
 - **Counts behind every percentage** (`within_2_days`, `one_on_one_compliant`,
   `one_on_one_eligible`) are sent beside it. The 1-on-1 pair is masked for HBPR with the
   percentage (`_mask_one_on_one`). Months frozen before 2026-11-19 return these as null.
+- **Frozen months keep their old numbers.** A month frozen before 2026-11-19 keeps its old leave
+  and 1-on-1 figures, including the old weekday-only leave count. The holiday rule and the new
+  counts apply only to live months and to months frozen after that date. Do not recompute a
+  frozen month to match the new rule (freeze rule, item 33 family).
 - **Excused 1-on-1s**: approved leave covering every working day of the month, or a skip with
   a reason. A slot pushed past month-end is a miss for the month it was due in. Rule kept as
   is; any change is an owner ruling (item 84).

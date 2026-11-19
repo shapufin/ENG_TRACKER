@@ -91,7 +91,7 @@ interface TeamGovernanceSectionProps {
 /**
  * The team-level governance the Line Manager owns: communication cadence, idle
  * risk, and the governance/risk records (absence, PIP, promotion, EPR).
- * Employee one-on-ones and employee EPR stay TL-authorable here — the HBPR
+ * Employee one-on-ones and employee EPR stay TL-authorable here. The HBPR
  * never sees them.
  */
 export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
@@ -152,7 +152,7 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
             value={
               meetings.one_on_one_compliance_pct !== null
                 ? `${meetings.one_on_one_compliance_pct}%`
-                : "—"
+                : "n/a"
             }
             icon={Handshake}
             iconWellClass={slaWell(meetings.one_on_one_compliance_pct)}
@@ -291,7 +291,7 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
           <StatCard
             label="Promotion ratio"
             labelClassName={MICRO_LABEL}
-            value={promotion.promoted_pct !== null ? `${promotion.promoted_pct}%` : "—"}
+            value={promotion.promoted_pct !== null ? `${promotion.promoted_pct}%` : "n/a"}
             icon={Award}
             iconWellClass={`border ${toneSurfaceClass.accent}`}
             iconColorClass={toneTextClass.accent}
