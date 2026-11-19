@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { isMfaChallenge, type AuthResponse, type User, type LoginCredentials } from "@/types";
 import { authService } from "@/services/authService";
 import { authenticateWithPasskey, registerPasskeyAtLogin } from "@/services/passkeyService";
+import { collectPhoneApproval } from "@/services/phoneApprovalService";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { isAuthRejection, setAccessToken } from "@/lib/api";
 import { getQueueCount } from "@/lib/offline/offlineQueue";
@@ -98,6 +99,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [startSession]
   );
 
+  const completePhoneApproval = useCallback(
+    async (mfaToken: string, requestId: string, collectKey: string) => {
+      const data = await collectPhoneApproval(mfaToken, requestId, collectKey);
+      // A status is not a session: nothing is stored until the phone has approved.
+      return "access" in data ? startSession(data) : data;
+    },
+    [startSession]
+  );
+
   const finishLoginPasskeySetup = useCallback(
     async (mfaToken: string, name: string) =>
       startSession(await registerPasskeyAtLogin(mfaToken, name)),
@@ -152,6 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     verifyMfa,
     verifyPasskey,
+    completePhoneApproval,
     finishLoginPasskeySetup,
     startLoginSetup,
     finishLoginSetup,

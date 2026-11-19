@@ -6,6 +6,8 @@ Whether MFA is *required* for someone lives on ``UserProfile.mfa_required`` and
 ``GlobalSettings.mfa_required``, so it can be set before a person enrols.
 """
 
+import uuid
+
 from django.contrib.auth import get_user_model
 from django.db import models
 
@@ -84,3 +86,57 @@ class WebAuthnChallenge(TimeStampedModel):
     class Meta:
         db_table = 'users_webauthn_challenge'
         indexes = [models.Index(fields=['user', 'purpose', 'used_at'])]
+
+
+class PairedPhone(TimeStampedModel):
+    """A phone allowed to approve this user's sign-ins (item 90).
+
+    The phone's identity is its passkey, so removing the passkey unpairs the phone.
+    A blank ``push_endpoint`` means QR-only. Plain row, no soft delete, never in Site Backup.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='paired_phones')
+    credential = models.OneToOneField(
+        WebAuthnCredential, on_delete=models.CASCADE, related_name='paired_phone',
+    )
+    name = models.CharField(max_length=64)
+    push_endpoint = models.URLField(max_length=500, blank=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'users_paired_phone'
+        ordering = ['created_at', 'id']
+
+    def __str__(self):
+        return f'PairedPhone({self.user_id}, {self.name})'
+
+
+class PhoneLoginRequest(TimeStampedModel):
+    """One sign-in waiting for a paired phone. Live state in Postgres (never Redis); pruned lazily."""
+    STATUS_PENDING = 'pending'
+    STATUS_APPROVED = 'approved'
+    STATUS_DENIED = 'denied'
+
+    public_id = models.UUIDField(unique=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='phone_login_requests')
+    status = models.CharField(max_length=10, default=STATUS_PENDING)
+    number = models.PositiveSmallIntegerField(help_text='The 2-digit number the PC shows.')
+    options = models.JSONField(default=list, help_text='The three numbers the phone shows, shuffled.')
+    challenge = models.BinaryField()
+    collector_digest = models.CharField(
+        max_length=64, help_text='sha256 hex of the key only the requesting PC holds.',
+    )
+    expires_at = models.DateTimeField()
+    decided_at = models.DateTimeField(null=True, blank=True)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    credential = models.ForeignKey(
+        WebAuthnCredential, null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+    )
+    requester_ip = models.GenericIPAddressField(null=True, blank=True)
+    requester_agent = models.CharField(max_length=200, blank=True)
+
+    class Meta:
+        db_table = 'users_phone_login_request'
+        indexes = [models.Index(fields=['user', 'status', 'expires_at'])]
+
+    def __str__(self):
+        return f'PhoneLoginRequest({self.user_id}, {self.status})'

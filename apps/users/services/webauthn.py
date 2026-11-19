@@ -30,7 +30,7 @@ from webauthn.helpers.structs import (
     UserVerificationRequirement,
 )
 
-from ..models.mfa import UserMFA, WebAuthnChallenge, WebAuthnCredential
+from ..models.mfa import PairedPhone, UserMFA, WebAuthnChallenge, WebAuthnCredential
 from .mfa import LOCK_MINUTES, MAX_FAILURES, MFAError, audit, required_source, totp_enabled
 
 logger = logging.getLogger(__name__)
@@ -210,16 +210,32 @@ def _record_failure(user, message: str, reason: str) -> MFAError:
     return MFAError('passkey_invalid', message, reason=reason)
 
 
-def verify_assertion(user, response: dict) -> WebAuthnCredential:
-    """Verify a browser sign-in response for ``user``; raises ``MFAError`` on any failure."""
-    _require_available()
+def assert_not_locked(user) -> None:
+    """Raise the lock error while the user's second-factor attempts are locked."""
     with transaction.atomic():
         locked_until = _lock_row(user).locked_until
     if locked_until and locked_until > timezone.now():
         raise _locked_error(locked_until)
 
+
+def verify_assertion(user, response: dict) -> WebAuthnCredential:
+    """Verify a browser sign-in response for ``user``; raises ``MFAError`` on any failure."""
+    _require_available()
+    assert_not_locked(user)
     challenge = _challenge_from_response(response)
     consume_challenge(user, WebAuthnChallenge.PURPOSE_LOGIN, challenge)
+    return verify_assertion_for_challenge(user, response, challenge)
+
+
+def verify_assertion_for_challenge(
+    user, response: dict, challenge: bytes, *, require_paired: bool = False,
+) -> WebAuthnCredential:
+    """Check an assertion against ``challenge``: credential, origin, RP ID, user verification,
+    signature and counter. One body for sign-in and phone approval (item 90), so the rules
+    cannot drift apart. The caller owns the lock check and the challenge's single use.
+
+    ``require_paired`` also demands the credential is a paired phone (``no_phone`` otherwise).
+    """
     try:
         raw_id = _b64url_decode(response['rawId'])
     except (KeyError, TypeError, ValueError) as exc:
@@ -227,6 +243,11 @@ def verify_assertion(user, response: dict) -> WebAuthnCredential:
     credential = WebAuthnCredential.objects.filter(user=user, credential_id=raw_id).first()
     if credential is None:
         raise _record_failure(user, _PASSKEY_INVALID, 'unknown_credential')
+    if require_paired and not PairedPhone.objects.filter(credential=credential).exists():
+        failure = _record_failure(user, _PASSKEY_INVALID, 'not_paired')
+        if failure.code == 'locked':
+            raise failure
+        raise MFAError('no_phone', 'This passkey is not set up to approve sign-ins.')
 
     try:
         verified = verify_authentication_response(

@@ -6,6 +6,7 @@ from collections.abc import Mapping
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import serializers, status
+from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -24,6 +25,8 @@ from core.maintenance import MaintenanceModeActive, is_maintenance_active, is_us
 from apps.reports.services.security_audit import log_security_event
 from ..serializers import CustomTokenObtainPairSerializer
 from ..services import mfa as mfa_service
+from ..services import phone_approval as phone_approval_service
+from ..services import phone_pairing as phone_pairing_service
 from ..services import webauthn as webauthn_service
 from ..services.mfa import MFAError
 from ..services.tokens import revoke_refresh_tokens
@@ -135,6 +138,13 @@ _MFA_STATUS = {
     'not_found': status.HTTP_404_NOT_FOUND,
     'credential_exists': status.HTTP_409_CONFLICT,
     'last_factor': status.HTTP_409_CONFLICT,
+    # Phone approval (item 90)
+    'request_invalid': status.HTTP_404_NOT_FOUND,
+    'request_expired': status.HTTP_410_GONE,
+    'request_used': status.HTTP_409_CONFLICT,
+    'too_many_requests': status.HTTP_429_TOO_MANY_REQUESTS,
+    'no_phone': status.HTTP_409_CONFLICT,
+    'phone_exists': status.HTTP_409_CONFLICT,
 }
 
 
@@ -723,3 +733,178 @@ class TokenLogoutView(APIView):
         response = Response(status=status.HTTP_200_OK)
         response.delete_cookie('refresh_token', path='/api/auth/token/')
         return response
+
+
+# --- Phone approval (item 90) -------------------------------------------------
+
+class _PhoneApprovalMixin:
+    """Every phone-approval endpoint is a 404 while ``PHONE_APPROVAL_ENABLED`` is off."""
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if not phone_approval_service.phone_approval_enabled():
+            raise NotFound()
+
+
+class _PhoneSignInView(_PhoneApprovalMixin, _MFAView):
+    """The PC's side: proves the password step with ``mfa_token``."""
+
+    def _user(self, request):
+        user = mfa_service.read_challenge(str(request.data.get('mfa_token', '')), mfa_service.PURPOSE_VERIFY)
+        if is_maintenance_active() and not is_user_exempt(user):
+            raise MaintenanceModeActive()
+        return user
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class PhoneRequestView(_PhoneSignInView):
+    """POST /api/auth/token/phone-request/ {mfa_token, via}: ask a paired phone to approve this sign-in."""
+
+    def post(self, request):
+        try:
+            user = self._user(request)
+            data = phone_approval_service.request_approval(
+                user, str(request.data.get('via', 'push')), get_client_ip(request),
+                request.META.get('HTTP_USER_AGENT', ''),
+            )
+        except MFAError as exc:
+            return _mfa_error(exc)
+        return Response(data)
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class PhoneCollectView(_PhoneSignInView):
+    """POST /api/auth/token/phone-collect/ {mfa_token, request_id, collect_key}: the PC's poll.
+
+    ``202 {status}`` until the phone approves; then the normal signed-in response. It sits under
+    ``token/`` so it shares the refresh-cookie path, and has its own (higher) throttle scope.
+    """
+    throttle_scope = 'phone_poll'
+
+    def post(self, request):
+        request_id = str(request.data.get('request_id', ''))
+        collect_key = str(request.data.get('collect_key', ''))
+        try:
+            user = self._user(request)
+            state = phone_approval_service.collect(user, request_id, collect_key, consume=False)
+        except MFAError as exc:
+            return _mfa_error(exc)
+        if state != 'approved':
+            return Response({'status': state}, status=status.HTTP_202_ACCEPTED)
+        return _complete_mfa_login(
+            request,
+            lambda owner: phone_approval_service.collect(owner, request_id, collect_key),
+            failure_text='Invalid phone approval',
+            auth_method='phone',
+        )
+
+
+class _PhoneApproverView(_PhoneApprovalMixin, _MFAView):
+    """The phone's side: no session; the paired passkey's assertion is the authentication."""
+
+    def _owner(self, public_id):
+        user = phone_approval_service.request_owner(public_id)
+        if is_maintenance_active() and not is_user_exempt(user):
+            raise MaintenanceModeActive()
+        return user
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class PhoneApprovalDetailView(_PhoneApproverView):
+    """GET /api/auth/phone/requests/<id>/: what the phone shows, plus the assertion options."""
+
+    def get(self, request, public_id):
+        try:
+            self._owner(public_id)
+            return Response(phone_approval_service.approval_view(public_id))
+        except MFAError as exc:
+            return _mfa_error(exc)
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class PhoneApprovalDecideView(_PhoneApproverView):
+    """POST /api/auth/phone/requests/<id>/decide/ {decision, number?, response?}."""
+
+    def post(self, request, public_id):
+        ip = get_client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', '')
+        user = None
+        try:
+            user = self._owner(public_id)
+            number = request.data.get('number')
+            phone_approval_service.decide(
+                public_id, str(request.data.get('decision', '')),
+                number=number if isinstance(number, int) else None, response=request.data.get('response'),
+            )
+        except MFAError as exc:
+            if user is not None and exc.code in ('wrong_number', 'passkey_invalid', 'no_phone', 'locked'):
+                log_security_event(
+                    user=user,
+                    action='MFA_LOCKED' if exc.code == 'locked' else 'MFA_FAILED',
+                    description=f"Phone approval refused for user '{user.username}'",
+                    ip_address=ip, user_agent=ua,
+                    extra_data={'username': user.username, 'code': exc.code},
+                    status='failure',
+                )
+            return _mfa_error(exc)
+        return Response(status=status.HTTP_200_OK)
+
+
+class _PairedPhonesView(_PhoneApprovalMixin, _SignedInMFAView):
+    def _step_up(self, request):
+        mfa_service.check_step_up(
+            request.user, str(request.data.get('password', '')), str(request.data.get('code', ''))
+        )
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class PairedPhonesView(_PairedPhonesView):
+    """GET lists the user's paired phones; POST {password, code?, credential_id, name, push_endpoint?} pairs one."""
+
+    def get(self, request):
+        return Response(phone_pairing_service.list_phones(request.user))
+
+    def post(self, request):
+        ip = get_client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', '')
+        try:
+            self._step_up(request)
+            phone = phone_pairing_service.pair(
+                request.user, request.data.get('credential_id'), str(request.data.get('name', '')),
+                str(request.data.get('push_endpoint', '')),
+            )
+        except MFAError as exc:
+            return _mfa_error(exc)
+        mfa_service.audit(
+            request.user, 'mfa_phone_paired',
+            f"{request.user.username} set up the phone '{phone.name}' to approve sign-ins",
+            request.user, ip_address=ip, user_agent=ua,
+        )
+        return Response(phone_pairing_service.summary(phone), status=status.HTTP_201_CREATED)
+
+
+@extend_schema(exclude=True)  # documented in docs/deploy; not part of the public schema
+class PairedPhoneDetailView(_PairedPhonesView):
+    """PATCH {name, password, code?} renames; DELETE {password, code?} unpairs. Both re-prove the password."""
+
+    def patch(self, request, pk):
+        try:
+            self._step_up(request)
+            phone = phone_pairing_service.rename(request.user, pk, str(request.data.get('name', '')))
+        except MFAError as exc:
+            return _mfa_error(exc)
+        return Response(phone_pairing_service.summary(phone))
+
+    def delete(self, request, pk):
+        ip = get_client_ip(request)
+        ua = request.META.get('HTTP_USER_AGENT', '')
+        try:
+            self._step_up(request)
+            phone_pairing_service.remove(request.user, pk)
+        except MFAError as exc:
+            return _mfa_error(exc)
+        mfa_service.audit(
+            request.user, 'mfa_phone_removed', f'{request.user.username} removed a phone',
+            request.user, ip_address=ip, user_agent=ua,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)

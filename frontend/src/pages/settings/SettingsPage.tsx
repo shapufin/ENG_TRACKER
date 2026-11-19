@@ -15,6 +15,7 @@ import { ClientAssignmentSection } from "./components/ClientAssignmentSection";
 import { NotificationPreferencesSection } from "./components/NotificationPreferencesSection";
 import { PluginCRScopeCard } from "./components/PluginCRScopeCard";
 import { PasswordRow } from "./components/PasswordRow";
+import { PairedPhonesSection } from "./components/PairedPhonesSection";
 import { PasskeysSection } from "./components/PasskeysSection";
 import { TwoFactorSection } from "./components/TwoFactorSection";
 
@@ -101,6 +102,7 @@ export const SettingsPage: React.FC = () => {
             <div className="space-y-2 border-t pt-4" role="group" aria-label="Security">
               <PasswordRow />
               <PasskeysSection />
+              <PairedPhonesSection />
               <TwoFactorSection />
             </div>
             {(user?.techs?.length ?? 0) > 0 && (

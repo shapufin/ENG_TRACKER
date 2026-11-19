@@ -8,6 +8,7 @@ import { HomeRedirect } from "@/components/routing/HomeRedirect";
 import { AppShell } from "@/components/layout/AppShell";
 import { AdminShell } from "@/components/layout/AdminShell";
 import { LoginPage } from "@/pages/LoginPage";
+import { PhoneApprovePage } from "@/pages/PhoneApprovePage";
 // Lazy so the login page does not download recharts (the dashboard's charts).
 const DashboardPage = React.lazy(() =>
   import("@/pages/dashboard/DashboardPage").then((m) => ({ default: m.DashboardPage }))
@@ -133,6 +134,8 @@ export const AppRoutes: React.FC = () => {
 
   return useRoutes([
     { path: "/login", element: <LoginPage /> },
+    // Public on purpose: the phone approves with its passkey, not a session (item 90).
+    { path: "/phone-approve/:requestId", element: <PhoneApprovePage /> },
     { path: "/", element: <HomeRedirect /> },
     { path: "/admin-dashboard/*", element: <Navigate to="/admin" replace /> },
     {

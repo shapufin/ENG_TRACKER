@@ -82,7 +82,7 @@ def _count_failure(sub):
     sub.save(update_fields=['failure_count', 'is_active'])
 
 
-def send_push_notification(user, title, message, url=None):
+def send_push_notification(user, title, message, url=None, endpoints=None):
     """Send a push notification to all active subscriptions for a user.
 
     Args:
@@ -90,11 +90,15 @@ def send_push_notification(user, title, message, url=None):
         title: Notification title
         message: Notification body text
         url: Optional URL to open when clicked
+        endpoints: Optional list; when given, only subscriptions with one of these
+            endpoints are used (phone approval targets paired phones, item 90)
 
     Returns:
         (sent_count, failed_count) tuple
     """
     subscriptions = PushSubscription.objects.filter(user=user, is_active=True)
+    if endpoints is not None:
+        subscriptions = subscriptions.filter(endpoint__in=list(endpoints))
     if not subscriptions.exists():
         return 0, 0
 

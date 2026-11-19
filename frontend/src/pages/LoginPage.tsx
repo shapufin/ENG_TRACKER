@@ -7,21 +7,33 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Fingerprint, LogIn, ShieldCheck, Wrench } from "lucide-react";
+import { Fingerprint, LogIn, ShieldCheck, Smartphone, Wrench } from "lucide-react";
 import { useSiteBranding } from "@/hooks/useSiteBranding";
 import { useMaintenanceStatus } from "@/hooks/useMaintenanceStatus";
 import { isMaintenanceError } from "@/lib/api";
 import { BackupCodesPanel } from "@/components/auth/BackupCodesPanel";
 import { MfaCodeField } from "@/components/auth/MfaCodeField";
 import { MfaEnrollment } from "@/components/auth/MfaEnrollment";
+import { PhoneApprovalWait, type PhoneWaitEnd } from "@/components/auth/PhoneApprovalWait";
 import { mfaErrorMessage } from "@/services/mfaService";
 import { PasskeyCancelledError, isPasskeySupported } from "@/services/passkeyService";
-import { isMfaChallenge, type AuthResponse, type MfaSetupData, type User } from "@/types";
+import { requestPhoneApproval } from "@/services/phoneApprovalService";
+import {
+  isMfaChallenge,
+  type AuthResponse,
+  type MfaSetupData,
+  type PhoneApprovalStart,
+  type User,
+} from "@/types";
 
-type Step = "password" | "passkey" | "code" | "choose" | "setup" | "backup";
+type Step = "password" | "phone" | "passkey" | "code" | "choose" | "setup" | "backup";
 
 const STEP_COPY: Record<Step, { title: string; subtitle: string }> = {
   password: { title: "", subtitle: "Sign in to your account" },
+  phone: {
+    title: "Two-factor authentication",
+    subtitle: "Approve this sign-in with the fingerprint or face on your phone.",
+  },
   passkey: {
     title: "Two-factor authentication",
     subtitle: "Confirm it is you with Face ID, your fingerprint or your device PIN.",
@@ -70,7 +82,8 @@ export const LoginPage: React.FC = () => {
   const [setupData, setSetupData] = useState<MfaSetupData | null>(null);
   const [signedIn, setSignedIn] = useState<AuthResponse | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
-  const [methods, setMethods] = useState<Array<"passkey" | "totp">>([]);
+  const [methods, setMethods] = useState<Array<"passkey" | "phone" | "totp">>([]);
+  const [phoneRequest, setPhoneRequest] = useState<PhoneApprovalStart | null>(null);
   const {
     login,
     verifyMfa,
@@ -101,6 +114,7 @@ export const LoginPage: React.FC = () => {
     setUseBackupCode(false);
     setSetupData(null);
     setMethods([]);
+    setPhoneRequest(null);
     setPassword("");
     setError(message);
   };
@@ -138,6 +152,8 @@ export const LoginPage: React.FC = () => {
           setSetupData(await startLoginSetup(data.mfa_token));
           setStep("setup");
         }
+      } else if (offered.includes("phone")) {
+        setStep("phone");
       } else if (passkeyUsable) {
         setStep("passkey");
       } else if (data.methods && !offered.includes("totp")) {
@@ -178,6 +194,30 @@ export const LoginPage: React.FC = () => {
     }
   };
 
+  const handlePhoneStart = async () => {
+    try {
+      setPhoneRequest(await requestPhoneApproval(mfaToken, "push"));
+    } catch (err) {
+      handleStepError(err, "The request could not be sent. Try again, or use a code instead.");
+    }
+  };
+
+  const handlePhoneEnded = (reason: PhoneWaitEnd) => {
+    setPhoneRequest(null);
+    setError(
+      reason === "denied"
+        ? "The request was denied on your phone. Nothing was approved. Send it again if it was you, or use a code instead."
+        : "The request expired before your phone approved it. Send it again, or use a code instead."
+    );
+  };
+
+  const goToStep = (next: Step) => {
+    setPhoneRequest(null);
+    setStep(next);
+    setCode("");
+    setError("");
+  };
+
   const handlePasskeySetup = async () => {
     setError("");
     setIsLoading(true);
@@ -186,7 +226,10 @@ export const LoginPage: React.FC = () => {
       navigate(homePathFor(data.user));
     } catch (err) {
       if (err instanceof PasskeyCancelledError) return;
-      handleStepError(err, "The passkey could not be set up. Try again, or use an authenticator app.");
+      handleStepError(
+        err,
+        "The passkey could not be set up. Try again, or use an authenticator app."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -222,6 +265,7 @@ export const LoginPage: React.FC = () => {
     setIsLoading(true);
     try {
       if (step === "password") await handlePasswordSubmit();
+      else if (step === "phone") await handlePhoneStart();
       else if (step === "passkey") await handlePasskeySubmit();
       else if (step === "code") await handleCodeSubmit();
       else if (step === "setup") await handleSetupSubmit();
@@ -234,6 +278,7 @@ export const LoginPage: React.FC = () => {
   const copy = STEP_COPY[step];
   const submitLabel = {
     password: isLoading ? "Signing in..." : "Sign In",
+    phone: isLoading ? "Sending to your phone..." : "Approve on my phone",
     passkey: isLoading ? "Waiting for your device..." : "Use Face ID or fingerprint",
     choose: "",
     code: isLoading ? "Verifying..." : "Verify",
@@ -242,6 +287,7 @@ export const LoginPage: React.FC = () => {
   }[step];
   const submitDisabled = isLoading || (step === "backup" && !acknowledged);
   const canUsePasskey = methods.includes("passkey") && isPasskeySupported();
+  const canUsePhone = methods.includes("phone");
   const canUseCode = methods.length === 0 || methods.includes("totp");
 
   return (
@@ -289,14 +335,19 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
-          {error && (step === "password" || step === "backup" || step === "passkey" || step === "choose") && (
-            <div
-              role="alert"
-              className="border-destructive/20 bg-destructive/10 text-destructive mb-4 rounded border p-3 text-sm"
-            >
-              {error}
-            </div>
-          )}
+          {error &&
+            (step === "password" ||
+              step === "backup" ||
+              step === "phone" ||
+              step === "passkey" ||
+              step === "choose") && (
+              <div
+                role="alert"
+                className="border-destructive/20 bg-destructive/10 text-destructive mb-4 rounded border p-3 text-sm"
+              >
+                {error}
+              </div>
+            )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {step === "password" && (
@@ -326,6 +377,32 @@ export const LoginPage: React.FC = () => {
               </>
             )}
 
+            {step === "phone" && phoneRequest && (
+              <PhoneApprovalWait
+                mfaToken={mfaToken}
+                request={phoneRequest}
+                onSignedIn={(data) => navigate(homePathFor(data.user))}
+                onEnded={handlePhoneEnded}
+                onError={(err) => {
+                  setPhoneRequest(null);
+                  handleStepError(
+                    err,
+                    "Waiting for your phone failed. Send the request again, or use a code instead."
+                  );
+                }}
+              />
+            )}
+
+            {step === "phone" && !phoneRequest && (
+              <div className="flex flex-col items-center gap-3 py-2 text-center">
+                <Smartphone className="text-primary h-10 w-10" aria-hidden="true" />
+                <p className="text-muted-foreground text-sm">
+                  We will send a notification to your phone. Tap the number shown here, then confirm
+                  with your fingerprint or face.
+                </p>
+              </div>
+            )}
+
             {step === "passkey" && (
               <div className="flex flex-col items-center gap-3 py-2 text-center">
                 <Fingerprint className="text-primary h-10 w-10" aria-hidden="true" />
@@ -337,7 +414,12 @@ export const LoginPage: React.FC = () => {
 
             {step === "choose" && (
               <div className="space-y-3">
-                <Button type="button" className="w-full" onClick={handlePasskeySetup} disabled={isLoading}>
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={handlePasskeySetup}
+                  disabled={isLoading}
+                >
                   <Fingerprint className="mr-2 h-4 w-4" aria-hidden="true" />
                   Set up Face ID or fingerprint
                 </Button>
@@ -379,13 +461,18 @@ export const LoginPage: React.FC = () => {
                   <button
                     type="button"
                     className="text-primary hover:text-primary-hover block min-h-6 text-sm underline-offset-4 hover:underline"
-                    onClick={() => {
-                      setStep("passkey");
-                      setCode("");
-                      setError("");
-                    }}
+                    onClick={() => goToStep("passkey")}
                   >
                     Use my passkey instead
+                  </button>
+                )}
+                {canUsePhone && (
+                  <button
+                    type="button"
+                    className="text-primary hover:text-primary-hover block min-h-6 text-sm underline-offset-4 hover:underline"
+                    onClick={() => goToStep("phone")}
+                  >
+                    Approve on my phone instead
                   </button>
                 )}
                 <p className="text-muted-foreground text-xs leading-relaxed">
@@ -415,26 +502,54 @@ export const LoginPage: React.FC = () => {
               />
             )}
 
-            {step !== "choose" && (
-              <Button type="submit" className="w-full" disabled={submitDisabled} autoFocus={step === "passkey"}>
+            {step !== "choose" && !(step === "phone" && phoneRequest) && (
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={submitDisabled}
+                autoFocus={step === "passkey" || step === "phone"}
+              >
                 {submitLabel}
               </Button>
             )}
-            {step === "passkey" && canUseCode && (
+            {step === "phone" && canUsePasskey && !phoneRequest && (
               <Button
                 type="button"
                 variant="outline"
                 className="w-full"
-                onClick={() => {
-                  setStep("code");
-                  setError("");
-                }}
+                onClick={() => goToStep("passkey")}
+                disabled={isLoading}
+              >
+                Use my passkey instead
+              </Button>
+            )}
+            {step === "passkey" && canUsePhone && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => goToStep("phone")}
+                disabled={isLoading}
+              >
+                Approve on my phone instead
+              </Button>
+            )}
+            {(step === "passkey" || step === "phone") && canUseCode && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => goToStep("code")}
                 disabled={isLoading}
               >
                 Use a code instead
               </Button>
             )}
-            {(step === "passkey" || step === "code" || step === "choose" || step === "setup") && (
+            {(step === "phone" ||
+              step === "passkey" ||
+              step === "code" ||
+              step === "choose" ||
+              step === "setup") && (
               <Button
                 type="button"
                 variant="ghost"

@@ -29,6 +29,8 @@ HOUSEKEEPING_MODELS = frozenset({
     'permissions.UserGroup',
     'permissions.UserRole',
     'users.MFABackupCode',
+    'users.PairedPhone',
+    'users.PhoneLoginRequest',
     'users.UserMFA',
     'users.WebAuthnChallenge',
     'users.WebAuthnCredential',

@@ -45,7 +45,13 @@ from apps.users.views.auth import (
     PasskeyListView,
     PasskeyOptionsView,
     PasskeyRegisterView,
+    PairedPhoneDetailView,
+    PairedPhonesView,
     PasswordChangeView,
+    PhoneApprovalDecideView,
+    PhoneApprovalDetailView,
+    PhoneCollectView,
+    PhoneRequestView,
     TokenLogoutView,
 )
 
@@ -174,6 +180,13 @@ urlpatterns += [
     path('api/auth/token/mfa-verify/', MFAVerifyView.as_view(), name='mfa_verify'),
     path('api/auth/token/passkey-options/', PasskeyLoginOptionsView.as_view(), name='passkey_login_options'),
     path('api/auth/token/passkey-verify/', PasskeyLoginVerifyView.as_view(), name='passkey_login_verify'),
+    # Phone approval (item 90). phone-collect lives under token/ so it shares the refresh cookie path.
+    path('api/auth/token/phone-request/', PhoneRequestView.as_view(), name='phone_request'),
+    path('api/auth/token/phone-collect/', PhoneCollectView.as_view(), name='phone_collect'),
+    path('api/auth/phone/requests/<str:public_id>/', PhoneApprovalDetailView.as_view(), name='phone_approval_detail'),
+    path('api/auth/phone/requests/<str:public_id>/decide/', PhoneApprovalDecideView.as_view(), name='phone_approval_decide'),
+    path('api/auth/mfa/phones/', PairedPhonesView.as_view(), name='mfa_phones'),
+    path('api/auth/mfa/phones/<int:pk>/', PairedPhoneDetailView.as_view(), name='mfa_phone_detail'),
     path('api/auth/mfa/login/passkey-options/', PasskeyLoginSetupOptionsView.as_view(), name='passkey_setup_options'),
     path('api/auth/mfa/login/passkey-register/', PasskeyLoginRegisterView.as_view(), name='passkey_setup_register'),
     path('api/auth/mfa/login/setup/', MFALoginSetupView.as_view(), name='mfa_login_setup'),
