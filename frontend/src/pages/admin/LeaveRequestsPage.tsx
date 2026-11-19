@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 import { leaveService } from "@/services/leaveService";
@@ -7,7 +7,8 @@ import { useAdminRejectMutation } from "@/hooks/useAdminRejectMutation";
 import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/layout/PageShell";
 import { LoadingCard } from "@/components/ui/LoadingCard";
-import { Sun, Stethoscope, Download } from "lucide-react";
+import { Sun, Stethoscope, Download, Users, List } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { invalidateAdminDashboard } from "@/lib/adminDashboardKeys";
 import { handleApiError } from "@/lib/error-handler";
 import { toast } from "sonner";
@@ -18,6 +19,11 @@ import { StatsCards } from "@/components/admin/StatsCards";
 import { StatCard } from "@/components/ui/StatCard";
 import { BulkDecisionBar } from "./components/BulkDecisionBar";
 import { LeaveRequestsTable } from "./components/LeaveRequestsTable";
+import { LeaveUserGroupedTable } from "./components/LeaveUserGroupedTable";
+import {
+  UserLeaveRequestsModal,
+  type SelectedUserTarget,
+} from "./components/UserLeaveRequestsModal";
 import { useBulkOperations } from "@/hooks/useBulkOperations";
 import { useScopedRowSelection } from "./hooks/useScopedRowSelection";
 import { useLeaveRequestFilters } from "./hooks/useLeaveRequestFilters";
@@ -72,6 +78,9 @@ const LeaveRequestsContent: React.FC = () => {
     refetchOnWindowFocus: false,
   });
 
+  const [viewMode, setViewMode] = useState<"by_user" | "all">("by_user");
+  const [selectedUser, setSelectedUser] = useState<SelectedUserTarget | null>(null);
+
   const filters = useLeaveRequestFilters();
   const {
     filterStatus,
@@ -102,6 +111,7 @@ const LeaveRequestsContent: React.FC = () => {
     mutationFn: (id: number) => leaveService.approve(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "leaves", "requests"] });
+      qc.invalidateQueries({ queryKey: ["admin", "leaves", "user-modal-requests"] });
       qc.invalidateQueries({ queryKey: ["vacations", "calendar"] });
       onRowRemoved();
       toast.success("Approved");
@@ -112,6 +122,7 @@ const LeaveRequestsContent: React.FC = () => {
   const rejectMutation = useAdminRejectMutation(leaveService.reject, {
     invalidateKeys: [
       ["admin", "leaves", "requests"],
+      ["admin", "leaves", "user-modal-requests"],
       ["vacations", "calendar"],
     ],
     onSuccess: () => onRowRemoved(),
@@ -121,6 +132,7 @@ const LeaveRequestsContent: React.FC = () => {
     mutationFn: (id: number) => leaveService.deleteRequest(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "leaves", "requests"] });
+      qc.invalidateQueries({ queryKey: ["admin", "leaves", "user-modal-requests"] });
       qc.invalidateQueries({ queryKey: ["vacations", "calendar"] });
       onRowRemoved();
       toast.success("Leave request deleted and balance restored");
@@ -194,6 +206,66 @@ const LeaveRequestsContent: React.FC = () => {
     return <LoadingCard rows={5} className="min-h-[300px]" />;
   }
 
+  const tableHeader = (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <StatusChips filterStatus={filterStatus} onStatusChange={setFilterStatus} counts={stats} />
+      <div className="bg-surface-sunken border-line-subtle inline-flex items-center rounded-lg border p-0.5 text-xs">
+        <button
+          type="button"
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-colors",
+            viewMode === "by_user"
+              ? "bg-popover text-foreground shadow-xs"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+          onClick={() => setViewMode("by_user")}
+          aria-pressed={viewMode === "by_user"}
+        >
+          <Users className="h-3.5 w-3.5" aria-hidden="true" />
+          By Employee
+        </button>
+        <button
+          type="button"
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-colors",
+            viewMode === "all"
+              ? "bg-popover text-foreground shadow-xs"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+          onClick={() => setViewMode("all")}
+          aria-pressed={viewMode === "all"}
+        >
+          <List className="h-3.5 w-3.5" aria-hidden="true" />
+          All Requests ({total})
+        </button>
+      </div>
+    </div>
+  );
+
+  const tableToolbar = (
+    <LeaveToolbarFilters
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      filterType={filterType}
+      onTypeChange={setFilterType}
+      filterUser={filterUser}
+      onUserChange={setFilterUser}
+      users={users}
+      tlFilters={{
+        italianTLs: italianTLs ?? [],
+        italianTl,
+        onItalianTlChange: setItalianTl,
+        albanianTLs: albanianTLs ?? [],
+        albanianTl,
+        onAlbanianTlChange: setAlbanianTl,
+      }}
+      dateFrom={dateFrom}
+      onDateFromChange={setDateFrom}
+      dateTo={dateTo}
+      onDateToChange={setDateTo}
+    />
+  );
+
   return (
     <PageShell
       title="Leave Requests"
@@ -224,58 +296,61 @@ const LeaveRequestsContent: React.FC = () => {
         }
       />
 
-      <LeaveRequestsTable
-        header={
-          <StatusChips
-            filterStatus={filterStatus}
-            onStatusChange={setFilterStatus}
-            counts={stats}
-          />
-        }
-        toolbar={
-          <LeaveToolbarFilters
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            filterType={filterType}
-            onTypeChange={setFilterType}
-            filterUser={filterUser}
-            onUserChange={setFilterUser}
-            users={users}
-            tlFilters={{
-              italianTLs: italianTLs ?? [],
-              italianTl,
-              onItalianTlChange: setItalianTl,
-              albanianTLs: albanianTLs ?? [],
-              albanianTl,
-              onAlbanianTlChange: setAlbanianTl,
+      {viewMode === "by_user" ? (
+        <LeaveUserGroupedTable
+          header={tableHeader}
+          toolbar={tableToolbar}
+          requests={requests}
+          server={{
+            search: searchQuery,
+            onSearchChange: setSearchQuery,
+            page,
+            total,
+            onPageChange: setPage,
+          }}
+          onSelectUser={(u) => setSelectedUser(u)}
+        />
+      ) : (
+        <>
+          <LeaveRequestsTable
+            header={tableHeader}
+            toolbar={tableToolbar}
+            requests={requests}
+            server={{
+              search: searchQuery,
+              onSearchChange: setSearchQuery,
+              page,
+              total,
+              onPageChange: setPage,
             }}
-            dateFrom={dateFrom}
-            onDateFromChange={setDateFrom}
-            dateTo={dateTo}
-            onDateToChange={setDateTo}
+            onApprove={(id) => approveMutation.mutate(id)}
+            onReject={(id, reason) => rejectMutation.mutate({ id, reason })}
+            onDelete={(id) => deleteMutation.mutate(id)}
+            canDelete={isSuperuser}
+            rowSelection={rowSelection}
+            onRowSelectionChange={setRowSelection}
           />
-        }
-        requests={requests}
-        server={{
-          search: searchQuery,
-          onSearchChange: setSearchQuery,
-          page,
-          total,
-          onPageChange: setPage,
+          <BulkDecisionBar
+            selectedCount={selectedCount}
+            pendingIds={selectedPendingIds}
+            bulk={bulk}
+            entityName="requests"
+            onClear={clearSelection}
+          />
+        </>
+      )}
+
+      {/* User Leave Records Modal */}
+      <UserLeaveRequestsModal
+        user={selectedUser}
+        open={Boolean(selectedUser)}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) setSelectedUser(null);
         }}
         onApprove={(id) => approveMutation.mutate(id)}
         onReject={(id, reason) => rejectMutation.mutate({ id, reason })}
         onDelete={(id) => deleteMutation.mutate(id)}
         canDelete={isSuperuser}
-        rowSelection={rowSelection}
-        onRowSelectionChange={setRowSelection}
-      />
-      <BulkDecisionBar
-        selectedCount={selectedCount}
-        pendingIds={selectedPendingIds}
-        bulk={bulk}
-        entityName="requests"
-        onClear={clearSelection}
       />
     </PageShell>
   );
