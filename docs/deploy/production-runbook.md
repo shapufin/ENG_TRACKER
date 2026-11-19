@@ -466,9 +466,15 @@ the user taps the same number and confirms with a fingerprint or face. It is one
 the authenticator app and passkeys (workflow-invariants item 90, spec
 `docs/superpowers/specs/2026-11-19-phone-approval-login-design.md`).
 
-- **Switch**: `PHONE_APPROVAL_ENABLED=true` in `.env` (passed through `docker-compose.yml`). Unset or false it
-  is off: every phone endpoint answers 404 and the sign-in flow is exactly as before. Enabled without
+- **Switch**: `PHONE_APPROVAL_ENABLED=true` in `.env`. `docker-compose.yml` passes it to the `backend` and
+  `scheduler` services (`${PHONE_APPROVAL_ENABLED:-false}`, pinned by `config/test_deployment.py`); a value
+  that compose does not pass never reaches the container and the feature stays off silently. Unset or false
+  it is off: every phone endpoint answers 404 and the sign-in flow is exactly as before. Enabled without
   `WEBAUTHN_RP_ID`/`WEBAUTHN_ORIGINS` the backend refuses to boot (an approval is a passkey assertion).
+  After changing `.env` recreate the containers (`docker compose up -d backend scheduler`) and check:
+  `docker compose exec backend python manage.py shell -c "from django.conf import settings; print(settings.PHONE_APPROVAL_ENABLED)"`.
+  With the switch on, every password login costs exactly one extra `exists()` query on `PairedPhone`
+  (paired or not, `test_switch_on_costs_exactly_one_extra_query_and_off_costs_none`); with it off, none.
 - **Rollout order**: (1) passkeys already work (5.8, `check_webauthn_config --production`); (2) `VAPID_PUBLIC_KEY`
   and `VAPID_PRIVATE_KEY` are set (push); (3) set the switch and restart the backend; (4) on one phone open
   Settings, Security, "Set up this phone"; (5) sign in on a computer and approve with the notification, then

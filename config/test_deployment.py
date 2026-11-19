@@ -1063,6 +1063,14 @@ class SchedulerFoundationContractTests(SimpleTestCase):
             with self.subTest(name=name):
                 self.assertIn(f'\n  {name}', tail)
 
+    def test_phone_approval_switch_reaches_the_backend_and_scheduler(self):
+        # A value in `.env` never reaches a container unless compose passes it (item 90):
+        # without this line the switch stays off with no error.
+        for name in ('backend', 'scheduler'):
+            with self.subTest(service=name):
+                body = ComposeContractTests._service(name)
+                self.assertIn('PHONE_APPROVAL_ENABLED: ${PHONE_APPROVAL_ENABLED:-false}', body)
+
     # --- nginx -----------------------------------------------------------
     def test_nginx_serves_protected_files_from_internal_locations_only(self):
         text = self._read('frontend', 'docker', 'nginx.conf.template')

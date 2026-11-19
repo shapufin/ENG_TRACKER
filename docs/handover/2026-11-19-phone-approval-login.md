@@ -35,6 +35,9 @@ pair one phone, test push and QR, tell users. Rollback: switch off, no migration
   120 s window reduce it).
 - iPhone push needs the app on the Home Screen (iOS 16.4 or later). Real push delivery is not covered by an
   automated test (no push service in e2e): check it by hand once on Android and once on iPhone.
-- `.env.example` needs one line for `PHONE_APPROVAL_ENABLED` (it could not be edited from the build session).
+- `.env.example` needs one line for `PHONE_APPROVAL_ENABLED` if it does not have it yet (it could not be edited from the build session).
+- Query cost: switch off = no extra query; switch on = exactly one extra `PairedPhone.exists()` per password login, paired or not. The pinned test is the source of truth, do not "optimise" it away.
+- The PC does not push on its own: after the password the user clicks "Approve on my phone" (a deliberate no-surprise-push rule); change that only as a design decision.
+- Running `frontend/e2e/phone-approval.spec.ts` needs the 3.14 `python` shim on PATH (it shells out to `python manage.py reset_user_mfa`), like `passkeys.spec.ts` (e2e runbook).
 - Open for the owner: whether a pairing should also be revoked when the user's password is changed (today the
   password change revokes sessions but pairings stay; the passkey is the credential).

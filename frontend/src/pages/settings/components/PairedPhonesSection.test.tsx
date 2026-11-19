@@ -120,6 +120,35 @@ describe("PairedPhonesSection", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("offers the notification steps on demand, closed by default", async () => {
+    vi.mocked(mfaService.status).mockResolvedValue(status());
+    renderSection();
+    await screen.findByText("My phone");
+    expect(screen.getByText(/Notifications are not on yet/)).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "iPhone" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "How to turn on notifications" }));
+    expect(screen.getByRole("tab", { name: "iPhone" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Android" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Hide the notification steps" }));
+    expect(screen.queryByRole("tab", { name: "iPhone" })).not.toBeInTheDocument();
+  });
+
+  it("opens the steps by itself on iPhone outside the Home Screen app and when blocked", async () => {
+    vi.mocked(mfaService.status).mockResolvedValue(status());
+    push.state.pushAvailability = "installed-required";
+    const first = renderSection();
+    expect(await screen.findByRole("tab", { name: "iPhone" })).toBeInTheDocument();
+    expect(screen.getByText(/add the app to the Home Screen first/)).toBeInTheDocument();
+    first.unmount();
+
+    push.state.pushAvailability = "available";
+    push.state.permission = "denied";
+    renderSection();
+    expect(await screen.findByRole("tab", { name: "Android" })).toBeInTheDocument();
+    expect(screen.getByText(/blocked in this browser/)).toBeInTheDocument();
+    push.state.permission = "default";
+  });
+
   it("lists each phone with its notification state and last use", async () => {
     vi.mocked(mfaService.status).mockResolvedValue(status());
     renderSection();

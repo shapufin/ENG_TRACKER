@@ -31,12 +31,30 @@ import {
   renamePhone,
 } from "@/services/phoneApprovalService";
 import type { PairedPhone } from "@/types";
+import { PushSetupGuide } from "./PushSetupGuide";
 import { SecurityRow } from "./SecurityRow";
 
 type Action =
   | { kind: "pair" }
   | { kind: "rename"; phone: PairedPhone }
   | { kind: "remove"; phone: PairedPhone };
+
+type PushStatus = "on" | "blocked" | "install" | "unsupported" | "ask";
+
+const pushStatus = (availability: string, permission: string): PushStatus => {
+  if (availability === "unsupported") return "unsupported";
+  if (availability === "installed-required") return "install";
+  if (permission === "denied") return "blocked";
+  return permission === "granted" ? "on" : "ask";
+};
+
+const PUSH_STATUS_COPY: Record<PushStatus, string> = {
+  on: "Notifications are on in this browser.",
+  ask: "Notifications are not on yet. You are asked when you set up this phone.",
+  blocked: "Notifications are blocked in this browser. Follow the steps to allow them.",
+  install: "On iPhone, add the app to the Home Screen first to get notifications.",
+  unsupported: "This browser cannot show notifications. Sign-in uses a QR code instead.",
+};
 
 const formatDay = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
@@ -211,6 +229,11 @@ export const PairedPhonesSection: React.FC = () => {
   const { data } = useQuery({ queryKey: MFA_STATUS_KEY, queryFn: mfaService.status });
   const [action, setAction] = useState<Action | null>(null);
   const supported = isPasskeySupported();
+  const push = usePushNotifications();
+  const [guideOpen, setGuideOpen] = useState<boolean | null>(null);
+  // Open by itself where notifications cannot work yet (iPhone outside the Home Screen app, or blocked).
+  const needsHelp = push.pushAvailability === "installed-required" || push.permission === "denied";
+  const showGuide = guideOpen ?? needsHelp;
 
   // Absent while the server switch is off: a row that can do nothing is noise.
   if (!data?.phone_approval) return null;
@@ -274,6 +297,25 @@ export const PairedPhonesSection: React.FC = () => {
             ))}
           </ul>
         )}
+        <div className="mt-2">
+          <p className="text-xs opacity-90" role="status">
+            {PUSH_STATUS_COPY[pushStatus(push.pushAvailability, push.permission)]}
+          </p>
+          <button
+            type="button"
+            className="text-primary hover:text-primary-hover inline-flex min-h-6 items-center text-xs underline-offset-4 hover:underline"
+            aria-expanded={showGuide}
+            aria-controls="push-setup-guide"
+            onClick={() => setGuideOpen(!showGuide)}
+          >
+            {showGuide ? "Hide the notification steps" : "How to turn on notifications"}
+          </button>
+          {showGuide && (
+            <div id="push-setup-guide">
+              <PushSetupGuide />
+            </div>
+          )}
+        </div>
       </SecurityRow>
       {action && (
         <PhoneDialog
