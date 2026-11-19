@@ -148,7 +148,10 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         if user.is_staff or user.is_superuser or leader.id == user.id:
             return
         for payload in payloads:
-            payload['meetings']['one_on_one_compliance_pct'] = None
+            meetings = payload['meetings']
+            meetings['one_on_one_compliance_pct'] = None
+            meetings['one_on_one_compliant'] = None
+            meetings['one_on_one_eligible'] = None
 
     @staticmethod
     def _hbpr_subject_ids(request, leader):

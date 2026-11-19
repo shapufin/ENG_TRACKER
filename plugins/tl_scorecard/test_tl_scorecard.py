@@ -1,5 +1,5 @@
 """Tests for the TL Scorecard plugin (Phase 1)."""
-from datetime import datetime as _datetime, time, timedelta, timezone as _utc
+from datetime import date, datetime as _datetime, time, timedelta, timezone as _utc
 from unittest import mock
 
 from django.core.management import call_command
@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIRequestFactory, force_authenticate
 
+from apps.dashboard.models.calendar import PublicHoliday
 from apps.leave_management.models import LeaveRequest
 from apps.overtime.models.core import Client, OvertimeLog
 from apps.permissions.models import Role, UserRole
@@ -90,6 +91,57 @@ class TLScorecardServiceTests(TestCase):
 
         result = leave_sla_metrics({self.member.id}, self.month_start)
         self.assertEqual(result['decided_count'], 0)
+
+    def _decided_wed_to_mon(self, holiday=False):
+        # Wed 4 Mar 2026 submit, Mon 9 Mar 2026 approve: Thu 5 and Fri 6 are weekdays.
+        if holiday:
+            PublicHoliday.objects.create(name='Test holiday', date=date(2026, 3, 5))
+        return _leave(
+            self.member, _datetime(2026, 3, 4, 10, 0, tzinfo=_utc.utc),
+            approved_at=_datetime(2026, 3, 9, 10, 0, tzinfo=_utc.utc),
+        )
+
+    def test_leave_sla_counts_weekdays_without_a_holiday_as_outside_2_days(self):
+        self._decided_wed_to_mon(holiday=False)  # Wed, Thu, Fri, Mon = 3 elapsed
+        result = leave_sla_metrics({self.member.id}, date(2026, 3, 1))
+        self.assertEqual(result['pct_within_2_days'], 0.0)
+        self.assertEqual(result['within_2_days'], 0)
+
+    def test_leave_sla_excludes_public_holidays_from_business_days(self):
+        self._decided_wed_to_mon(holiday=True)  # Thu holiday drops out: 2 elapsed
+        result = leave_sla_metrics({self.member.id}, date(2026, 3, 1))
+        self.assertEqual(result['pct_within_2_days'], 100.0)
+        self.assertEqual(result['within_2_days'], 1)
+
+    def test_one_on_one_reports_compliant_and_eligible_counts(self):
+        second = _make_user('member_b')
+        second.profile.italian_tl = self.leader
+        second.profile.save()
+        Meeting.objects.create(
+            meeting_type='one_on_one', organizer=self.leader, counterparty=self.member,
+            occurred_on=self.month.date(),
+        )
+        result = meeting_compliance_metrics(self.leader, {self.member.id, second.id}, self.month_start)
+        self.assertEqual(result['one_on_one_compliant'], 1)
+        self.assertEqual(result['one_on_one_eligible'], 2)
+        self.assertEqual(result['one_on_one_compliance_pct'], 50.0)
+
+    def test_tl_sync_ytd_counts_this_year_up_to_the_month_with_pace(self):
+        for occurred in (date(2026, 1, 20), date(2026, 3, 10), date(2026, 4, 2)):
+            Meeting.objects.create(
+                meeting_type='tl_sync', organizer=self.leader,
+                counterparty=_make_user(f'mgr_{occurred.isoformat()}'), occurred_on=occurred,
+            )
+        data = build_scorecard(self.leader, date(2026, 3, 1))
+        self.assertEqual(data['tl_sync_ytd'], 2)  # April is outside March's YTD
+        self.assertEqual(data['tl_sync_expected_ytd'], 12)  # ceil(45 * 3 / 12)
+
+    def test_build_scorecard_exposes_the_targets_it_is_measured_against(self):
+        data = build_scorecard(self.leader, self.month_start)
+        self.assertEqual(data['targets'], {
+            'tl_sync_per_year': 45, 'reviews_per_year': 12,
+            'one_on_one_pct': 100.0, 'promotion_pct': 3.0,
+        })
 
     def test_ot_turnaround_average(self):
         _overtime(self.member, self.month, approved_at=self.month)

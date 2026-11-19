@@ -2,6 +2,8 @@ import type { HbprCadence, HbprCadenceStatus } from "@/types/hbprAssignment";
 
 export interface LeaveSla {
   decided_count: number;
+  /** Null in months frozen before the count was stored. */
+  within_2_days?: number | null;
   pct_within_2_days: number | null;
   pending_at_month_end: number;
 }
@@ -13,6 +15,9 @@ export interface OvertimeTurnaround {
 
 export interface MeetingCompliance {
   one_on_one_compliance_pct: number | null;
+  /** Members who had a 1-on-1 this month / members counted (excused people removed). Null for HBPR. */
+  one_on_one_compliant?: number | null;
+  one_on_one_eligible?: number | null;
   tl_sync_count: number;
   team_meetings_held: number;
   team_meetings_with_hrbp: number;
@@ -56,10 +61,23 @@ export interface HbprCadenceBanner {
   can_edit_cadence: boolean;
 }
 
+/** Targets the scorecard is measured against, served by the backend (Line Manager KPI). */
+export interface ScorecardTargets {
+  tl_sync_per_year: number;
+  reviews_per_year: number;
+  one_on_one_pct: number;
+  promotion_pct: number;
+}
+
 export interface Scorecard {
   hbpr_cadence?: HbprCadenceBanner | null;
   month: string;
   team_size: number;
+  /** Manager syncs held from 1 January through this month. Live, never frozen. */
+  tl_sync_ytd?: number;
+  /** Syncs needed by the end of this month to be on pace for the annual target. */
+  tl_sync_expected_ytd?: number;
+  targets?: ScorecardTargets;
   leave: LeaveSla;
   overtime: OvertimeTurnaround;
   meetings: MeetingCompliance;

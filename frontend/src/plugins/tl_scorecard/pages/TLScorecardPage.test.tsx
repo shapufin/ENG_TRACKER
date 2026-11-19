@@ -85,10 +85,12 @@ vi.mock("@/services/userService", () => ({
 const SCORECARD: Scorecard = {
   month: "2026-09-01",
   team_size: 4,
-  leave: { decided_count: 3, pct_within_2_days: 66.7, pending_at_month_end: 1 },
+  leave: { decided_count: 3, within_2_days: 2, pct_within_2_days: 66.7, pending_at_month_end: 1 },
   overtime: { decided_count: 2, avg_turnaround_days: 1.5 },
   meetings: {
     one_on_one_compliance_pct: 75,
+    one_on_one_compliant: 3,
+    one_on_one_eligible: 4,
     tl_sync_count: 3,
     team_meetings_held: 1,
     team_meetings_with_hrbp: 1,
@@ -101,6 +103,9 @@ const SCORECARD: Scorecard = {
   pip: { active_count: 1, pending_approval_count: 0 },
   promotion: { promoted_count: 0, team_size: 4, promoted_pct: 0, target_pct: 3 },
   escalation_count: 0,
+  tl_sync_ytd: 9,
+  tl_sync_expected_ytd: 12,
+  targets: { tl_sync_per_year: 45, reviews_per_year: 12, one_on_one_pct: 100, promotion_pct: 3 },
 };
 
 const mockDefaults = () => {
@@ -195,12 +200,14 @@ describe("TLScorecardPage", () => {
     });
   });
 
-  it("labels the approval-behavior engagement score as a proxy, not the sentiment KPI", async () => {
+  it("explains the approval engagement score by its four components, not the sentiment KPI", async () => {
     mockDefaults();
 
     renderPage();
 
     await waitFor(() => expect(screen.getByText("8.2/10")).toBeInTheDocument());
+    expect(screen.getByText("Approval engagement (automated)")).toBeInTheDocument();
+    expect(screen.getByText(/on-time decisions \(40%\)/)).toBeInTheDocument();
     expect(screen.getByText(/No pulse-survey responses yet/i)).toBeInTheDocument();
   });
 
@@ -216,6 +223,17 @@ describe("TLScorecardPage", () => {
 
     await waitFor(() => expect(screen.getByText("8.7/10")).toBeInTheDocument());
     expect(screen.getByText(/3 response\(s\)/)).toBeInTheDocument();
+  });
+
+  it("shows the 1-on-1 fraction, the YTD sync pace and the leave count behind the percentages", async () => {
+    mockDefaults();
+
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("3 of 4 met · Target: 100%")).toBeInTheDocument());
+    expect(screen.getByText("9 of 45 YTD · 12 needed by now")).toBeInTheDocument();
+    expect(screen.getByText("2 of 3 decided in time · submitted this month")).toBeInTheDocument();
+    expect(screen.getByText("Annual target 45 · about 4 a month")).toBeInTheDocument();
   });
 
   it("renders meeting compliance, idle, and review-delivery metrics", async () => {

@@ -7,7 +7,7 @@ from datetime import date
 
 from .services import PROMOTION_TARGET_PCT
 
-# Targets copied from the UI (the UI wins if they ever differ):
+# Targets mirror the scorecard payload (services.TL_SYNC/REVIEW/ONE_ON_ONE constants, served as `targets`):
 # - ScorecardOverview.tsx: pending leave "Target: 0".
 # - TeamGovernanceSection.tsx: 1:1 "Target: 100%", reviews "Target: ≥12/year",
 #   promotion "Target: {promotion.target_pct}%/year" (3.0, services.PROMOTION_TARGET_PCT),
@@ -88,7 +88,7 @@ def kpi_rows(scorecard, *, include_leave_overtime=True) -> list[dict]:
         }
 
     rows = [
-        row('Leave', 'Leave decided within 2 days', leave['pct_within_2_days'], 'pct'),
+        row('Leave', 'Leave decided within 2 business days', leave['pct_within_2_days'], 'pct'),
         row('Leave', 'Pending leave at month-end', leave['pending_at_month_end'], 'count'),
         row('Overtime', 'OT approval turnaround (days)', scorecard['overtime']['avg_turnaround_days'], 'num'),
         row('Meetings', '1:1 compliance', meetings['one_on_one_compliance_pct'], 'pct',

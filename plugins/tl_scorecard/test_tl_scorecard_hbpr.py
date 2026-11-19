@@ -259,20 +259,20 @@ class HbprExportScopeTests(HbprScorecardBase):
     def test_hbpr_xlsx_export_has_no_leave_or_overtime_kpis(self):
         text = self._xlsx_text(self._export_body(self.hbpr, 'xlsx'))
         self.assertIn('1:1 compliance', text)
-        self.assertNotIn('Leave decided within 2 days', text)
+        self.assertNotIn('Leave decided within 2 business days', text)
         self.assertNotIn('Pending leave at month-end', text)
         self.assertNotIn('OT approval turnaround', text)
 
     def test_hbpr_pdf_export_has_no_leave_or_overtime_kpis(self):
         text = self._pdf_text(self._export_body(self.hbpr, 'pdf'))
         self.assertIn('1:1 compliance', text)
-        self.assertNotIn('Leave decided within 2 days', text)
+        self.assertNotIn('Leave decided within 2 business days', text)
         self.assertNotIn('Pending leave at month-end', text)
         self.assertNotIn('Overtime', text)
 
     def test_tl_xlsx_export_keeps_leave_and_overtime_kpis(self):
         text = self._xlsx_text(self._export_body(self.tl, 'xlsx'))
-        self.assertIn('Leave decided within 2 days', text)
+        self.assertIn('Leave decided within 2 business days', text)
         self.assertIn('OT approval turnaround', text)
 
     def test_epr_cycles_are_limited_to_the_subject_scope(self):
@@ -437,6 +437,9 @@ class HbprOneOnOneLeakTests(HbprScorecardBase):
         resp = self._get('scorecard', self.hbpr)
         self.assertEqual(resp.status_code, 200)
         self.assertIsNone(resp.data['meetings']['one_on_one_compliance_pct'])
+        # The fraction behind the percentage is one-on-one data too.
+        self.assertIsNone(resp.data['meetings']['one_on_one_compliant'])
+        self.assertIsNone(resp.data['meetings']['one_on_one_eligible'])
 
     def test_scorecard_keeps_one_on_one_compliance_for_owner_and_staff(self):
         for user in (self.tl, self.staff):
