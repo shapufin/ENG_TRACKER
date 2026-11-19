@@ -19,12 +19,24 @@ import { MfaCodeField } from "@/components/auth/MfaCodeField";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { MFA_STATUS_KEY } from "@/services/mfaKeys";
 import { mfaErrorMessage, mfaService } from "@/services/mfaService";
-import { PasskeyCancelledError, isPasskeySupported, registerPasskey } from "@/services/passkeyService";
-import { currentPushEndpoint, pairPhone, removePhone, renamePhone } from "@/services/phoneApprovalService";
+import {
+  PasskeyCancelledError,
+  isPasskeySupported,
+  registerPasskey,
+} from "@/services/passkeyService";
+import {
+  currentPushEndpoint,
+  pairPhone,
+  removePhone,
+  renamePhone,
+} from "@/services/phoneApprovalService";
 import type { PairedPhone } from "@/types";
 import { SecurityRow } from "./SecurityRow";
 
-type Action = { kind: "pair" } | { kind: "rename"; phone: PairedPhone } | { kind: "remove"; phone: PairedPhone };
+type Action =
+  | { kind: "pair" }
+  | { kind: "rename"; phone: PairedPhone }
+  | { kind: "remove"; phone: PairedPhone };
 
 const formatDay = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
@@ -51,10 +63,19 @@ const COPY = {
   },
 } as const;
 
-const PhoneDialog = ({ action, appOn, onClose }: { action: Action; appOn: boolean; onClose: () => void }) => {
+const PhoneDialog = ({
+  action,
+  appOn,
+  onClose,
+}: {
+  action: Action;
+  appOn: boolean;
+  onClose: () => void;
+}) => {
   const queryClient = useQueryClient();
   const push = usePushNotifications();
-  const initialName = action.kind === "pair" ? "This phone" : action.kind === "rename" ? action.phone.name : "";
+  const initialName =
+    action.kind === "pair" ? "This phone" : action.kind === "rename" ? action.phone.name : "";
   const [name, setName] = useState(initialName);
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -64,8 +85,10 @@ const PhoneDialog = ({ action, appOn, onClose }: { action: Action; appOn: boolea
 
   const run = useMutation({
     mutationFn: async () => {
-      if (action.kind === "rename") return void (await renamePhone(action.phone.id, name, password, code));
-      if (action.kind === "remove") return void (await removePhone(action.phone.id, password, code));
+      if (action.kind === "rename")
+        return void (await renamePhone(action.phone.id, name, password, code));
+      if (action.kind === "remove")
+        return void (await removePhone(action.phone.id, password, code));
 
       const passkey = await registerPasskey(password, name);
       let pushEndpoint = "";
@@ -75,12 +98,18 @@ const PhoneDialog = ({ action, appOn, onClose }: { action: Action; appOn: boolea
       }
       await pairPhone({ password, code, credentialId: passkey.id, name, pushEndpoint });
       if (!pushEndpoint) {
-        toast.message("Phone set up without notifications. Sign-ins will show a QR code to scan with its camera.");
+        toast.message(
+          "Phone set up without notifications. Sign-ins will show a QR code to scan with its camera."
+        );
       }
     },
     onSuccess: () => {
       toast.success(
-        action.kind === "pair" ? "Phone set up" : action.kind === "rename" ? "Phone renamed" : "Phone removed"
+        action.kind === "pair"
+          ? "Phone set up"
+          : action.kind === "rename"
+            ? "Phone renamed"
+            : "Phone removed"
       );
       queryClient.invalidateQueries({ queryKey: MFA_STATUS_KEY });
       onClose();
@@ -194,11 +223,19 @@ export const PairedPhonesSection: React.FC = () => {
         tone={has ? "success" : "neutral"}
         icon={<Smartphone />}
         title="Phone approval"
-        status={<Badge variant={has ? "default" : "secondary"}>{has ? `${phones.length} set up` : "None"}</Badge>}
+        status={
+          <Badge variant={has ? "default" : "secondary"}>
+            {has ? `${phones.length} set up` : "None"}
+          </Badge>
+        }
         hint="Sign in on a computer by approving it on your phone with your fingerprint or face."
         actions={
           supported && (
-            <Button size="control-sm" variant={has ? "outline" : "default"} onClick={() => setAction({ kind: "pair" })}>
+            <Button
+              size="control-sm"
+              variant={has ? "outline" : "default"}
+              onClick={() => setAction({ kind: "pair" })}
+            >
               Set up this phone
             </Button>
           )
@@ -212,7 +249,9 @@ export const PairedPhonesSection: React.FC = () => {
                   <p className="truncate font-medium">{phone.name}</p>
                   <p className="text-xs opacity-80">
                     {phone.can_push ? "Notifications on" : "QR code only"} ·{" "}
-                    {phone.last_used_at ? `Last used ${formatDay(phone.last_used_at)}` : "Never used"}
+                    {phone.last_used_at
+                      ? `Last used ${formatDay(phone.last_used_at)}`
+                      : "Never used"}
                   </p>
                 </div>
                 <Button

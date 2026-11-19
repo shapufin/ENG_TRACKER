@@ -5,8 +5,17 @@ import { MemoryRouter } from "react-router-dom";
 
 import { PairedPhonesSection } from "./PairedPhonesSection";
 import { mfaService } from "@/services/mfaService";
-import { PasskeyCancelledError, isPasskeySupported, registerPasskey } from "@/services/passkeyService";
-import { currentPushEndpoint, pairPhone, removePhone, renamePhone } from "@/services/phoneApprovalService";
+import {
+  PasskeyCancelledError,
+  isPasskeySupported,
+  registerPasskey,
+} from "@/services/passkeyService";
+import {
+  currentPushEndpoint,
+  pairPhone,
+  removePhone,
+  renamePhone,
+} from "@/services/phoneApprovalService";
 import { toast } from "sonner";
 
 vi.stubGlobal(
@@ -24,7 +33,9 @@ vi.mock("@/services/mfaService", async () => ({
   mfaService: { status: vi.fn() },
 }));
 vi.mock("@/services/passkeyService", async () => ({
-  ...(await vi.importActual<typeof import("@/services/passkeyService")>("@/services/passkeyService")),
+  ...(await vi.importActual<typeof import("@/services/passkeyService")>(
+    "@/services/passkeyService"
+  )),
   isPasskeySupported: vi.fn(),
   registerPasskey: vi.fn(),
 }));
@@ -45,14 +56,40 @@ const push = vi.hoisted(() => ({
 }));
 vi.mock("@/hooks/usePushNotifications", () => ({ usePushNotifications: () => push.state }));
 
-const phone = { id: 7, name: "My phone", can_push: true, created_at: "2026-11-01T10:00:00Z", last_used_at: null };
-const qrOnly = { id: 8, name: "Old phone", can_push: false, created_at: "2026-11-02T10:00:00Z", last_used_at: "2026-11-10T08:00:00Z" };
-const base = { enabled: false, enrolled: true, required: false, required_by: null, backup_codes_remaining: 0, passkeys: [] };
-const status = (over: object = {}) => ({ ...base, phone_approval: true, phones: [phone, qrOnly], ...over });
+const phone = {
+  id: 7,
+  name: "My phone",
+  can_push: true,
+  created_at: "2026-11-01T10:00:00Z",
+  last_used_at: null,
+};
+const qrOnly = {
+  id: 8,
+  name: "Old phone",
+  can_push: false,
+  created_at: "2026-11-02T10:00:00Z",
+  last_used_at: "2026-11-10T08:00:00Z",
+};
+const base = {
+  enabled: false,
+  enrolled: true,
+  required: false,
+  required_by: null,
+  backup_codes_remaining: 0,
+  passkeys: [],
+};
+const status = (over: object = {}) => ({
+  ...base,
+  phone_approval: true,
+  phones: [phone, qrOnly],
+  ...over,
+});
 
 const renderSection = () =>
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       <MemoryRouter>
         <PairedPhonesSection />
       </MemoryRouter>
@@ -75,7 +112,9 @@ beforeEach(() => {
 
 describe("PairedPhonesSection", () => {
   it("renders nothing while phone approval is switched off", async () => {
-    vi.mocked(mfaService.status).mockResolvedValue(status({ phone_approval: undefined, phones: undefined }));
+    vi.mocked(mfaService.status).mockResolvedValue(
+      status({ phone_approval: undefined, phones: undefined })
+    );
     const { container } = renderSection();
     await waitFor(() => expect(mfaService.status).toHaveBeenCalled());
     expect(container).toBeEmptyDOMElement();
@@ -92,7 +131,12 @@ describe("PairedPhonesSection", () => {
 
   it("creates a passkey on this phone, asks for notifications and pairs it", async () => {
     vi.mocked(mfaService.status).mockResolvedValue(status({ phones: [] }));
-    vi.mocked(registerPasskey).mockResolvedValue({ id: 33, name: "This phone", created_at: "x", last_used_at: null });
+    vi.mocked(registerPasskey).mockResolvedValue({
+      id: 33,
+      name: "This phone",
+      created_at: "x",
+      last_used_at: null,
+    });
     vi.mocked(currentPushEndpoint).mockResolvedValue("https://fcm.googleapis.com/fcm/send/abc");
     vi.mocked(pairPhone).mockResolvedValue(phone);
     renderSection();
@@ -115,14 +159,21 @@ describe("PairedPhonesSection", () => {
 
   it("still pairs, as QR only, when notifications are refused", async () => {
     vi.mocked(mfaService.status).mockResolvedValue(status({ phones: [] }));
-    vi.mocked(registerPasskey).mockResolvedValue({ id: 33, name: "This phone", created_at: "x", last_used_at: null });
+    vi.mocked(registerPasskey).mockResolvedValue({
+      id: 33,
+      name: "This phone",
+      created_at: "x",
+      last_used_at: null,
+    });
     vi.mocked(pairPhone).mockResolvedValue(qrOnly);
     push.state.requestPermission.mockResolvedValue(false);
     renderSection();
     fireEvent.click(await screen.findByRole("button", { name: "Set up this phone" }));
     await fillAndSubmit("Set up phone");
 
-    await waitFor(() => expect(pairPhone).toHaveBeenCalledWith(expect.objectContaining({ pushEndpoint: "" })));
+    await waitFor(() =>
+      expect(pairPhone).toHaveBeenCalledWith(expect.objectContaining({ pushEndpoint: "" }))
+    );
     expect(push.state.subscribe).not.toHaveBeenCalled();
     expect(toast.message).toHaveBeenCalledWith(expect.stringMatching(/QR code/));
   });

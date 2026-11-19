@@ -19,7 +19,10 @@ export function bufferToBase64url(buffer: ArrayBuffer): string {
 }
 
 export function base64urlToBuffer(value: string): ArrayBuffer {
-  const padded = value.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(value.length / 4) * 4, "=");
+  const padded = value
+    .replace(/-/g, "+")
+    .replace(/_/g, "/")
+    .padEnd(Math.ceil(value.length / 4) * 4, "=");
   const binary = atob(padded);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -54,7 +57,8 @@ type RequestOptionsJSON = {
 };
 
 const isDismissal = (error: unknown): boolean =>
-  error instanceof DOMException && (error.name === "NotAllowedError" || error.name === "AbortError");
+  error instanceof DOMException &&
+  (error.name === "NotAllowedError" || error.name === "AbortError");
 
 async function runPrompt<T>(prompt: () => Promise<T | null>): Promise<T> {
   try {
@@ -125,10 +129,16 @@ export async function registerPasskey(password: string, name: string): Promise<P
 }
 
 /** Forced enrolment at sign-in: register a passkey and finish signing in. */
-export async function registerPasskeyAtLogin(mfaToken: string, name: string): Promise<AuthResponse> {
-  const { data: options } = await api.post<CreationOptionsJSON>("/auth/mfa/login/passkey-options/", {
-    mfa_token: mfaToken,
-  });
+export async function registerPasskeyAtLogin(
+  mfaToken: string,
+  name: string
+): Promise<AuthResponse> {
+  const { data: options } = await api.post<CreationOptionsJSON>(
+    "/auth/mfa/login/passkey-options/",
+    {
+      mfa_token: mfaToken,
+    }
+  );
   const response = await createCredential(options);
   const { data } = await api.post<AuthResponse>("/auth/mfa/login/passkey-register/", {
     mfa_token: mfaToken,

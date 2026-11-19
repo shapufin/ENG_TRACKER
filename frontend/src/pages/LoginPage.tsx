@@ -226,7 +226,10 @@ export const LoginPage: React.FC = () => {
       navigate(homePathFor(data.user));
     } catch (err) {
       if (err instanceof PasskeyCancelledError) return;
-      handleStepError(err, "The passkey could not be set up. Try again, or use an authenticator app.");
+      handleStepError(
+        err,
+        "The passkey could not be set up. Try again, or use an authenticator app."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -332,14 +335,19 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
-          {error && (step === "password" || step === "backup" || step === "phone" || step === "passkey" || step === "choose") && (
-            <div
-              role="alert"
-              className="border-destructive/20 bg-destructive/10 text-destructive mb-4 rounded border p-3 text-sm"
-            >
-              {error}
-            </div>
-          )}
+          {error &&
+            (step === "password" ||
+              step === "backup" ||
+              step === "phone" ||
+              step === "passkey" ||
+              step === "choose") && (
+              <div
+                role="alert"
+                className="border-destructive/20 bg-destructive/10 text-destructive mb-4 rounded border p-3 text-sm"
+              >
+                {error}
+              </div>
+            )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {step === "password" && (
@@ -377,7 +385,10 @@ export const LoginPage: React.FC = () => {
                 onEnded={handlePhoneEnded}
                 onError={(err) => {
                   setPhoneRequest(null);
-                  handleStepError(err, "Waiting for your phone failed. Send the request again, or use a code instead.");
+                  handleStepError(
+                    err,
+                    "Waiting for your phone failed. Send the request again, or use a code instead."
+                  );
                 }}
               />
             )}
@@ -386,8 +397,8 @@ export const LoginPage: React.FC = () => {
               <div className="flex flex-col items-center gap-3 py-2 text-center">
                 <Smartphone className="text-primary h-10 w-10" aria-hidden="true" />
                 <p className="text-muted-foreground text-sm">
-                  We will send a notification to your phone. Tap the number shown here, then confirm with your
-                  fingerprint or face.
+                  We will send a notification to your phone. Tap the number shown here, then confirm
+                  with your fingerprint or face.
                 </p>
               </div>
             )}
@@ -403,7 +414,12 @@ export const LoginPage: React.FC = () => {
 
             {step === "choose" && (
               <div className="space-y-3">
-                <Button type="button" className="w-full" onClick={handlePasskeySetup} disabled={isLoading}>
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={handlePasskeySetup}
+                  disabled={isLoading}
+                >
                   <Fingerprint className="mr-2 h-4 w-4" aria-hidden="true" />
                   Set up Face ID or fingerprint
                 </Button>
@@ -529,7 +545,11 @@ export const LoginPage: React.FC = () => {
                 Use a code instead
               </Button>
             )}
-            {(step === "phone" || step === "passkey" || step === "code" || step === "choose" || step === "setup") && (
+            {(step === "phone" ||
+              step === "passkey" ||
+              step === "code" ||
+              step === "choose" ||
+              step === "setup") && (
               <Button
                 type="button"
                 variant="ghost"

@@ -21,7 +21,13 @@ interface Props {
  * Shows the number to tap on the phone and polls until the phone approves. Stops on unmount, on
  * denied/expired and once the request window has passed: it can never poll forever.
  */
-export const PhoneApprovalWait: React.FC<Props> = ({ mfaToken, request, onSignedIn, onEnded, onError }) => {
+export const PhoneApprovalWait: React.FC<Props> = ({
+  mfaToken,
+  request,
+  onSignedIn,
+  onEnded,
+  onError,
+}) => {
   const { completePhoneApproval } = useAuth();
   const [showQr, setShowQr] = useState(!request.pushed);
   const handlers = useRef({ onSignedIn, onEnded, onError });

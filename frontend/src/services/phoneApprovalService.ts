@@ -1,5 +1,11 @@
 import api from "@/lib/api";
-import type { AuthResponse, PairedPhone, PhoneApprovalStart, PhoneApprovalState, PhoneApprovalView } from "@/types";
+import type {
+  AuthResponse,
+  PairedPhone,
+  PhoneApprovalStart,
+  PhoneApprovalState,
+  PhoneApprovalView,
+} from "@/types";
 
 /** Phone approval sign-in (spec 2026-11-19). Every path is relative to the axios baseURL (`/api`). */
 const PHONES = "/auth/mfa/phones";
@@ -77,7 +83,12 @@ export async function listPhones(): Promise<PairedPhone[]> {
   return data;
 }
 
-export async function renamePhone(id: number, name: string, password: string, code = ""): Promise<PairedPhone> {
+export async function renamePhone(
+  id: number,
+  name: string,
+  password: string,
+  code = ""
+): Promise<PairedPhone> {
   const { data } = await api.patch<PairedPhone>(`${PHONES}/${id}/`, { name, password, code });
   return data;
 }

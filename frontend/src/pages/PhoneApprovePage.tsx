@@ -38,7 +38,9 @@ export const PhoneApprovePage: React.FC = () => {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(mfaErrorMessage(err, "This request could not be opened. Start again on your computer."));
+        setError(
+          mfaErrorMessage(err, "This request could not be opened. Start again on your computer.")
+        );
         setPhase("failed");
       });
     return () => {
@@ -71,7 +73,12 @@ export const PhoneApprovePage: React.FC = () => {
       await decideApproval(requestId, { decision: "deny" });
       setPhase("denied");
     } catch (err) {
-      setError(mfaErrorMessage(err, "The request could not be cancelled. It expires by itself in a few minutes."));
+      setError(
+        mfaErrorMessage(
+          err,
+          "The request could not be cancelled. It expires by itself in a few minutes."
+        )
+      );
       setPhase("failed");
     }
   };
@@ -96,7 +103,10 @@ export const PhoneApprovePage: React.FC = () => {
         )}
 
         {phase === "failed" && (
-          <div role="alert" className="border-destructive/20 bg-destructive/10 text-destructive rounded border p-3 text-sm">
+          <div
+            role="alert"
+            className="border-destructive/20 bg-destructive/10 text-destructive rounded border p-3 text-sm"
+          >
             {error}
             <p className="mt-2">Nothing was approved. Start again on your computer.</p>
           </div>
@@ -126,7 +136,8 @@ export const PhoneApprovePage: React.FC = () => {
               <strong className="text-foreground">{view.username}</strong> is signing in with{" "}
               {view.requester.agent || "an unknown browser"}
               {view.requester.at ? ` at ${timeOf(view.requester.at)}` : ""}
-              {view.requester.ip ? ` (${view.requester.ip})` : ""}. Only approve if that is you, right now.
+              {view.requester.ip ? ` (${view.requester.ip})` : ""}. Only approve if that is you,
+              right now.
             </p>
             <div>
               <p className="mb-2 text-sm font-medium">Tap the number shown on your computer</p>

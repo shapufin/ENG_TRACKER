@@ -50,7 +50,10 @@ vi.mock("react-router-dom", async () => {
   return { ...actual, useNavigate: () => navigateMock };
 });
 
-const session = { access: "tok", user: { id: 1, username: "ann", is_staff: false, is_superuser: false } };
+const session = {
+  access: "tok",
+  user: { id: 1, username: "ann", is_staff: false, is_superuser: false },
+};
 const started = (over = {}) => ({
   request_id: "r1",
   number: 42,
@@ -65,7 +68,9 @@ const challenge = (methods: string[]) => ({ mfa_required: true, mfa_token: "chal
 
 const renderPage = () =>
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       <MemoryRouter>
         <LoginPage />
       </MemoryRouter>
@@ -197,7 +202,9 @@ describe("LoginPage phone approval", () => {
   it("starts over from the password when the sign-in step timed out", async () => {
     loginMock.mockResolvedValue(challenge(["phone", "totp"]));
     completeMock.mockRejectedValue({
-      response: { data: { code: "challenge_invalid", detail: "This sign-in step expired. Start again." } },
+      response: {
+        data: { code: "challenge_invalid", detail: "This sign-in step expired. Start again." },
+      },
     });
     renderPage();
     await passwordStep();

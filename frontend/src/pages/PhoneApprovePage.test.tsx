@@ -64,7 +64,8 @@ describe("PhoneApprovePage", () => {
     renderPage();
     expect(await screen.findByText(/ann/)).toBeInTheDocument();
     expect(screen.getByText(/Chrome on Windows/)).toBeInTheDocument();
-    for (const n of view.options) expect(screen.getByRole("button", { name: `Number ${n}` })).toBeInTheDocument();
+    for (const n of view.options)
+      expect(screen.getByRole("button", { name: `Number ${n}` })).toBeInTheDocument();
     expect(getApprovalRequestMock).toHaveBeenCalledWith("req-1");
   });
 
@@ -84,7 +85,10 @@ describe("PhoneApprovePage", () => {
 
   it("sends a wrong tap as chosen and says nothing was approved", async () => {
     decideApprovalMock.mockRejectedValue(
-      apiError("wrong_number", "That is not the number on your computer. The request was cancelled.")
+      apiError(
+        "wrong_number",
+        "That is not the number on your computer. The request was cancelled."
+      )
     );
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Number 17" }));
@@ -106,7 +110,9 @@ describe("PhoneApprovePage", () => {
   it("denies with 'Not me' and needs no biometric", async () => {
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "This is not me" }));
-    await waitFor(() => expect(decideApprovalMock).toHaveBeenCalledWith("req-1", { decision: "deny" }));
+    await waitFor(() =>
+      expect(decideApprovalMock).toHaveBeenCalledWith("req-1", { decision: "deny" })
+    );
     expect(getAssertionMock).not.toHaveBeenCalled();
     expect(await screen.findByText(/Nothing was approved/)).toBeInTheDocument();
   });
@@ -116,7 +122,9 @@ describe("PhoneApprovePage", () => {
       apiError("request_expired", "This request expired. Start again on your computer.")
     );
     renderPage();
-    expect(await screen.findByRole("alert")).toHaveTextContent("This request expired. Start again on your computer.");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This request expired. Start again on your computer."
+    );
     expect(screen.queryByRole("button", { name: /Number/ })).not.toBeInTheDocument();
   });
 
