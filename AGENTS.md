@@ -252,6 +252,10 @@ Rules:
 - Stat cards with zero events in the month display a typographic em-dash `"—"` in `text-muted-foreground font-normal` rather than raw `"n/a"`.
 - Toolbar actions (`ExportButton` + `Visualize`) are clustered as an inseparable pair with `sm:flex-nowrap`, and `ReportingYearSelect` uses the compact label `"Year"` (with `aria-label="Select year"`), eliminating orphaned button drops on intermediate viewports.
 
+## 2026-11-19 — TL scorecard records DateRangePicker adoption
+- The Records tab in TL scorecard (`RecordsTab.tsx`) uses the unified `DateRangePicker` component ("Timeframe") with quick presets (This month, Last month, This quarter, etc.) and explicit From/To calendar selection (`?from=&to=`), replacing the browser-native `<input type="month">`.
+- Backward compatible with `?month=`: derives month start and end dates (`resolvedFrom`, `resolvedTo`), displaying the month's start/end dates in the picker and filtering rows accordingly. Clear resets `from`, `to`, `month`, and `page`.
+
 ## 2026-10-11 — TL scorecard / payroll review follow-ups (Phase 8)
 - Wage writes are HR or staff only (`plugins/payroll/services/wage_access.py`). The payroll `manage` grant alone no longer lets a team leader create, change or delete a wage, and the wages importer uses the same check. TLs keep read access to their scoreable team's wage through the TL scorecard.
 - Team-scoped payroll: only staff, superusers and HR are company-wide viewers; the payroll `manage` grant alone grants nothing. `GET /api/plugins/payroll/runs/scope/` returns `run_scope: company|team`, and `PayrollRun.notes` is hidden from and not searchable by team scope.

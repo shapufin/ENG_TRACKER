@@ -1,13 +1,15 @@
 import React, { useMemo } from "react";
 import { FileSpreadsheet, Plus } from "lucide-react";
+import { endOfMonth } from "date-fns";
 import { SearchField } from "@/components/ui/SearchField";
 import { useSearchParams } from "react-router-dom";
 import { useQueries } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { downloadBlobResponse } from "@/lib/download";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { Input } from "@/components/ui/input";
+import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { Label } from "@/components/ui/label";
+import { toLocalISODate } from "@/lib/date-format-utils";
 import {
   Select,
   SelectContent,
@@ -63,10 +65,17 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
   const { user } = useAuth();
   const { isAdmin, isSuperuser } = usePermissions();
   const kind = parseKind(params.get("kind"));
+  const dateFrom = params.get("from") ?? "";
+  const dateTo = params.get("to") ?? "";
   const month = params.get("month") ?? "";
   const search = (params.get("q") ?? "").trim().toLowerCase();
   const stateFilter = parseStateFilter(params.get("state"));
   const page = Math.max(1, Number(params.get("page") ?? 1) || 1);
+
+  const resolvedFrom = dateFrom || (month ? `${month.slice(0, 7)}-01` : "");
+  const resolvedTo =
+    dateTo ||
+    (month ? toLocalISODate(endOfMonth(new Date(`${month.slice(0, 7)}-01T00:00:00`))) : "");
 
   const setParam = (key: string, value: string | null, keepPage = false) =>
     setParams(
@@ -92,9 +101,11 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
     return { userId: user?.id ?? null, isStaff: staff, canReview: staff };
   }, [user?.id, isAdmin, isSuperuser]);
 
-  const inMonth = (index: number, row: RecordRow): boolean => {
-    if (!month) return true;
-    return RECORD_CONFIGS[index].date(row).startsWith(month.slice(0, 7));
+  const inRange = (index: number, row: RecordRow): boolean => {
+    const rowDate = RECORD_CONFIGS[index].date(row);
+    if (resolvedFrom && rowDate < resolvedFrom) return false;
+    if (resolvedTo && rowDate > resolvedTo) return false;
+    return true;
   };
 
   const matchesSearch = (index: number, row: RecordRow): boolean => {
@@ -113,9 +124,9 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
     return haystack.includes(search);
   };
 
-  /** Month + search only: stable counts for badges and pills. */
+  /** Range + search only: stable counts for badges and pills. */
   const baseRows = (index: number): RecordRow[] | undefined =>
-    results[index].data?.filter((row) => inMonth(index, row) && matchesSearch(index, row));
+    results[index].data?.filter((row) => inRange(index, row) && matchesSearch(index, row));
 
   const inState = (index: number, row: RecordRow): boolean => {
     if (stateFilter === "all") return true;
@@ -128,9 +139,9 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
     const base = baseRows(activeIndex);
     return base?.filter((row) => inState(activeIndex, row));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [results, activeIndex, month, search, stateFilter]);
+  }, [results, activeIndex, resolvedFrom, resolvedTo, search, stateFilter]);
   const totalCount = results[activeIndex].data?.length ?? 0;
-  const monthCount = baseRows(activeIndex)?.length ?? 0;
+  const rangeCount = baseRows(activeIndex)?.length ?? 0;
 
   const attentionCount = useMemo(
     () =>
@@ -138,7 +149,7 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
         toneForState(RECORD_CONFIGS[activeIndex].state(row).tone)
       ).length,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [results, activeIndex, month, search]
+    [results, activeIndex, resolvedFrom, resolvedTo, search]
   );
 
   const summary = useMemo(() => {
@@ -146,14 +157,14 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
     let total = 0;
     results.forEach((result, index) => {
       for (const row of result.data ?? []) {
-        if (!inMonth(index, row)) continue;
+        if (!inRange(index, row)) continue;
         total += 1;
         if (RECORD_CONFIGS[index].state(row).tone === "success") done += 1;
       }
     });
     return { done, total, pct: total === 0 ? 0 : Math.round((done / total) * 100) };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [results, month]);
+  }, [results, resolvedFrom, resolvedTo]);
 
   const totalPages = Math.max(1, Math.ceil((activeRows?.length ?? 0) / RECORDS_PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -235,24 +246,52 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
           <div className="border-border/60 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
             <div className="flex flex-wrap items-center gap-2.5">
               <Label
-                htmlFor="records-month"
+                htmlFor="records-date-range"
                 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase"
               >
                 Timeframe
               </Label>
-              <Input
-                id="records-month"
-                type="month"
-                className="w-44"
-                value={month.slice(0, 7)}
-                onChange={(e) => setParam("month", e.target.value ? `${e.target.value}-01` : null)}
+              <DateRangePicker
+                id="records-date-range"
+                from={resolvedFrom}
+                to={resolvedTo}
+                onChange={({ from: nextFrom, to: nextTo }) => {
+                  setParams(
+                    (prev) => {
+                      const next = new URLSearchParams(prev);
+                      if (nextFrom) next.set("from", nextFrom);
+                      else next.delete("from");
+                      if (nextTo) next.set("to", nextTo);
+                      else next.delete("to");
+                      next.delete("month");
+                      next.delete("page");
+                      return next;
+                    },
+                    { replace: true }
+                  );
+                }}
+                placeholder="Filter by date"
+                ariaLabel="Filter records by date"
+                className="w-auto min-w-[220px]"
               />
-              {month && (
+              {(dateFrom || dateTo || month) && (
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => setParam("month", null)}
+                  onClick={() => {
+                    setParams(
+                      (prev) => {
+                        const next = new URLSearchParams(prev);
+                        next.delete("from");
+                        next.delete("to");
+                        next.delete("month");
+                        next.delete("page");
+                        return next;
+                      },
+                      { replace: true }
+                    );
+                  }}
                 >
                   Clear
                 </Button>
@@ -370,9 +409,9 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
                         config={config}
                         rows={activeRows}
                         totalTrend={
-                          month || stateFilter !== "all"
-                            ? `of ${monthCount} total`
-                            : "across all months"
+                          dateFrom || dateTo || month || stateFilter !== "all"
+                            ? `of ${rangeCount} total`
+                            : "across all records"
                         }
                       />
                     )}

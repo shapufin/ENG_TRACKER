@@ -232,6 +232,22 @@ describe("RecordsTab URL state", () => {
     renderTab("?tab=records&month=2025-01-01");
     expect(await screen.findByText("No match")).toBeInTheDocument();
   });
+
+  it("narrows by date range (from and to)", async () => {
+    renderTab("?tab=records&from=2025-01-01&to=2025-01-31");
+    expect(await screen.findByText("No match")).toBeInTheDocument();
+  });
+
+  it("clears date range when Clear button is clicked", async () => {
+    renderTab("?tab=records&from=2026-09-01&to=2026-09-30");
+    const clearBtn = await screen.findByRole("button", { name: "Clear" });
+    fireEvent.click(clearBtn);
+    await waitFor(() => {
+      const where = screen.getByTestId("where");
+      expect(where).not.toHaveTextContent("from=");
+      expect(where).not.toHaveTextContent("to=");
+    });
+  });
 });
 
 describe("RecordsTab mockup layout", () => {
