@@ -16,7 +16,8 @@ the existing `_complete_mfa_login`.
   `users.0031_phone_approval`), shared assertion check `webauthn.verify_assertion_for_challenge`,
   `send_push_notification(..., endpoints=)` in the notifications plugin.
 - Frontend: `PhoneApprovePage` (public route `/phone-approve/:requestId`), the LoginPage `phone` step with
-  `PhoneApprovalWait`, Settings `PairedPhonesSection`, `phoneApprovalService`, `AuthContext.completePhoneApproval`.
+  `PhoneApprovalWait`, Settings `PairedPhonesSection` with `PushSetupGuide` (iPhone/Android steps to turn on
+  notifications), `phoneApprovalService`, `AuthContext.completePhoneApproval`.
 - Site Backup: both tables excluded; the guard fails for any new model in `apps/users/models/mfa.py` that is
   not excluded, and for save receivers added to the two models without a `raw=True` guard.
 - Tests: `apps/users/tests_app/test_phone_*.py`, `test_webauthn_shared_verify.py`,
