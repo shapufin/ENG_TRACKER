@@ -479,7 +479,9 @@ the authenticator app and passkeys (workflow-invariants item 90, spec
   and `VAPID_PRIVATE_KEY` are set (push); (3) set the switch and restart the backend; (4) on one phone open
   Settings, Security, "Set up this phone"; (5) sign in on a computer and approve with the notification, then
   again with "Show QR code instead"; (6) tell users. **Android**: Chrome needs no install. **iPhone**: push needs
-  the app added to the Home Screen (iOS 16.4 or later); otherwise the QR code is the path.
+  the app added to the Home Screen (iOS 16.4 or later); otherwise the QR code is the path. Users do not need
+  this runbook: Settings, Security, Phone approval has "How to turn on notifications" with iPhone and Android
+  tabs (`PushSetupGuide`), and opens it by itself where notifications cannot work yet.
 - **Approval link host**: the link in the notification and the QR code uses the first entry of `WEBAUTHN_ORIGINS`;
   it must be the host users open the app on (the service worker only opens same-origin links).
 - **Rollback**: set the switch to false and restart. No migration to revert; paired phones stay in the
