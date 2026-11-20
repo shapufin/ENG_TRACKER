@@ -141,7 +141,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         **REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'],  # noqa: F405
         'auth': '20/min',
-        'mfa': '10/min',
+        'mfa': '30/min',
         'phone_poll': '240/min',  # the PC polls phone-collect every 2 s (item 90)
         'upload': '30/hour',
         'export': '20/hour',

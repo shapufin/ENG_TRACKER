@@ -278,7 +278,7 @@ REST_FRAMEWORK = {
         # Disabled in dev/test to avoid 429s in the test suite; set real limits
         # when the production settings profile is built.
         'auth': '20/min' if not DEBUG else None,          # login/token refresh
-        'mfa': '10/min' if not DEBUG else None,           # second-factor verify/enrol
+        'mfa': '30/min' if not DEBUG else None,           # second-factor verify/enrol
         # The PC polls phone-collect every 2 s while it waits; sized for an office behind one NAT.
         'phone_poll': '240/min' if not DEBUG else None,
         'upload': '30/hour' if not DEBUG else None,       # file parsing endpoints

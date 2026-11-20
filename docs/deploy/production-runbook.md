@@ -490,7 +490,7 @@ the authenticator app and passkeys (workflow-invariants item 90, spec
 - **Locked-out or lost phone**: the user removes the phone under Settings (needs the password), or an admin
   runs `reset_user_mfa <username>`, which also removes every pairing and live request and ends the sessions.
 - **Throttle**: the PC polls `api/auth/token/phone-collect/` every 2 s under its own scope `phone_poll`
-  (240/min per IP); the other endpoints share `mfa` (10/min). Raise `phone_poll` only if an office behind one
+  (240/min per IP); the other endpoints share `mfa` (30/min). Raise `phone_poll` only if an office behind one
   address sees 429 while waiting.
 - **Watch the audit log** for `MFA_PHONE_WRONG_NUMBER` (someone approving blind, or an attacker who knows the
   password), repeated `MFA_FAILED` rows from `phone` approvals, and `MFA_LOCKED`.
