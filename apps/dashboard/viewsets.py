@@ -110,7 +110,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Team confidentiality (2026-10-20): teammates' pending counts and
         # statuses are TL management data. Employees get nothing from here.
-        is_unrestricted = user.is_staff or user.is_superuser or has_hr_role(user)
+        is_unrestricted = self._is_company_scope(user)
         if not (is_unrestricted or has_team_leader_role(user)):
             raise PermissionDenied()
 
@@ -155,6 +155,13 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         logger.debug(f"[TL Dashboard] final_member_ids={team_member_ids}")
 
         return team, list(team_member_ids), None
+
+    @staticmethod
+    def _is_company_scope(user):
+        """Staff, superusers and pure HR see whole teams; any leader (HR or not) keeps leader scope."""
+        if user.is_staff or user.is_superuser:
+            return True
+        return has_hr_role(user) and not has_team_leader_role(user)
 
     @action(detail=False, methods=['get'], permission_classes=[IsHR])
     def global_stats(self, request):
@@ -257,7 +264,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         ot_rows = OvertimeLog.objects.filter(user_id__in=team_member_ids)
         sb_rows = StandbyLog.objects.filter(user_id__in=team_member_ids)
         user = request.user
-        if not (user.is_staff or user.is_superuser or has_hr_role(user)):
+        if not self._is_company_scope(user):
             from apps.users.services.leader_ownership import owned_by_leader_q
             ot_rows = ot_rows.filter(owned_by_leader_q(user.id))
             sb_rows = sb_rows.filter(owned_by_leader_q(user.id))
@@ -574,12 +581,19 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         # to avoid N+1 queries when accessing user details
         highlights = []
 
+        # Overtime and standby follow the owner rule (item 82) for leaders, as in team_stats.
+        ot_rows = OvertimeLog.objects.select_related('user').filter(
+            user_id__in=team_member_ids, status='pending')
+        sb_rows = StandbyLog.objects.select_related('user').filter(
+            user_id__in=team_member_ids, status='pending')
+        if not self._is_company_scope(request.user):
+            from apps.users.services.leader_ownership import owned_by_leader_q
+            ot_rows = ot_rows.filter(owned_by_leader_q(request.user.id))
+            sb_rows = sb_rows.filter(owned_by_leader_q(request.user.id))
+
         # Overtime
         if scope in ('all', 'overtime'):
-            for item in OvertimeLog.objects.select_related('user').filter(
-                user_id__in=team_member_ids,
-                status='pending'
-            ).order_by('-date')[:limit]:
+            for item in ot_rows.order_by('-date')[:limit]:
                 highlights.append({
                     'id': item.id,
                     'type': 'overtime',
@@ -594,10 +608,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Standby
         if scope in ('all', 'standby'):
-            for item in StandbyLog.objects.select_related('user').filter(
-                user_id__in=team_member_ids,
-                status='pending'
-            ).order_by('-date')[:limit]:
+            for item in sb_rows.order_by('-date')[:limit]:
                 highlights.append({
                     'id': item.id,
                     'type': 'standby',
