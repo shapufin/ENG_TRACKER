@@ -740,6 +740,11 @@ class TokenLogoutView(APIView):
 class _PhoneApprovalMixin:
     """Every phone-approval endpoint is a 404 while ``PHONE_APPROVAL_ENABLED`` is off."""
 
+    # Scope only (like token refresh): the PC polls every 2 s, so the shared 100/hour ``anon``
+    # bucket would lock sign-in out for minutes. Guessing is stopped by the single-use
+    # collect key, the 3-live-request cap and the shared lockout.
+    throttle_classes = [ScopedRateThrottle]
+
     def initial(self, request, *args, **kwargs):
         super().initial(request, *args, **kwargs)
         if not phone_approval_service.phone_approval_enabled():

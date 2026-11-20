@@ -179,6 +179,8 @@ def status_for(user) -> dict:
         'passkeys': [summary(p) for p in passkeys],
     }
     if phone_approval_enabled():  # absent (not false) while the switch is off, so the payload is unchanged
+        # A phone's own passkey is listed once, under its phone, not again as a passkey.
+        data['passkeys'] = [summary(p) for p in passkeys.filter(paired_phone__isnull=True)]
         data['phone_approval'] = True
         data['phones'] = list_phones(user)
     return data
