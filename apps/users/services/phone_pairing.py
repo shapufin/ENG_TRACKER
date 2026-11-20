@@ -6,6 +6,7 @@ from django.db import IntegrityError, transaction
 from ..models.mfa import PairedPhone, PhoneLoginRequest, WebAuthnCredential
 from .mfa import MFAError
 from .phone_approval import _require_enabled
+from . import webauthn
 from .webauthn import NAME_MAX_LENGTH
 
 logger = logging.getLogger(__name__)
@@ -79,14 +80,17 @@ def rename(user, phone_id: int, name: str) -> PairedPhone:
 
 
 def remove(user, phone_id: int) -> None:
-    """Unpair a phone. The passkey stays; live requests for the user are dropped."""
+    """Unpair a phone and delete its passkey (a leftover one makes pairing again fail on the phone).
+
+    The passkey goes through ``webauthn.remove`` so the last-factor rule still applies.
+    """
     with transaction.atomic():
-        _own(user, phone_id).delete()
+        webauthn.remove(user, _own(user, phone_id).credential_id)
         PhoneLoginRequest.objects.filter(user=user).delete()
 
 
 def remove_all(user) -> None:
-    """Admin reset and ``reset_user_mfa``: every pairing and live request."""
+    """Admin reset and ``reset_user_mfa``: every pairing, its passkey and live request."""
     with transaction.atomic():
-        PairedPhone.objects.filter(user=user).delete()
+        WebAuthnCredential.objects.filter(user=user, paired_phone__isnull=False).delete()
         PhoneLoginRequest.objects.filter(user=user).delete()

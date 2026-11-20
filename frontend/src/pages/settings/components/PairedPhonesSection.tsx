@@ -56,6 +56,13 @@ const PUSH_STATUS_COPY: Record<PushStatus, string> = {
   unsupported: "This browser cannot show notifications. Sign-in uses a QR code instead.",
 };
 
+/** A name that fits the device in hand; the name field stays editable. */
+const deviceName = () => {
+  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  if (/iPhone|iPod/.test(ua)) return "iPhone";
+  return /Android/.test(ua) ? "Android phone" : "This phone";
+};
+
 const formatDay = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 
@@ -75,7 +82,7 @@ const COPY = {
   },
   remove: {
     title: "Remove phone",
-    description: "This phone will no longer approve sign-ins. Its passkey stays under Passkeys.",
+    description: "This phone will no longer approve sign-ins, and its passkey is removed with it.",
     submit: "Remove phone",
     busy: "Removing...",
   },
@@ -93,7 +100,7 @@ const PhoneDialog = ({
   const queryClient = useQueryClient();
   const push = usePushNotifications();
   const initialName =
-    action.kind === "pair" ? "This phone" : action.kind === "rename" ? action.phone.name : "";
+    action.kind === "pair" ? deviceName() : action.kind === "rename" ? action.phone.name : "";
   const [name, setName] = useState(initialName);
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -138,7 +145,7 @@ const PhoneDialog = ({
         setError("The prompt was closed before it finished. Try again when you are ready.");
       } else if (err instanceof DOMException && err.name === "InvalidStateError") {
         setError(
-          "This phone already has a passkey for your account. Remove it under Passkeys, then set up the phone again."
+          "This phone already has a passkey for your account. Remove the old one under Passkeys (in Security), then set up the phone again."
         );
       } else {
         setError(mfaErrorMessage(err));

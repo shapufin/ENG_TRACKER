@@ -98,12 +98,23 @@ export const SettingsPage: React.FC = () => {
               ))}
               {getRoleBadges().length === 0 && <Badge variant="outline">User</Badge>}
             </div>
-            {/* Security: the two account protections, compact but never hidden. */}
-            <div className="space-y-2 border-t pt-4" role="group" aria-label="Security">
+            {/* Security: the account protections, compact but never hidden. On a phone,
+                phone approval leads and passkeys follow it (setting a phone up creates one). */}
+            <div
+              className="flex flex-col gap-2 border-t pt-4 [&>:empty]:hidden"
+              role="group"
+              aria-label="Security"
+            >
               <PasswordRow />
-              <PasskeysSection />
-              <PairedPhonesSection />
-              <TwoFactorSection />
+              <div className="max-md:order-2">
+                <PasskeysSection />
+              </div>
+              <div className="max-md:order-1">
+                <PairedPhonesSection />
+              </div>
+              <div className="max-md:order-3">
+                <TwoFactorSection />
+              </div>
             </div>
             {(user?.techs?.length ?? 0) > 0 && (
               <div>

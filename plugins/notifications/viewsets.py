@@ -11,6 +11,7 @@ from .models import (
     NotificationPreference,
     PushSubscription,
 )
+from apps.users.models import PairedPhone
 from core.mixins.permissions import (
     PluginEnabledMixin,
     has_hr_role,
@@ -280,12 +281,17 @@ class NotificationViewSet(PluginEnabledMixin, viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # A paired phone approves sign-ins through this address, so signing out of the phone
+        # must not kill it (the client keeps the browser subscription when ``kept``).
+        if PairedPhone.objects.filter(user=request.user, push_endpoint=endpoint).exists():
+            return Response({'deactivated': 0, 'kept': True})
+
         updated = PushSubscription.objects.filter(
             user=request.user,
             endpoint=endpoint
         ).update(is_active=False)
 
-        return Response({'deactivated': updated})
+        return Response({'deactivated': updated, 'kept': False})
 
     @action(detail=False, methods=['get'])
     def subscriptions(self, request):

@@ -79,6 +79,17 @@ describe("logout and the browser push subscription", () => {
     expect(api.post).toHaveBeenCalledWith("/auth/token/logout/");
   });
 
+  it("keeps the browser subscription of a paired phone so it can still approve sign-ins", async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: { kept: true } } as any);
+    stubServiceWorker(subscription);
+    unsubscribe.mockClear();
+
+    await authService.logout();
+
+    expect(unsubscribe).not.toHaveBeenCalled();
+    expect(api.post).toHaveBeenCalledWith("/auth/token/logout/");
+  });
+
   it("still signs out when there is no subscription or the unsubscribe fails", async () => {
     vi.mocked(api.post).mockResolvedValue({ data: {} } as any);
     stubServiceWorker(null);
