@@ -7,6 +7,7 @@ from rest_framework.test import APITestCase
 from django.utils import timezone
 
 from apps.overtime.models.core import Client, OvertimeLog
+from apps.standby.models import StandbyLog
 from apps.users.models import Team
 
 WIDGET_URL = '/api/dashboard/widgets/{}/'
@@ -104,6 +105,56 @@ class DashboardWidgetTeamScopeTests(APITestCase):
                 with self.subTest(action=action, limit=bad):
                     resp = self._get(self.tl, action, limit=bad)
                     self.assertEqual(resp.status_code, 400)
+
+
+class LeaderWithHrRoleOwnerScopeTests(APITestCase):
+    """A Line Manager who also holds HR keeps leader scope on the TL dashboard (items 64, 82).
+
+    Regression: the HR grant made the widgets list every member of the leader's team and
+    count/show pending standby that belongs to another Line Manager.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.viewer = User.objects.create_user(username='dw_lmhr', password='x')
+        assign_role(cls.viewer, 'albanian_tl')
+        assign_role(cls.viewer, 'hr')
+        cls.other_lm = User.objects.create_user(username='dw_other_lm', password='x')
+        assign_role(cls.other_lm, 'albanian_tl')
+        cls.mine = User.objects.create_user(
+            username='dw_mine', password='x', first_name='Mina', last_name='Mine')
+        cls.foreign = User.objects.create_user(
+            username='dw_foreign_rep', password='x', first_name='Kora', last_name='Foreign')
+        team = Team.objects.create(name='DW Shared', code='DWS')
+        for user in (cls.viewer, cls.mine, cls.foreign):
+            user.profile.teams.add(team)
+        cls.mine.profile.albanian_tl = cls.viewer
+        cls.mine.profile.save()
+        cls.foreign.profile.albanian_tl = cls.other_lm
+        cls.foreign.profile.save()
+        client = Client.objects.create(name='DW LMHR Client', code='DLH')
+        for user in (cls.mine, cls.foreign):
+            OvertimeLog.objects.create(
+                user=user, date=timezone.now().date(), hours=2, status='pending', client=client)
+            StandbyLog.objects.create(
+                user=user, date=timezone.now().date(), hours=6, status='pending')
+
+    def setUp(self):
+        cache.clear()
+        self.client.force_authenticate(self.viewer)
+
+    def test_queue_highlights_show_only_owned_rows(self):
+        resp = self.client.get(WIDGET_URL.format('queue_highlights'), {'limit': 20})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('Mina Mine', str(resp.data))
+        self.assertNotIn('Kora', str(resp.data))
+
+    def test_team_stats_count_only_owned_rows(self):
+        resp = self.client.get(WIDGET_URL.format('team_stats'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data['pending_team_standby'], 1)
+        self.assertEqual(resp.data['pending_team_overtime'], 1)
+        self.assertEqual(resp.data['team_size'], 2)  # Mina + the viewer
 
 
 class LedTeamOnlyLeaderTests(APITestCase):
