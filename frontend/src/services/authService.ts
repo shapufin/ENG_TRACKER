@@ -7,7 +7,8 @@ const UNSUBSCRIBE_PUSH = "/plugins/notifications/notifications/unsubscribe/";
 /**
  * Stop push notices for this browser before the session ends. Without it the subscription
  * outlives the sign-out and the next person on the same browser profile would receive the
- * previous person's notices. Best effort: it never blocks or fails a logout.
+ * previous person's notices. A paired phone's address is kept (the server answers `kept`):
+ * it is how that phone receives sign-in approvals. Best effort: it never blocks a logout.
  */
 async function unsubscribePush(): Promise<void> {
   try {
@@ -15,7 +16,10 @@ async function unsubscribePush(): Promise<void> {
     const registration = await navigator.serviceWorker.getRegistration();
     const subscription = await registration?.pushManager.getSubscription();
     if (!subscription) return;
-    await api.post(UNSUBSCRIBE_PUSH, { endpoint: subscription.endpoint });
+    const { data } = await api.post<{ kept?: boolean }>(UNSUBSCRIBE_PUSH, {
+      endpoint: subscription.endpoint,
+    });
+    if (data?.kept) return;
     await subscription.unsubscribe();
   } catch {
     // The server also hands an endpoint to whoever subscribes next from this browser.

@@ -5,7 +5,7 @@ from unittest import mock
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
-from apps.users.models import PairedPhone, PhoneLoginRequest
+from apps.users.models import PairedPhone, PhoneLoginRequest, WebAuthnCredential
 from apps.users.services import phone_approval, phone_pairing
 from apps.users.services.mfa import MFAError
 from apps.users.tests_app.test_phone_models import make_phone_request
@@ -75,13 +75,28 @@ class PairingTests(PasskeyServiceTestCase):
             self.assertEqual(ctx.exception.code, 'not_found')
         phone_pairing.remove(self.user, phone.pk)
         self.assertFalse(PairedPhone.objects.exists())
-        self.assertTrue(self.user.passkeys.exists())  # unpairing keeps the passkey itself
+        self.assertFalse(self.user.passkeys.exists())  # the phone's passkey goes with it
+
+    def test_unpairing_then_pairing_again_leaves_no_orphan_passkey(self):
+        phone = phone_pairing.pair(self.user, self.credential.pk, 'Phone', '')
+        phone_pairing.remove(self.user, phone.pk)
+        self.assertFalse(WebAuthnCredential.objects.filter(user=self.user).exists())
+
+    def test_unpairing_the_last_required_factor_is_refused(self):
+        phone = phone_pairing.pair(self.user, self.credential.pk, 'Phone', '')
+        self.user.profile.mfa_required = True
+        self.user.profile.save()
+        with self.assertRaises(MFAError) as ctx:
+            phone_pairing.remove(self.user, phone.pk)
+        self.assertEqual(ctx.exception.code, 'last_factor')
+        self.assertTrue(PairedPhone.objects.filter(pk=phone.pk).exists())
 
     def test_remove_all_deletes_pairings_and_live_requests(self):
         phone_pairing.pair(self.user, self.credential.pk, 'Phone', '')
         make_phone_request(self.user)
         phone_pairing.remove_all(self.user)
         self.assertFalse(PairedPhone.objects.exists())
+        self.assertFalse(WebAuthnCredential.objects.filter(user=self.user).exists())
         self.assertFalse(PhoneLoginRequest.objects.exists())
 
     def test_pairing_is_refused_while_the_switch_is_off(self):

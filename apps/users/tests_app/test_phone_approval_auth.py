@@ -249,7 +249,7 @@ class PairingEndpointTests(PhoneApprovalHttpTestCase):
         self.assertEqual(renamed.data['name'], 'Work')
         removed = self.client.delete(f'{PHONES}{pk}/', {'password': PASSWORD}, format='json')
         self.assertEqual(removed.status_code, 204)
-        self.assertTrue(WebAuthnCredential.objects.filter(pk=self.credential_pk).exists())
+        self.assertFalse(WebAuthnCredential.objects.filter(pk=self.credential_pk).exists())
         for action in ('MFA_PHONE_PAIRED', 'MFA_PHONE_REMOVED'):
             self.assertTrue(AuditLog.objects.filter(action=action).exists(), action)
 
