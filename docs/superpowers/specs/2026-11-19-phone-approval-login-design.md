@@ -129,7 +129,7 @@ Decisions taken while building, recorded here so the spec matches the code:
 - Extra error code `request_invalid` (404) for an unknown, malformed or foreign request id and for a wrong `collect_key`, so nothing is revealed. Also `phone_exists` (409) for pairing the same passkey twice.
 - `status_for` adds `phone_approval: true` and `phones: [...]` only while the switch is on (absent, not false, when off), so the payload is unchanged.
 - Switch off answers 404 through `NotFound` in `initial()` of every phone view, not the 503 of `unavailable`.
-- The PC poll has its own throttle scope `phone_poll` (240/min); the `mfa` scope (10/min) would 429 a 2-second poll.
+- The PC poll has its own throttle scope `phone_poll` (240/min); the `mfa` scope (30/min since 2026-11-20, a pairing makes about five calls) would 429 a 2-second poll.
 - `qr_svg` is always returned so the PC can toggle the QR without another request.
 - The bulk-delete per-user query budget moved from 205 to 210 on purpose (two more relations to `User`).
 - `PHONE_APPROVAL_ENABLED` is documented in the runbook and the migration checklist; `.env.example` could not be edited from the session (blocked by a read/edit deny rule), so the owner adds one line there.
