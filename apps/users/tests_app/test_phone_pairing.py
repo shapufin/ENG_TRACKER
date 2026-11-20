@@ -77,6 +77,12 @@ class PairingTests(PasskeyServiceTestCase):
         self.assertFalse(PairedPhone.objects.exists())
         self.assertFalse(self.user.passkeys.exists())  # the phone's passkey goes with it
 
+    def test_a_phones_passkey_is_listed_under_the_phone_not_as_a_passkey(self):
+        from apps.users.services.mfa import status_for
+        phone_pairing.pair(self.user, self.credential.pk, 'Phone', '')
+        data = status_for(self.user)
+        self.assertEqual((data['passkeys'], len(data['phones']), data['enrolled']), ([], 1, True))
+
     def test_unpairing_then_pairing_again_leaves_no_orphan_passkey(self):
         phone = phone_pairing.pair(self.user, self.credential.pk, 'Phone', '')
         phone_pairing.remove(self.user, phone.pk)

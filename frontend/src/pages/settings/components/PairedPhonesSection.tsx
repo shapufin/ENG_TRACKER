@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MfaCodeField } from "@/components/auth/MfaCodeField";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { MFA_STATUS_KEY } from "@/services/mfaKeys";
 import { mfaErrorMessage, mfaService } from "@/services/mfaService";
@@ -236,6 +237,7 @@ export const PairedPhonesSection: React.FC = () => {
   const { data } = useQuery({ queryKey: MFA_STATUS_KEY, queryFn: mfaService.status });
   const [action, setAction] = useState<Action | null>(null);
   const supported = isPasskeySupported();
+  const isMobile = useIsMobile();
   const push = usePushNotifications();
   const [guideOpen, setGuideOpen] = useState<boolean | null>(null);
   // Open by itself where notifications cannot work yet (iPhone outside the Home Screen app, or blocked).
@@ -258,12 +260,12 @@ export const PairedPhonesSection: React.FC = () => {
             {has ? `${phones.length} set up` : "None"}
           </Badge>
         }
-        hint="Sign in on a computer by approving it on your phone with your fingerprint or face."
+        hint="Approve a computer sign-in from this phone with your fingerprint or face. Setting up a phone also adds its passkey."
         actions={
           supported && (
             <Button
               size="control-sm"
-              variant={has ? "outline" : "default"}
+              variant={has || !isMobile ? "outline" : "default"}
               onClick={() => setAction({ kind: "pair" })}
             >
               Set up this phone

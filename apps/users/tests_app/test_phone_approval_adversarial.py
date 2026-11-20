@@ -74,6 +74,14 @@ class AdversarialTests(PhoneApprovalHttpTestCase):
                      auth_views.PairedPhoneDetailView):
             self.assertEqual(view.throttle_scope, 'mfa', view.__name__)
 
+    def test_phone_sign_in_is_not_capped_by_the_shared_anon_bucket(self):
+        """The PC polls every 2 s: with the default classes the 100/hour ``anon`` bucket
+        locks sign-in out for minutes (and a whole office behind one IP)."""
+        from rest_framework.throttling import ScopedRateThrottle
+        for view in (auth_views.PhoneRequestView, auth_views.PhoneCollectView,
+                     auth_views.PhoneApprovalDetailView, auth_views.PhoneApprovalDecideView):
+            self.assertEqual(list(view.throttle_classes), [ScopedRateThrottle], view.__name__)
+
 
 class TokenMintingSourceWalk(PhoneApprovalHttpTestCase):
     def test_only_the_existing_paths_mint_tokens(self):

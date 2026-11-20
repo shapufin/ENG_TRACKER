@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fingerprint } from "lucide-react";
 import { toast } from "sonner";
@@ -183,6 +184,7 @@ export const PasskeysSection: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const supported = isPasskeySupported();
+  const isMobile = useIsMobile();
   const passkeys = data?.passkeys ?? [];
 
   // The logon prompt sends people here with the add dialog open.
@@ -199,6 +201,8 @@ export const PasskeysSection: React.FC = () => {
   if (!data || (!supported && passkeys.length === 0)) return null;
 
   const has = passkeys.length > 0;
+  // One lead action per screen: on a phone, setting the phone up comes first.
+  const phoneLeads = isMobile && !!data.phone_approval;
   return (
     <div id="passkeys">
       <SecurityRow
@@ -206,10 +210,18 @@ export const PasskeysSection: React.FC = () => {
         icon={<Fingerprint />}
         title="Passkeys"
         status={<Badge variant={has ? "default" : "secondary"}>{has ? `${passkeys.length} added` : "None"}</Badge>}
-        hint="Sign in with Face ID, your fingerprint or your device PIN. No code to type."
+        hint={
+          data.phone_approval
+            ? "Sign in on this device with Face ID, your fingerprint or your PIN. Phones are listed under Phone approval."
+            : "Sign in with Face ID, your fingerprint or your device PIN. No code to type."
+        }
         actions={
           supported && (
-            <Button size="control-sm" variant={has ? "outline" : "default"} onClick={() => setAction({ kind: "add" })}>
+            <Button
+              size="control-sm"
+              variant={has || phoneLeads ? "outline" : "default"}
+              onClick={() => setAction({ kind: "add" })}
+            >
               Add a passkey
             </Button>
           )
