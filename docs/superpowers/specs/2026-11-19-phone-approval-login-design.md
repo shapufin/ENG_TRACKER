@@ -30,7 +30,7 @@ Out of scope (YAGNI): passwordless login, approving without a biometric, approvi
 
 ## 2. Data model (`apps/users/models/mfa.py`, Postgres only, plain `TimeStampedModel`)
 
-- `PairedPhone`: `user` FK (CASCADE, `related_name='paired_phones'`), `credential` OneToOne to `WebAuthnCredential` (CASCADE, `related_name='paired_phone'`, so removing the passkey unpairs the phone), `name` (max 64), `push_endpoint` (`URLField(max_length=500, blank=True)`, blank = QR only), `last_used_at` (null).
+- `PairedPhone`: `user` FK (CASCADE, `related_name='paired_phones'`), `credential` OneToOne to `WebAuthnCredential` (CASCADE, `related_name='paired_phone'`, so removing the passkey unpairs the phone); unpairing a phone deletes its passkey too (2026-11-20, via `webauthn.remove`), `name` (max 64), `push_endpoint` (`URLField(max_length=500, blank=True)`, blank = QR only), `last_used_at` (null).
 - `PhoneLoginRequest`: `public_id` UUID (unique, `uuid4`, goes in URLs), `user` FK (CASCADE), `status` (`pending` | `approved` | `denied`), `number` (10 to 99), `options` (JSON list of the three numbers shown on the phone, shuffled), `challenge` (32 bytes), `collector_digest` (sha256 hex of the key only the requesting PC holds), `expires_at` (now + 120 s), `decided_at`, `consumed_at`, `credential` FK null (which passkey approved), `requester_ip` (null), `requester_agent` (max 200).
 - Decision state is never in Redis. A request is consumed once under `select_for_update`. Expired, denied and consumed rows older than one hour are deleted lazily whenever a request is created (same as `WebAuthnChallenge`).
 - Both models go into `HOUSEKEEPING_MODELS` (`apps/users/services/user_deletion.py`): they are state, not history, so they must not block a user delete.
