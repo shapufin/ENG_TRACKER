@@ -14,6 +14,7 @@ import {
   renamePasskey,
 } from "@/services/passkeyService";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 vi.stubGlobal(
   "ResizeObserver",
@@ -24,6 +25,7 @@ vi.stubGlobal(
   }
 );
 
+vi.mock("@/hooks/useIsMobile", () => ({ useIsMobile: vi.fn(() => false) }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("@/services/mfaService", async () => ({
   ...(await vi.importActual<typeof import("@/services/mfaService")>("@/services/mfaService")),
@@ -64,6 +66,21 @@ describe("PasskeysSection", () => {
 
     await waitFor(() => expect(mfaService.status).toHaveBeenCalled());
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("is hidden on a phone when phone approval covers it and no passkey is left over", async () => {
+    vi.mocked(useIsMobile).mockReturnValue(true);
+    vi.mocked(mfaService.status).mockResolvedValue(status({ passkeys: [], phone_approval: true }));
+    const { container } = renderSection();
+    await waitFor(() => expect(mfaService.status).toHaveBeenCalled());
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("stays on a phone while a leftover passkey can be removed", async () => {
+    vi.mocked(useIsMobile).mockReturnValue(true);
+    vi.mocked(mfaService.status).mockResolvedValue(status({ passkeys: [laptop], phone_approval: true }));
+    renderSection();
+    expect(await screen.findByText("Laptop")).toBeInTheDocument();
   });
 
   it("lists each passkey with when it was added and last used", async () => {

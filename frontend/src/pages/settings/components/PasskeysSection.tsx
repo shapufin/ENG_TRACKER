@@ -201,6 +201,9 @@ export const PasskeysSection: React.FC = () => {
   if (!data || (!supported && passkeys.length === 0)) return null;
 
   const has = passkeys.length > 0;
+  // On a phone, setting the phone up already adds its passkey: a second card only confuses, so it
+  // shows there only while a leftover passkey needs removing (or the sign-in prompt asked to add one).
+  if (isMobile && data.phone_approval && !has && !wantsAdd) return null;
   // One lead action per screen: on a phone, setting the phone up comes first.
   const phoneLeads = isMobile && !!data.phone_approval;
   return (
