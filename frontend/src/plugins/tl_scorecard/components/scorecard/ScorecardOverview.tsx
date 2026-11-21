@@ -173,7 +173,9 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
           trend={
             overtime.decided_count === 0
               ? "No decisions yet this month"
-              : `${overtime.within_sla ?? 0} of ${overtime.decided_count} decided in time · average ${overtime.avg_turnaround_days}d`
+              : overtime.within_sla != null
+                ? `${overtime.within_sla} of ${overtime.decided_count} decided in time · average ${overtime.avg_turnaround_days}d`
+                : `${overtime.decided_count} requests submitted this month · average ${overtime.avg_turnaround_days}d`
           }
           progressPercent={overtime.pct_within_sla ?? undefined}
           progressColorClass={slaBar(overtime.pct_within_sla ?? null)}

@@ -54,7 +54,7 @@ describe("ScorecardOverview (Overtime SLA card)", () => {
     expect(screen.getByText("2 of 3 decided in time · average 1.7d")).toBeInTheDocument();
   });
 
-  it("renders — and 'No decisions yet this month' when pct_within_sla is null", () => {
+  it("renders the no-data dash and 'No decisions yet this month' when pct_within_sla is null", () => {
     const scorecard: Scorecard = {
       ...BASE_SCORECARD,
       overtime: {
@@ -67,5 +67,15 @@ describe("ScorecardOverview (Overtime SLA card)", () => {
     renderOverview(scorecard);
     expect(screen.getByText("Overtime decided within 2 working days")).toBeInTheDocument();
     expect(screen.getByText("No decisions yet this month")).toBeInTheDocument();
+  });
+
+  it("does not invent '0 of N in time' for a frozen month saved before the SLA keys existed", () => {
+    const scorecard: Scorecard = {
+      ...BASE_SCORECARD,
+      overtime: { decided_count: 5, avg_turnaround_days: 2.4 },
+    };
+    renderOverview(scorecard);
+    expect(screen.queryByText(/0 of 5 decided in time/)).not.toBeInTheDocument();
+    expect(screen.getByText("5 requests submitted this month · average 2.4d")).toBeInTheDocument();
   });
 });
