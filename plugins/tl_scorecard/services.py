@@ -41,6 +41,9 @@ from .models import (
 )
 from core.utils.metrics_freeze import is_frozen, is_past_freeze
 
+ONBOARDING_WINDOW_DAYS = 14
+ONBOARDING_TRACKING_START = date(2026, 12, 1)
+
 def reporting_period(month: date | None) -> date:
     """Normalize any date within a month to that month's first day — the
     one shared "as-of month" convention every later phase should reuse
@@ -161,6 +164,20 @@ class TrendWindow:
                 leader=leader, slot_date__gte=first_month, slot_date__lt=end,
             ).values_list('employee_id', 'slot_date', 'reason') if reason.strip()
         ]
+        from django.contrib.auth.models import User
+        self.hire_dates = {
+            u_id: (h_date, dj.date() if dj else None)
+            for u_id, h_date, dj in User.objects.filter(id__in=team_member_ids).values_list(
+                'id', 'profile__hire_date', 'date_joined',
+            )
+        }
+        self.onboarding_meetings = list(Meeting.objects.filter(
+            meeting_type='one_on_one',
+            onboarding_discussed=True,
+            counterparty_id__in=team_member_ids,
+            occurred_on__gte=first_month - timedelta(days=ONBOARDING_WINDOW_DAYS),
+            occurred_on__lt=end,
+        ))
 
     @staticmethod
     def _submitted_in(rows, month_start, month_end):
@@ -803,11 +820,80 @@ def _current_state_metrics(user, team_member_ids) -> dict:
 
 def month_blocks(user, month: date, team_member_ids, window: TrendWindow | None = None) -> dict:
     """The month-bound part of a scorecard: what the freeze stores."""
+    meetings = meeting_compliance_metrics(user, team_member_ids, month, window)
+    meetings.update(onboarding_metrics(user, month, window))
     return {
         'team_size': len(team_member_ids),
         'leave': leave_sla_metrics(team_member_ids, month, window),
         'overtime': ot_turnaround_metrics(user.id, month, window),
-        'meetings': meeting_compliance_metrics(user, team_member_ids, month, window),
+        'meetings': meetings,
+    }
+
+
+def onboarding_metrics(leader, month: date, window: TrendWindow | None = None) -> dict:
+    """Joiners due within 14 calendar days of hire date whose due date falls in this month.
+
+    Cohort: scoreable_member_ids(leader) (link-only, keeps deactivated users; no is_active filter).
+    start = profile.hire_date or user.date_joined.date().
+    Skip start < ONBOARDING_TRACKING_START.
+    due = start + timedelta(days=ONBOARDING_WINDOW_DAYS).
+    Owned by the month `due` falls in (not the hire month).
+    Done = exists Meeting(meeting_type='one_on_one', counterparty=joiner, onboarding_discussed=True, occurred_on <= due).
+    No organizer filter.
+    pct = round(done / due * 100, 1), None when due == 0.
+    """
+    month = reporting_period(month)
+    month_start, month_end = _month_bounds(month)
+
+    if window is not None:
+        hire_dates = window.hire_dates
+    else:
+        if isinstance(leader, int):
+            from django.contrib.auth.models import User
+            leader = User.objects.select_related('profile').get(pk=leader)
+        team_member_ids = scoreable_member_ids(leader)
+        from django.contrib.auth.models import User
+        hire_dates = {
+            u_id: (h_date, dj.date() if dj else None)
+            for u_id, h_date, dj in User.objects.filter(id__in=team_member_ids).values_list(
+                'id', 'profile__hire_date', 'date_joined',
+            )
+        }
+
+    due_map = {}
+    for user_id, (hire_date, date_joined) in hire_dates.items():
+        start = hire_date or (date_joined.date() if hasattr(date_joined, 'date') else date_joined)
+        if start is None or start < ONBOARDING_TRACKING_START:
+            continue
+        due = start + timedelta(days=ONBOARDING_WINDOW_DAYS)
+        if month_start <= due < month_end:
+            due_map[user_id] = due
+
+    due_count = len(due_map)
+    if not due_map:
+        return {'onboarding_due': 0, 'onboarding_done': 0, 'onboarding_pct': None}
+
+    done_user_ids = set()
+    if window is not None:
+        for m in window.onboarding_meetings:
+            if m.counterparty_id in due_map and m.occurred_on <= due_map[m.counterparty_id]:
+                done_user_ids.add(m.counterparty_id)
+    else:
+        meetings = Meeting.objects.filter(
+            meeting_type='one_on_one',
+            onboarding_discussed=True,
+            counterparty_id__in=due_map.keys(),
+        )
+        for m in meetings:
+            if m.occurred_on <= due_map[m.counterparty_id]:
+                done_user_ids.add(m.counterparty_id)
+
+    done_count = len(done_user_ids)
+    pct = round((done_count / due_count) * 100, 1) if due_count > 0 else None
+    return {
+        'onboarding_due': due_count,
+        'onboarding_done': done_count,
+        'onboarding_pct': pct,
     }
 
 

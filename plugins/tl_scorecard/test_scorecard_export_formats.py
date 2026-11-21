@@ -100,6 +100,34 @@ class SummaryExportFormatTests(TestCase):
             self.assertEqual(row_within[3].value, 100.0)
             self.assertEqual(row_within[4].value, expected_status)
 
+    def test_summary_onboarding_row(self):
+        scorecard = build_scorecard(self.leader, date.today())
+        governance = {'open_pips': [], 'pending_promotions': [], 'epr_cycles': [], 'open_absences': []}
+
+        # 1) When onboarding_pct is 100%: green at 100%
+        scorecard['meetings']['onboarding_pct'] = 100.0
+        scorecard['meetings']['onboarding_due'] = 2
+        scorecard['meetings']['onboarding_done'] = 2
+        wb = load_workbook(io.BytesIO(build_workbook_bytes(scorecard, governance, 'Oct 2026')))
+        ws = wb['Summary']
+        row_1on1 = _find_row(ws, '1:1 compliance')
+        row_onb = _find_row(ws, 'Onboarding 1-on-1s within 14 days')
+        self.assertEqual(row_onb[0].row, row_1on1[0].row + 1)
+        self.assertEqual(row_onb[2].value, 100.0)
+        self.assertEqual(row_onb[3].value, 100.0)
+        self.assertEqual(row_onb[4].value, 'On track')
+
+        # 2) With no joiners (onboarding_pct is None): — Value and Target
+        scorecard['meetings']['onboarding_pct'] = None
+        scorecard['meetings']['onboarding_due'] = 0
+        scorecard['meetings']['onboarding_done'] = 0
+        wb2 = load_workbook(io.BytesIO(build_workbook_bytes(scorecard, governance, 'Oct 2026')))
+        ws2 = wb2['Summary']
+        row_onb2 = _find_row(ws2, 'Onboarding 1-on-1s within 14 days')
+        self.assertEqual(row_onb2[2].value, '—')
+        self.assertEqual(row_onb2[3].value, '—')
+        self.assertEqual(row_onb2[4].value, '—')
+
     def test_unknown_file_format_is_rejected(self):
         resp = self._get({'file_format': 'docx'})
         self.assertEqual(resp.status_code, 400)

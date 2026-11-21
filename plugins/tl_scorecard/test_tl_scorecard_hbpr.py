@@ -275,6 +275,12 @@ class HbprExportScopeTests(HbprScorecardBase):
         self.assertIn('Leave decided within 2 business days', text)
         self.assertIn('OT approval turnaround', text)
 
+    def test_hbpr_export_has_no_onboarding_row(self):
+        xlsx_text = self._xlsx_text(self._export_body(self.hbpr, 'xlsx'))
+        self.assertNotIn('Onboarding', xlsx_text)
+        pdf_text = self._pdf_text(self._export_body(self.hbpr, 'pdf'))
+        self.assertNotIn('Onboarding', pdf_text)
+
     def test_epr_cycles_are_limited_to_the_subject_scope(self):
         from datetime import date as _date
         from .services import governance_records
@@ -440,6 +446,13 @@ class HbprOneOnOneLeakTests(HbprScorecardBase):
         # The fraction behind the percentage is one-on-one data too.
         self.assertIsNone(resp.data['meetings']['one_on_one_compliant'])
         self.assertIsNone(resp.data['meetings']['one_on_one_eligible'])
+
+    def test_hbpr_payload_masks_onboarding(self):
+        resp = self._get('scorecard', self.hbpr)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(resp.data['meetings']['onboarding_due'])
+        self.assertIsNone(resp.data['meetings']['onboarding_done'])
+        self.assertIsNone(resp.data['meetings']['onboarding_pct'])
 
     def test_scorecard_keeps_one_on_one_compliance_for_owner_and_staff(self):
         for user in (self.tl, self.staff):

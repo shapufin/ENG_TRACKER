@@ -56,6 +56,9 @@ class MeetingComplianceSerializer(serializers.Serializer):
     team_meetings_held = serializers.IntegerField()
     team_meetings_with_hrbp = serializers.IntegerField()
     team_meeting_notes_within_24h = serializers.IntegerField()
+    onboarding_due = serializers.IntegerField(allow_null=True, required=False)
+    onboarding_done = serializers.IntegerField(allow_null=True, required=False)
+    onboarding_pct = serializers.FloatField(allow_null=True, required=False)
 
 
 class IdleMetricsSerializer(serializers.Serializer):

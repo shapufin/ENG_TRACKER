@@ -195,7 +195,7 @@ def _partnership_section(story, hbpr_evidence):
 
 
 def build_scorecard_pdf(scorecard, trend, governance, epr, period_label, leader_name,
-                        generated_by, hbpr_evidence=None, include_leave_overtime=True) -> bytes:
+                        generated_by, hbpr_evidence=None, include_restricted=True) -> bytes:
     """The TL scorecard PDF. `trend` and `scorecard` are already one-on-one masked
     for the viewer; `epr` is `services.epr_metrics` for the same team and year."""
     buffer = io.BytesIO()
@@ -206,7 +206,7 @@ def build_scorecard_pdf(scorecard, trend, governance, epr, period_label, leader_
         generated_by=generated_by,
         period_label=period_label,
     )
-    rows = kpi_rows(scorecard, include_leave_overtime=include_leave_overtime)
+    rows = kpi_rows(scorecard, include_restricted=include_restricted)
     _cover(story, scorecard, leader_name, period_label, rows)
     _meetings_section(story, trend)
     _epr_section(story, scorecard, epr)

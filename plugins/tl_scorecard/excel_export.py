@@ -104,7 +104,7 @@ def _print_setup(ws, title_rows=None):
         ws.repeat_rows(*title_rows)
 
 
-def _build_summary_sheet(wb, fmt, scorecard, period_label, include_leave_overtime=True):
+def _build_summary_sheet(wb, fmt, scorecard, period_label, include_restricted=True):
     ws = wb.add_worksheet("Summary")
     ws.hide_gridlines(2)
     _print_setup(ws, (3, 3))
@@ -127,7 +127,7 @@ def _build_summary_sheet(wb, fmt, scorecard, period_label, include_leave_overtim
     for col, label in enumerate(["Area", "Metric", "Value", "Target", "Status"]):
         ws.write(3, col, label, fmt.header)
 
-    for offset, item in enumerate(kpi_rows(scorecard, include_leave_overtime=include_leave_overtime)):
+    for offset, item in enumerate(kpi_rows(scorecard, include_restricted=include_restricted)):
         r = 4 + offset
         ws.write(r, 0, item["area"], fmt.area)
         ws.write(r, 1, item["metric"], fmt.label)
@@ -327,7 +327,7 @@ def _build_hbpr_evidence_sheet(wb, fmt, evidence):
 
 
 def build_workbook_bytes(scorecard, governance, period_label, hbpr_evidence=None, trend=None,
-                         include_leave_overtime=True):
+                         include_restricted=True):
     """Build the tl_scorecard summary workbook and return raw .xlsx bytes.
 
     ``trend`` (optional) is the list of scorecard points, oldest first, with the
@@ -346,7 +346,7 @@ def build_workbook_bytes(scorecard, governance, period_label, hbpr_evidence=None
         "comments": "Generated live from tl_scorecard data.",
     })
     fmt = _Formats(wb)
-    _build_summary_sheet(wb, fmt, scorecard, period_label, include_leave_overtime)
+    _build_summary_sheet(wb, fmt, scorecard, period_label, include_restricted)
     if trend:
         _build_trend_sheet(wb, fmt, trend)
     _build_governance_sheet(wb, fmt, governance)
