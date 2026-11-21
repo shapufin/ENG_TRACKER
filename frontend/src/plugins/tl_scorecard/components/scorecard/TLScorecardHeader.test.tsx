@@ -61,6 +61,40 @@ describe("TLScorecardHeader (mockup button hierarchy)", () => {
     expect(onTabChange).toHaveBeenCalledWith("evidence");
   });
 
+  it("keeps the guide button out of the Export + Visualize pair and lets the row wrap on tablets", async () => {
+    // Browser pass 2026-11-21: at 320px the guide button pushed Visualize off-screen, and
+    // at 768px (sidebar open) `sm:flex-nowrap` clipped the whole action cluster.
+    vi.mocked(userService.getMyTeamMembers).mockResolvedValue([]);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={qc}>
+          <TLScorecardHeader
+            tab="overview"
+            onTabChange={vi.fn()}
+            targets={{
+              tl_sync_per_year: 26,
+              reviews_per_year: 12,
+              one_on_one_pct: 100,
+              promotion_pct: 3,
+            }}
+          >
+            <div>child</div>
+          </TLScorecardHeader>
+        </QueryClientProvider>
+      </MemoryRouter>
+    );
+    const guide = screen.getByRole("button", { name: "How the scorecard is measured" });
+    const exportButton = screen.getByRole("button", { name: /export summary/i });
+    const visualize = screen.getByRole("link", { name: /visualize/i });
+    const pair = visualize.parentElement;
+    expect(pair).not.toBeNull();
+    expect(pair!.contains(exportButton)).toBe(true);
+    expect(pair!.contains(guide)).toBe(false);
+    const row = pair!.parentElement!;
+    expect(row.className).not.toMatch(/(^|\s)sm:flex-nowrap(\s|$)/);
+  });
+
   it("does not render the guide button when targets prop is missing", async () => {
     vi.mocked(userService.getMyTeamMembers).mockResolvedValue([]);
     renderHeader();

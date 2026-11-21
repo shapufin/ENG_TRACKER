@@ -134,26 +134,28 @@ export const TLScorecardHeader: React.FC<TLScorecardHeaderProps> = ({
         </span>
       }
       actions={
-        <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+        // Wraps below xl: with the sidebar open, a tablet has too little room for one line.
+        // The guide button is its own item so Export + Visualize stay an inseparable pair.
+        <div className="flex flex-wrap items-center gap-2 xl:flex-nowrap">
           {year != null && onYearChange && month != null && onMonthChange && (
             <div className="flex items-center gap-1.5 sm:gap-2">
               <ReportingMonthSelect year={year} month={month} onMonthChange={onMonthChange} />
               <ReportingYearSelect year={year} onYearChange={onYearChange} />
             </div>
           )}
+          {targets && (
+            <Button
+              type="button"
+              variant="outline"
+              size="control-icon-sm"
+              aria-label="How the scorecard is measured"
+              title="How the scorecard is measured"
+              onClick={() => setGuideOpen(true)}
+            >
+              <CircleHelp className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          )}
           <div className="flex items-center gap-2">
-            {targets && (
-              <Button
-                type="button"
-                variant="outline"
-                size="control-icon-sm"
-                aria-label="How the scorecard is measured"
-                title="How the scorecard is measured"
-                onClick={() => setGuideOpen(true)}
-              >
-                <CircleHelp className="h-4 w-4" aria-hidden="true" />
-              </Button>
-            )}
             <ExportButton month={month} />
             <Button size="sm" asChild>
               <Link to="/tl-scorecard/visualize">
