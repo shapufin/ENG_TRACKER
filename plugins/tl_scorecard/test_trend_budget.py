@@ -150,4 +150,5 @@ class TrendWindowedMetricsTests(TestCase):
         # 20 -> 22 on purpose (R7, 2026-11-17): approved leave and holidays are read once for the whole window.
         # 22 -> 24 on purpose (2026-11-19): the leave escalation reads holidays once for its pending range,
         # and the Manager-sync dates for the year are read once (YTD pace, every point shares them).
-        self.assertLessEqual(len(ctx), 24, [q['sql'][:80] for q in ctx.captured_queries])
+        # 24 -> 26 on purpose (2026-11-21): hire dates and onboarding meetings are read once for the whole window.
+        self.assertLessEqual(len(ctx), 26, [q['sql'][:80] for q in ctx.captured_queries])

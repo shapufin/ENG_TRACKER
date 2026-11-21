@@ -56,4 +56,32 @@ describe("recordsToCsv", () => {
     expect(csv).toContain("'-2+3");
     expect(csv).not.toMatch(/(^|,)=HYPERLINK/m);
   });
+
+  it("includes Onboarding discussed column in the header and values", () => {
+    expect(RECORDS_CSV_COLUMNS).toContain("Onboarding discussed");
+
+    const meetingsCsv = recordsToCsv(byKey("meetings"), [
+      {
+        id: 1,
+        occurred_on: "2026-10-04",
+        meeting_type: "one_on_one",
+        onboarding_discussed: true,
+      } as never,
+      {
+        id: 2,
+        occurred_on: "2026-10-05",
+        meeting_type: "one_on_one",
+        onboarding_discussed: false,
+      } as never,
+    ]);
+    expect(meetingsCsv).toContain("Yes");
+    expect(meetingsCsv).toContain("No");
+
+    const absenceCsv = recordsToCsv(byKey("absences"), [
+      { id: 3, absence_date: "2020-01-01", employee_name: "Jane" } as never,
+    ]);
+    const lines = absenceCsv.trim().split("\r\n");
+    // Non-meeting kind leaves the cell empty
+    expect(lines[1].endsWith(",")).toBe(true);
+  });
 });

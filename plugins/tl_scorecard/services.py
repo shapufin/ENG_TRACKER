@@ -41,6 +41,9 @@ from .models import (
 )
 from core.utils.metrics_freeze import is_frozen, is_past_freeze
 
+ONBOARDING_WINDOW_DAYS = 14
+ONBOARDING_TRACKING_START = date(2026, 12, 1)
+
 def reporting_period(month: date | None) -> date:
     """Normalize any date within a month to that month's first day — the
     one shared "as-of month" convention every later phase should reuse
@@ -161,6 +164,15 @@ class TrendWindow:
                 leader=leader, slot_date__gte=first_month, slot_date__lt=end,
             ).values_list('employee_id', 'slot_date', 'reason') if reason.strip()
         ]
+        self.hire_dates = _onboarding_hire_dates(team_member_ids)
+        # No lower bound: the single-month path has none either, so a 1-on-1 held
+        # before the start date counts the same in /trend and /scorecard.
+        self.onboarding_meetings = list(Meeting.objects.filter(
+            meeting_type='one_on_one',
+            onboarding_discussed=True,
+            counterparty_id__in=team_member_ids,
+            occurred_on__lt=end,
+        ))
 
     @staticmethod
     def _submitted_in(rows, month_start, month_end):
@@ -243,12 +255,22 @@ def ot_turnaround_metrics(leader_id: int, month: date, window: TrendWindow | Non
         )
     decided = [r for r in rows if r.status in ('approved', 'rejected') and r.approved_at]
     if not decided:
-        return {'decided_count': 0, 'avg_turnaround_days': None}
+        return {'decided_count': 0, 'avg_turnaround_days': None, 'within_sla': 0, 'pct_within_sla': None}
 
-    total_days = sum(_business_days_elapsed(r.submitted_at, r.approved_at) for r in decided)
+    if window is not None:
+        holidays = window.leave_holidays
+    else:
+        holidays = global_holiday_dates(
+            min(_local_date(r.submitted_at) for r in decided),
+            max(_local_date(r.approved_at) for r in decided),
+        )
+    decided_days = [_business_days_elapsed(r.submitted_at, r.approved_at, holidays) for r in decided]
+    within = sum(1 for d in decided_days if d <= OT_SLA_WORKING_DAYS)
     return {
         'decided_count': len(decided),
-        'avg_turnaround_days': round(total_days / len(decided), 1),
+        'avg_turnaround_days': round(sum(decided_days) / len(decided), 1),
+        'within_sla': within,
+        'pct_within_sla': round(within / len(decided) * 100, 1),
     }
 
 
@@ -354,15 +376,18 @@ ESCALATION_PIP_PENDING_DAYS = 14
 ESCALATION_ABSENCE_SLA_DAYS = 5
 
 PROMOTION_TARGET_PCT = 3.0
+OT_SLA_WORKING_DAYS = 2  # must equal plugins/engagement/sla.py SLA_WORKING_DAYS['overtime']
 # Scorecard targets per role code. The first role the viewer holds wins, in this order.
 # Line Manager (albanian_tl) is the KPI owner's set (Enri). A new role such as PM gets its
 # own entry here; a viewer with no listed role gets the Line Manager set.
 SCORECARD_TARGETS_BY_ROLE = {
     'albanian_tl': {
-        'tl_sync_per_year': 45,
+        'tl_sync_per_year': 26,
+        'tl_sync_full_year': 45,
         'reviews_per_year': 12,
         'one_on_one_pct': 100.0,
         'promotion_pct': PROMOTION_TARGET_PCT,
+        'ot_within_sla_pct': 100.0,
     },
 }
 DEFAULT_TARGET_ROLE = 'albanian_tl'
@@ -790,12 +815,143 @@ def _current_state_metrics(user, team_member_ids) -> dict:
 
 def month_blocks(user, month: date, team_member_ids, window: TrendWindow | None = None) -> dict:
     """The month-bound part of a scorecard: what the freeze stores."""
+    meetings = meeting_compliance_metrics(user, team_member_ids, month, window)
+    meetings.update(onboarding_metrics(user, month, window, member_ids=team_member_ids))
     return {
         'team_size': len(team_member_ids),
         'leave': leave_sla_metrics(team_member_ids, month, window),
         'overtime': ot_turnaround_metrics(user.id, month, window),
-        'meetings': meeting_compliance_metrics(user, team_member_ids, month, window),
+        'meetings': meetings,
     }
+
+
+def _onboarding_hire_dates(member_ids) -> dict[int, date | None]:
+    """user_id -> onboarding start: ``hire_date``, else the Tirane date of ``date_joined``
+    (a UTC ``.date()`` put a 00:30 sign-up on the previous day, and so in another month)."""
+    from django.contrib.auth.models import User
+    return {
+        user_id: hire_date or (_local_date(joined) if joined else None)
+        for user_id, hire_date, joined in User.objects.filter(id__in=member_ids).values_list(
+            'id', 'profile__hire_date', 'date_joined',
+        )
+    }
+
+
+def _onboarding_due_map(leader, month: date, window: TrendWindow | None = None,
+                        member_ids=None) -> dict[int, date]:
+    """Resolve user_id -> due date for team joiners whose 14-day window closes in month.
+
+    ``member_ids`` is the month's roster when the caller has one (the freeze job, a
+    past-month export); otherwise the leader's live scoreable roster.
+    """
+    month = reporting_period(month)
+    month_start, month_end = _month_bounds(month)
+
+    if window is not None:
+        starts = window.hire_dates
+    else:
+        starts = _onboarding_hire_dates(
+            scoreable_member_ids(leader) if member_ids is None else member_ids,
+        )
+
+    due_map = {}
+    for user_id, start in starts.items():
+        if start is None or start < ONBOARDING_TRACKING_START:
+            continue
+        due = start + timedelta(days=ONBOARDING_WINDOW_DAYS)
+        if month_start <= due < month_end:
+            due_map[user_id] = due
+    return due_map
+
+
+def onboarding_metrics(leader, month: date, window: TrendWindow | None = None,
+                       member_ids=None) -> dict:
+    """Joiners due within 14 calendar days of hire date whose due date falls in this month.
+
+    Cohort: scoreable_member_ids(leader) (link-only, keeps deactivated users; no is_active filter).
+    start = profile.hire_date or user.date_joined.date().
+    Skip start < ONBOARDING_TRACKING_START.
+    due = start + timedelta(days=ONBOARDING_WINDOW_DAYS).
+    Owned by the month `due` falls in (not the hire month).
+    Done = exists Meeting(meeting_type='one_on_one', counterparty=joiner, onboarding_discussed=True, occurred_on <= due).
+    No organizer filter.
+    pct = round(done / due * 100, 1), None when due == 0.
+    """
+    due_map = _onboarding_due_map(leader, month, window, member_ids)
+    due_count = len(due_map)
+    if not due_map:
+        return {'onboarding_due': 0, 'onboarding_done': 0, 'onboarding_pct': None}
+
+    done_user_ids = set()
+    if window is not None:
+        for m in window.onboarding_meetings:
+            if m.counterparty_id in due_map and m.occurred_on <= due_map[m.counterparty_id]:
+                done_user_ids.add(m.counterparty_id)
+    else:
+        meetings = Meeting.objects.filter(
+            meeting_type='one_on_one',
+            onboarding_discussed=True,
+            counterparty_id__in=due_map.keys(),
+        )
+        for m in meetings:
+            if m.occurred_on <= due_map[m.counterparty_id]:
+                done_user_ids.add(m.counterparty_id)
+
+    done_count = len(done_user_ids)
+    pct = round((done_count / due_count) * 100, 1) if due_count > 0 else None
+    return {
+        'onboarding_due': due_count,
+        'onboarding_done': done_count,
+        'onboarding_pct': pct,
+    }
+
+
+def onboarding_joiners(leader, month: date, member_ids=None) -> list[dict]:
+    """Joiners due in this month, with their meeting status for the Governance sheet.
+
+    Returns [{user_id, name, due, met_on: date | None, organizer_name: str | None}].
+    met_on = earliest tagged one_on_one (onboarding_discussed=True, counterparty=joiner) with occurred_on <= due, else None.
+    organizer_name = that meeting's organizer str, else None.
+    Names and 1-on-1 dates: callers serve this to the leader and staff only.
+    """
+    due_map = _onboarding_due_map(leader, month, member_ids=member_ids)
+    if not due_map:
+        return []
+
+    from django.contrib.auth.models import User
+    users = {
+        u.id: u
+        for u in User.objects.filter(id__in=due_map.keys())
+    }
+
+    meetings = list(
+        Meeting.objects.filter(
+            meeting_type='one_on_one',
+            onboarding_discussed=True,
+            counterparty_id__in=due_map.keys(),
+        ).select_related('organizer').order_by('occurred_on', 'id')
+    )
+
+    earliest_meeting = {}
+    for m in meetings:
+        cid = m.counterparty_id
+        if cid in due_map and m.occurred_on <= due_map[cid]:
+            if cid not in earliest_meeting:
+                earliest_meeting[cid] = m
+
+    joiners = []
+    for user_id in sorted(due_map.keys(), key=lambda uid: (due_map[uid], _pack_name(users.get(uid)) or '')):
+        user = users.get(user_id)
+        due = due_map[user_id]
+        m = earliest_meeting.get(user_id)
+        joiners.append({
+            'user_id': user_id,
+            'name': _pack_name(user) if user else str(user_id),
+            'due': due,
+            'met_on': m.occurred_on if m else None,
+            'organizer_name': _pack_name(m.organizer) if m and m.organizer else None,
+        })
+    return joiners
 
 
 def snapshot_blocks(user, month: date, snapshots: dict | None = None) -> dict | None:

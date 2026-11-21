@@ -11,6 +11,8 @@ export interface LeaveSla {
 export interface OvertimeTurnaround {
   decided_count: number;
   avg_turnaround_days: number | null;
+  within_sla?: number;
+  pct_within_sla?: number | null;
 }
 
 export interface MeetingCompliance {
@@ -22,6 +24,9 @@ export interface MeetingCompliance {
   team_meetings_held: number;
   team_meetings_with_hrbp: number;
   team_meeting_notes_within_24h: number;
+  onboarding_due?: number | null;
+  onboarding_done?: number | null;
+  onboarding_pct?: number | null;
 }
 
 export interface IdleMetrics {
@@ -64,9 +69,11 @@ export interface HbprCadenceBanner {
 /** Targets the scorecard is measured against, served by the backend (Line Manager KPI). */
 export interface ScorecardTargets {
   tl_sync_per_year: number;
+  tl_sync_full_year?: number;
   reviews_per_year: number;
   one_on_one_pct: number;
   promotion_pct: number;
+  ot_within_sla_pct?: number;
 }
 
 export interface Scorecard {
@@ -185,6 +192,7 @@ export interface Meeting {
   recorded_by?: number | null;
   recorded_by_name?: string | null;
   recorded_at?: string;
+  onboarding_discussed?: boolean;
 }
 
 /** Weekly check-in logged against an idle flag (`status_updates` on the serializer). */

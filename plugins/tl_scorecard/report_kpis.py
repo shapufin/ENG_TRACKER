@@ -21,6 +21,8 @@ TARGETS = {
     'pip_pending': 0,
     'absences_breached': 0,
     'escalations': 0,
+    'ot_within_sla_pct': 100.0,
+    'onboarding_pct': 100.0,
 }
 
 ON_TRACK = 'On track'
@@ -62,14 +64,14 @@ def reviews_target(month: str | None, targets: dict | None = None) -> int:
     return per_year * date.fromisoformat(month).month // 12
 
 
-def kpi_rows(scorecard, *, include_leave_overtime=True) -> list[dict]:
+def kpi_rows(scorecard, *, include_restricted=True) -> list[dict]:
     """Area | Metric | Value | Target | Status rows, in display order.
 
     ``kind`` tells the builders how to format ``value`` and ``target``:
     ``pct`` (a percentage already multiplied by 100), ``count`` or ``num``.
     Rows without a target carry ``target=None`` and status ``—``.
-    ``include_leave_overtime=False`` drops the Leave and Overtime areas for a
-    viewer the leave and overtime surfaces are denied to (HBPR-only).
+    ``include_restricted=False`` drops the Leave, Overtime and Onboarding rows for a
+    viewer those surfaces are denied to (HBPR-only).
     """
     leave = scorecard['leave']
     meetings = scorecard['meetings']
@@ -91,12 +93,17 @@ def kpi_rows(scorecard, *, include_leave_overtime=True) -> list[dict]:
             'target': target, 'status': status,
         }
 
+    onboarding_pct = meetings.get('onboarding_pct')
     rows = [
         row('Leave', 'Leave decided within 2 business days', leave['pct_within_2_days'], 'pct'),
         row('Leave', 'Pending leave at month-end', leave['pending_at_month_end'], 'count'),
         row('Overtime', 'OT approval turnaround (days)', scorecard['overtime']['avg_turnaround_days'], 'num'),
+        row('Overtime', 'OT decided within 2 working days', scorecard['overtime'].get('pct_within_sla'),
+            'pct', targets.get('ot_within_sla_pct', TARGETS['ot_within_sla_pct'])),
         row('Meetings', '1:1 compliance', meetings['one_on_one_compliance_pct'], 'pct',
             targets['one_on_one_pct']),
+        row('Meetings', 'Onboarding 1-on-1s within 14 days', onboarding_pct, 'pct',
+            TARGETS['onboarding_pct'] if onboarding_pct is not None else None),
         row('Meetings', 'Manager syncs', meetings['tl_sync_count'], 'count'),
         row('Meetings', 'Team meetings with HRBP', meetings['team_meetings_with_hrbp'], 'count'),
         row('Reviews', f'Management reviews (YTD, pro-rata of {targets["reviews_per_year"]}/year)',
@@ -110,9 +117,13 @@ def kpi_rows(scorecard, *, include_leave_overtime=True) -> list[dict]:
             targets['promotion_pct']),
         row('Risk', 'Escalation risks', escalations, 'count', TARGETS['escalations']),
     ]
-    if include_leave_overtime:
+    if include_restricted:
         return rows
-    return [r for r in rows if r['area'] not in ('Leave', 'Overtime')]
+    return [
+        r for r in rows
+        if r['area'] not in ('Leave', 'Overtime')
+        and r['metric'] != 'Onboarding 1-on-1s within 14 days'
+    ]
 
 
 def format_value(value, kind) -> str:

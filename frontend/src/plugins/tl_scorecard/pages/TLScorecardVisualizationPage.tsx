@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   Area,
-  AreaChart,
   Bar,
   BarChart,
   Cell,
@@ -28,6 +27,7 @@ import {
   ShieldAlert,
   TrendingUp,
   TriangleAlert,
+  UserPlus,
   Users,
 } from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
@@ -64,6 +64,7 @@ const meetingCadenceConfig: ChartConfig = {
 
 const oneOnOneConfig: ChartConfig = {
   one_on_one: { label: "1:1 compliance (%)", color: "hsl(var(--chart-1))" },
+  onboarding: { label: "Onboarding 1-on-1s (%)", color: "hsl(var(--chart-2))" },
 };
 
 const notesConfig: ChartConfig = {
@@ -188,8 +189,9 @@ const TLScorecardVisualization: React.FC = () => {
   const oneOnOneData = trend.map((p) => ({
     month: p.month,
     one_on_one: p.meetings.one_on_one_compliance_pct,
+    onboarding: p.meetings.onboarding_pct ?? null,
   }));
-  const hasOneOnOne = oneOnOneData.some((d) => d.one_on_one !== null);
+  const hasOneOnOne = oneOnOneData.some((d) => d.one_on_one !== null || d.onboarding !== null);
   const notesData = trend.map((p) => ({
     month: p.month,
     team_meetings_held: p.meetings.team_meetings_held,
@@ -274,6 +276,14 @@ const TLScorecardVisualization: React.FC = () => {
                 iconTone="info"
               />
             )}
+            {latest.meetings.onboarding_pct != null && (
+              <StatCard
+                label="Onboarding 1-on-1s within 14 days"
+                value={`${latest.meetings.onboarding_pct}%`}
+                icon={UserPlus}
+                iconTone="info"
+              />
+            )}
             <StatCard
               label="Team meetings held"
               value={latest.meetings.team_meetings_held}
@@ -344,7 +354,7 @@ const TLScorecardVisualization: React.FC = () => {
             description="Share of planned employee one-on-ones held, with the 100% target"
           >
             <ChartContainer config={oneOnOneConfig} className={CHART_CLASS}>
-              <AreaChart data={oneOnOneData} margin={CHART_MARGIN}>
+              <ComposedChart data={oneOnOneData} margin={CHART_MARGIN}>
                 <defs>
                   <linearGradient id="vizOneOnOneFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.4} />
@@ -360,6 +370,7 @@ const TLScorecardVisualization: React.FC = () => {
                 />
                 <YAxis domain={[0, 100]} tickLine={false} axisLine={false} />
                 {monthTooltip}
+                <ChartLegend content={<ChartLegendContent />} />
                 <ReferenceLine
                   y={100}
                   stroke="hsl(var(--muted-foreground))"
@@ -373,7 +384,15 @@ const TLScorecardVisualization: React.FC = () => {
                   strokeWidth={3}
                   connectNulls
                 />
-              </AreaChart>
+                <Line
+                  type="monotone"
+                  dataKey="onboarding"
+                  stroke="var(--color-onboarding)"
+                  strokeWidth={2.5}
+                  dot={{ r: 3 }}
+                  connectNulls
+                />
+              </ComposedChart>
             </ChartContainer>
           </ChartSection>
         )}

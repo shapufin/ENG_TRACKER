@@ -112,6 +112,7 @@ export const tlScorecardService = {
     occurred_on: string;
     notes: string;
     reference_url?: string;
+    onboarding_discussed?: boolean;
   }) => api.post(`${BASE}/meetings/`, data),
 
   createIdleFlag: (data: {

@@ -268,12 +268,47 @@ class HbprExportScopeTests(HbprScorecardBase):
         self.assertIn('1:1 compliance', text)
         self.assertNotIn('Leave decided within 2 business days', text)
         self.assertNotIn('Pending leave at month-end', text)
-        self.assertNotIn('Overtime', text)
+        # Case-insensitive: the cover's "Targets:" sentence must not name the overtime target either.
+        self.assertNotIn('overtime', text.lower())
 
     def test_tl_xlsx_export_keeps_leave_and_overtime_kpis(self):
         text = self._xlsx_text(self._export_body(self.tl, 'xlsx'))
         self.assertIn('Leave decided within 2 business days', text)
         self.assertIn('OT approval turnaround', text)
+
+    def test_hbpr_with_another_role_never_gets_onboarding_joiners(self):
+        """Final review 2026-11-21: the joiner list was gated on is_hbpr_only, so an
+        HBPR who also holds HR got names and 1-on-1 dates. Owner or staff only."""
+        from datetime import timedelta
+        from unittest import mock
+
+        from core.utils.timezone_local import business_today
+
+        from . import services
+        from .models import Meeting
+
+        Role.objects.get_or_create(code='hr', defaults={'name': 'hr'})
+        assign_role(self.hbpr, 'hr')
+        joiner = _make_user('onb_joiner_sc', first_name='Zelda', last_name='Joiner')
+        start = business_today().replace(day=1)
+        joiner.profile.albanian_tl = self.tl
+        joiner.profile.hire_date = start
+        joiner.profile.save()
+        Meeting.objects.create(
+            organizer=self.tl, counterparty=joiner, meeting_type='one_on_one',
+            occurred_on=start + timedelta(days=2), onboarding_discussed=True,
+        )
+        with mock.patch.object(services, 'ONBOARDING_TRACKING_START', date(2020, 1, 1)):
+            owner_text = self._xlsx_text(self._export_body(self.tl, 'xlsx'))
+            hbpr_hr_text = self._xlsx_text(self._export_body(self.hbpr, 'xlsx'))
+        self.assertIn('Zelda', owner_text)  # control: the owner's workbook lists the joiner
+        self.assertNotIn('Zelda', hbpr_hr_text)
+
+    def test_hbpr_export_has_no_onboarding_row(self):
+        xlsx_text = self._xlsx_text(self._export_body(self.hbpr, 'xlsx'))
+        self.assertNotIn('Onboarding', xlsx_text)
+        pdf_text = self._pdf_text(self._export_body(self.hbpr, 'pdf'))
+        self.assertNotIn('Onboarding', pdf_text)
 
     def test_epr_cycles_are_limited_to_the_subject_scope(self):
         from datetime import date as _date
@@ -440,6 +475,13 @@ class HbprOneOnOneLeakTests(HbprScorecardBase):
         # The fraction behind the percentage is one-on-one data too.
         self.assertIsNone(resp.data['meetings']['one_on_one_compliant'])
         self.assertIsNone(resp.data['meetings']['one_on_one_eligible'])
+
+    def test_hbpr_payload_masks_onboarding(self):
+        resp = self._get('scorecard', self.hbpr)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(resp.data['meetings']['onboarding_due'])
+        self.assertIsNone(resp.data['meetings']['onboarding_done'])
+        self.assertIsNone(resp.data['meetings']['onboarding_pct'])
 
     def test_scorecard_keeps_one_on_one_compliance_for_owner_and_staff(self):
         for user in (self.tl, self.staff):

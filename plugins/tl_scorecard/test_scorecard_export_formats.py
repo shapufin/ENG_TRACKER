@@ -1,6 +1,7 @@
 """TL scorecard summary export: XLSX (default) and PDF branches of one endpoint."""
 import io
 from datetime import date
+from unittest import mock
 
 from django.core.management import call_command
 from django.test import SimpleTestCase, TestCase
@@ -11,6 +12,7 @@ from rest_framework.test import APIRequestFactory, force_authenticate
 from apps.permissions.models import Role, UserRole
 from core.utils.csv_injection_assert import PAYLOAD, assert_xlsx_neutralised
 
+from . import services
 from .excel_export import build_workbook_bytes
 from .report_kpis import kpi_rows, status_for
 from .models import Absence, PIPRecord
@@ -82,6 +84,119 @@ class SummaryExportFormatTests(TestCase):
         row = _find_row(wb['Summary'], '1:1 compliance')
         self.assertIsInstance(row[2].value, (int, float))
         self.assertNotIsInstance(row[2].value, bool)
+
+    def test_summary_has_ot_within_sla_row(self):
+        scorecard = build_scorecard(self.leader, date.today())
+        governance = {'open_pips': [], 'pending_promotions': [], 'epr_cycles': [], 'open_absences': []}
+
+        for pct, expected_status in [(100.0, 'On track'), (90.0, 'Watch'), (79.0, 'Off track')]:
+            scorecard['overtime']['pct_within_sla'] = pct
+            wb = load_workbook(io.BytesIO(build_workbook_bytes(scorecard, governance, 'Oct 2026')))
+            ws = wb['Summary']
+            row_turnaround = _find_row(ws, 'OT approval turnaround (days)')
+            row_within = _find_row(ws, 'OT decided within 2 working days')
+            self.assertEqual(row_turnaround[3].value, '—')
+            self.assertEqual(row_turnaround[4].value, '—')
+            self.assertEqual(row_within[0].row, row_turnaround[0].row + 1)
+            self.assertEqual(row_within[2].value, pct)
+            self.assertEqual(row_within[3].value, 100.0)
+            self.assertEqual(row_within[4].value, expected_status)
+
+    def test_summary_onboarding_row(self):
+        scorecard = build_scorecard(self.leader, date.today())
+        governance = {'open_pips': [], 'pending_promotions': [], 'epr_cycles': [], 'open_absences': []}
+
+        # 1) When onboarding_pct is 100%: green at 100%
+        scorecard['meetings']['onboarding_pct'] = 100.0
+        scorecard['meetings']['onboarding_due'] = 2
+        scorecard['meetings']['onboarding_done'] = 2
+        wb = load_workbook(io.BytesIO(build_workbook_bytes(scorecard, governance, 'Oct 2026')))
+        ws = wb['Summary']
+        row_1on1 = _find_row(ws, '1:1 compliance')
+        row_onb = _find_row(ws, 'Onboarding 1-on-1s within 14 days')
+        self.assertEqual(row_onb[0].row, row_1on1[0].row + 1)
+        self.assertEqual(row_onb[2].value, 100.0)
+        self.assertEqual(row_onb[3].value, 100.0)
+        self.assertEqual(row_onb[4].value, 'On track')
+
+        # 2) With no joiners (onboarding_pct is None): — Value and Target
+        scorecard['meetings']['onboarding_pct'] = None
+        scorecard['meetings']['onboarding_due'] = 0
+        scorecard['meetings']['onboarding_done'] = 0
+        wb2 = load_workbook(io.BytesIO(build_workbook_bytes(scorecard, governance, 'Oct 2026')))
+        ws2 = wb2['Summary']
+        row_onb2 = _find_row(ws2, 'Onboarding 1-on-1s within 14 days')
+        self.assertEqual(row_onb2[2].value, '—')
+        self.assertEqual(row_onb2[3].value, '—')
+        self.assertEqual(row_onb2[4].value, '—')
+
+    def test_trend_sheet_has_onboarding_column_and_dash_when_no_joiners(self):
+        resp = self._get({'file_format': 'xlsx'})
+        self.assertEqual(resp.status_code, 200)
+        wb = load_workbook(io.BytesIO(resp.content))
+        ws = wb['Trend']
+        header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        self.assertIn('Onboarding 1-on-1s', header_row)
+        col_idx = header_row.index('Onboarding 1-on-1s')
+        data_rows = [row for row in ws.iter_rows(min_row=2, values_only=True) if row[0] is not None]
+        self.assertTrue(len(data_rows) > 0)
+        for row in data_rows:
+            self.assertEqual(row[col_idx], '—')
+
+    @mock.patch.object(services, 'ONBOARDING_TRACKING_START', date(2025, 1, 1))
+    def test_governance_sheet_has_onboarding_section_with_met_and_missed_joiners(self):
+        from .models import Meeting
+
+        met_joiner = _make_user('joiner_met_fmt', first_name='Joiner', last_name='Met')
+        met_joiner.profile.italian_tl = self.leader
+        met_joiner.profile.hire_date = date(2026, 9, 20)  # due = 2026-10-04 (October)
+        met_joiner.profile.save()
+
+        missed_joiner = _make_user('joiner_missed_fmt', first_name='Joiner', last_name='Missed')
+        missed_joiner.profile.italian_tl = self.leader
+        missed_joiner.profile.hire_date = date(2026, 9, 25)  # due = 2026-10-09 (October)
+        missed_joiner.profile.save()
+
+        Meeting.objects.create(
+            organizer=self.leader,
+            counterparty=met_joiner,
+            meeting_type='one_on_one',
+            onboarding_discussed=True,
+            occurred_on=date(2026, 10, 2),
+        )
+
+        resp = self._get({'file_format': 'xlsx', 'month': '2026-10-01'})
+        self.assertEqual(resp.status_code, 200)
+        wb = load_workbook(io.BytesIO(resp.content))
+        ws = wb['Governance']
+
+        rows = list(ws.iter_rows(values_only=True))
+        onboarding_header_idx = None
+        for i, row in enumerate(rows):
+            if row and row[0] == 'Employee' and len(row) >= 3 and row[1] == 'Onboarding date' and row[2] == 'With':
+                if i > 0 and rows[i - 1] and rows[i - 1][0] == 'Onboarding':
+                    onboarding_header_idx = i
+                    break
+
+        self.assertIsNotNone(onboarding_header_idx, 'Onboarding section header not found in Governance sheet')
+        data_rows = rows[onboarding_header_idx + 1:onboarding_header_idx + 3]
+        met_row = next((r for r in data_rows if 'Joiner Met' in str(r[0])), None)
+        missed_row = next((r for r in data_rows if 'Joiner Missed' in str(r[0])), None)
+        self.assertIsNotNone(met_row, f'Joiner Met row not found in {data_rows}')
+        self.assertIsNotNone(missed_row, f'Joiner Missed row not found in {data_rows}')
+
+        self.assertEqual(met_row[1], '2026-10-02')
+        self.assertEqual(met_row[2], self.leader.get_full_name() or self.leader.username)
+
+        self.assertEqual(missed_row[1], '—')
+        self.assertEqual(missed_row[2], '—')
+
+    def test_pdf_export_contains_meetings_column_header_and_cover_phrase(self):
+        resp = self._get({'file_format': 'pdf'})
+        self.assertEqual(resp.status_code, 200)
+        text = _pdf_text(resp.content)
+        self.assertIn('onboarding 1-on-1s within 14 days', text)
+        self.assertIn('Onboarding 1-on-1s', text)
 
     def test_unknown_file_format_is_rejected(self):
         resp = self._get({'file_format': 'docx'})
@@ -186,6 +301,21 @@ class HbprExportFormatTests(HbprScorecardBase):
         pdf_text = _pdf_text(self._export('pdf').content)
         self.assertNotIn('ex_member_formats', pdf_text)
         self.assertIn(self.member.username, pdf_text)
+
+    def test_hbpr_export_has_no_onboarding_text_anywhere(self):
+        for fmt in ('xlsx', 'pdf'):
+            resp = self._export(fmt)
+            self.assertEqual(resp.status_code, 200)
+            if fmt == 'xlsx':
+                wb = load_workbook(io.BytesIO(resp.content))
+                for name in wb.sheetnames:
+                    for row in wb[name].iter_rows(values_only=True):
+                        for cell in row:
+                            if cell:
+                                self.assertNotIn('onboarding', str(cell).lower())
+            else:
+                text = _pdf_text(resp.content)
+                self.assertNotIn('onboarding', text.lower())
 
 
 class ReportKpiStatusTests(SimpleTestCase):

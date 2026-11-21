@@ -51,23 +51,24 @@ def _at(day, hour=8):
 class DeadlineRuleTests(TestCase):
     """Pure deadline arithmetic: Mon-Fri working days, Tirana local time."""
 
-    def test_overtime_gets_five_working_days_end_of_day(self):
+    def test_overtime_gets_two_working_days_end_of_day(self):
         fri = date(2026, 10, 9)  # Friday
         deadline = deadline_for('overtime', _at(fri, 10), holidays=set())
-        self.assertEqual(deadline, datetime(2026, 10, 16, 23, 59, 59, 999999, tzinfo=business_tz()))
+        self.assertEqual(deadline, datetime(2026, 10, 13, 23, 59, 59, 999999, tzinfo=business_tz()))
 
     def test_public_holiday_moves_overtime_deadline_one_working_day(self):
         fri = date(2026, 10, 9)
         holidays = {date(2026, 10, 12)}  # Monday holiday
         deadline = deadline_for('overtime', _at(fri, 10), holidays=holidays)
-        self.assertEqual(deadline.date(), date(2026, 10, 19))
+        self.assertEqual(deadline.date(), date(2026, 10, 14))
 
-    def test_standby_uses_the_same_five_day_rule(self):
+    def test_overtime_is_two_days_and_standby_stays_five(self):
+        # KPI goal covers overtime only; standby SLA remains 5 working days.
         fri = date(2026, 10, 9)
-        self.assertEqual(
-            deadline_for('standby', _at(fri, 10), holidays=set()),
-            deadline_for('overtime', _at(fri, 10), holidays=set()),
-        )
+        ot_deadline = deadline_for('overtime', _at(fri, 10), holidays=set())
+        standby_deadline = deadline_for('standby', _at(fri, 10), holidays=set())
+        self.assertEqual(ot_deadline.date(), date(2026, 10, 13))
+        self.assertEqual(standby_deadline.date(), date(2026, 10, 16))
 
     def test_leave_submitted_on_saturday_is_due_monday_end_of_day(self):
         sat = date(2026, 10, 10)

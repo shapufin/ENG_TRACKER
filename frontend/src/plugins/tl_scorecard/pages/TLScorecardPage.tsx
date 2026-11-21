@@ -31,6 +31,7 @@ import type {
   EPRStage,
   HbprCadencePayload,
   HbprEvidencePayload,
+  Scorecard,
 } from "../types/tlScorecard";
 
 const Skeleton: React.FC = () => (
@@ -339,6 +340,7 @@ const TLScorecardAuthoring: React.FC = () => {
         subtitle="Your team's leave, EPR, governance and pay at a glance."
         tab={tab}
         onTabChange={setTab}
+        targets={scorecardQuery.data?.targets}
       >
         <TeamTab />
       </TLScorecardHeader>
@@ -351,6 +353,7 @@ const TLScorecardAuthoring: React.FC = () => {
         subtitle="Historical activity log, compliance benchmarks, and employee touchpoints recorded by team leaders."
         tab={tab}
         onTabChange={setTab}
+        targets={scorecardQuery.data?.targets}
       >
         <RecordsTab onCreateRecord={openCreateDialog} />
         {createDialogs}
@@ -371,6 +374,7 @@ const TLScorecardAuthoring: React.FC = () => {
         subtitle="Cadence meetings, EPR participation and the year-end summary for your HBPR partnership."
         tab={tab}
         onTabChange={setTab}
+        targets={scorecardQuery.data?.targets}
       >
         <ReportingYearSelect year={year} onYearChange={setYear} />
         <HbprPartnershipSection
@@ -401,7 +405,11 @@ const TLScorecardAuthoring: React.FC = () => {
 
   if (scorecardQuery.isLoading) {
     return (
-      <TLScorecardHeader tab={tab} onTabChange={setTab}>
+      <TLScorecardHeader
+        tab={tab}
+        onTabChange={setTab}
+        targets={(scorecardQuery.data as Scorecard | undefined)?.targets}
+      >
         <Skeleton />
       </TLScorecardHeader>
     );
@@ -409,7 +417,11 @@ const TLScorecardAuthoring: React.FC = () => {
 
   if (scorecardQuery.isError || !scorecardQuery.data) {
     return (
-      <TLScorecardHeader tab={tab} onTabChange={setTab}>
+      <TLScorecardHeader
+        tab={tab}
+        onTabChange={setTab}
+        targets={(scorecardQuery.data as Scorecard | undefined)?.targets}
+      >
         <ErrorCard
           title="Couldn't load your scorecard"
           message="Check your connection and try again."
@@ -434,6 +446,7 @@ const TLScorecardAuthoring: React.FC = () => {
       year={year}
       onMonthChange={setMonth}
       onYearChange={setYear}
+      targets={scorecardQuery.data?.targets}
     >
       <HbprCadenceMissingBanner
         assignment={scorecard.hbpr_cadence}

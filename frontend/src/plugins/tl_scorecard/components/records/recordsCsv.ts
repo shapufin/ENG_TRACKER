@@ -1,7 +1,16 @@
 import type { KindConfig, RecordRow } from "./recordKinds";
+import type { Meeting } from "../../types/tlScorecard";
 
 /** Table column order, mirrored 1:1 in the CSV so the file matches the list. */
-export const RECORDS_CSV_COLUMNS = ["ID", "Date", "Type", "With", "Focus", "State"] as const;
+export const RECORDS_CSV_COLUMNS = [
+  "ID",
+  "Date",
+  "Type",
+  "With",
+  "Focus",
+  "State",
+  "Onboarding discussed",
+] as const;
 
 /** Excel/Sheets run a cell starting with these as a formula; prefix `'` so free text stays text. */
 const neutralise = (value: string): string => (/^\s*[=+\-@\t\r]/.test(value) ? `'${value}` : value);
@@ -17,6 +26,8 @@ const escape = (value: string): string =>
 export const recordsToCsv = (config: KindConfig<RecordRow>, rows: RecordRow[]): string => {
   const lines = [RECORDS_CSV_COLUMNS.join(",")];
   for (const row of rows) {
+    const onboardingValue =
+      config.key === "meetings" ? ((row as Meeting).onboarding_discussed ? "Yes" : "No") : "";
     lines.push(
       [
         String(row.id),
@@ -26,6 +37,7 @@ export const recordsToCsv = (config: KindConfig<RecordRow>, rows: RecordRow[]): 
           config.person(row),
           config.focus(row) ?? "",
           config.state(row).label,
+          onboardingValue,
         ].map(neutralise),
       ]
         .map(escape)

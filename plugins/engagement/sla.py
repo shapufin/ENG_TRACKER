@@ -4,7 +4,8 @@ Deadline rules for TL engagement scoring.
 - Leave: decided by the end of the same working day it was submitted. A request
   submitted on a weekend or public holiday is due at the end of the next
   working day.
-- Overtime / standby: decided within 5 working days after the submission date.
+- Overtime: decided within 2 working days after the submission date.
+- Standby: decided within 5 working days after the submission date.
 - Working day = Mon-Fri, not a public holiday in the TL's holiday set.
 - Deadlines are end-of-day in the business timezone (GlobalSettings, default
   Europe/Tirane), so the Django TIME_ZONE setting (UTC) is deliberately not used.
@@ -14,7 +15,9 @@ Pure functions only: no database access. The services layer loads holidays.
 from datetime import datetime, time, timedelta
 
 from core.utils.timezone_local import business_tz
-SLA_WORKING_DAYS = {'overtime': 5, 'standby': 5}
+
+# Overtime SLA must match plugins/tl_scorecard/services.py OT_SLA_WORKING_DAYS
+SLA_WORKING_DAYS = {'overtime': 2, 'standby': 5}
 RESPONSIVENESS_FULL_CREDIT = 0.25
 RESPONSIVENESS_ZERO_CREDIT = 1.0
 

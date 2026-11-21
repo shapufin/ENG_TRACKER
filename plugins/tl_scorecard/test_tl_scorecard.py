@@ -134,18 +134,31 @@ class TLScorecardServiceTests(TestCase):
             )
         data = build_scorecard(self.leader, date(2026, 3, 1))
         self.assertEqual(data['tl_sync_ytd'], 2)  # April is outside March's YTD
-        self.assertEqual(data['tl_sync_expected_ytd'], 12)  # ceil(45 * 3 / 12)
+        self.assertEqual(data['tl_sync_expected_ytd'], 7)  # ceil(26 * 3 / 12)
+
+    def test_tl_sync_pace_by_month(self):
+        # Month -> expected: 1->3, 3->7, 6->13, 12->26
+        expected_by_month = {1: 3, 3: 7, 6: 13, 12: 26}
+        for month_num, expected in expected_by_month.items():
+            data = build_scorecard(self.leader, date(2026, month_num, 1))
+            self.assertEqual(
+                data['tl_sync_expected_ytd'],
+                expected,
+                f"Month {month_num} expected {expected}, got {data['tl_sync_expected_ytd']}",
+            )
 
     def test_build_scorecard_exposes_the_targets_it_is_measured_against(self):
         data = build_scorecard(self.leader, self.month_start)
         self.assertEqual(data['targets'], {
-            'tl_sync_per_year': 45, 'reviews_per_year': 12,
+            'tl_sync_per_year': 26, 'tl_sync_full_year': 45, 'reviews_per_year': 12,
             'one_on_one_pct': 100.0, 'promotion_pct': 3.0,
+            'ot_within_sla_pct': 100.0,
         })
 
     def test_targets_follow_the_viewers_role(self):
         pm_targets = {
-            'tl_sync_per_year': 24, 'reviews_per_year': 4, 'one_on_one_pct': 100.0, 'promotion_pct': 3.0,
+            'tl_sync_per_year': 24, 'tl_sync_full_year': 45, 'reviews_per_year': 4, 'one_on_one_pct': 100.0, 'promotion_pct': 3.0,
+            'ot_within_sla_pct': 100.0,
         }
         with mock.patch.dict('plugins.tl_scorecard.services.SCORECARD_TARGETS_BY_ROLE', {'pm': pm_targets}):
             _assign_tl_role(self.leader, 'pm')
@@ -155,7 +168,8 @@ class TLScorecardServiceTests(TestCase):
 
     def test_targets_fall_back_to_the_line_manager_kpi_without_a_mapped_role(self):
         data = build_scorecard(self.leader, date(2026, 3, 1))
-        self.assertEqual(data['targets']['tl_sync_per_year'], 45)
+        self.assertEqual(data['targets']['tl_sync_per_year'], 26)
+        self.assertEqual(data['targets']['tl_sync_full_year'], 45)
         self.assertEqual(data['targets']['reviews_per_year'], 12)
 
     def test_ot_turnaround_average(self):
@@ -168,6 +182,47 @@ class TLScorecardServiceTests(TestCase):
         result = ot_turnaround_metrics(self.leader.id, self.month_start)
         self.assertEqual(result['decided_count'], 0)
         self.assertIsNone(result['avg_turnaround_days'])
+
+    def test_ot_pct_within_sla_counts_rows_at_or_under_two_business_days(self):
+        # 3 decided rows at 1, 2 and 3 business days -> within_sla == 2, pct_within_sla == 66.7
+        t_sub = _datetime(2026, 3, 2, 10, 0, tzinfo=_utc.utc)
+        _overtime(self.member, t_sub, approved_at=_datetime(2026, 3, 3, 10, 0, tzinfo=_utc.utc))
+        _overtime(self.member, t_sub, approved_at=_datetime(2026, 3, 4, 10, 0, tzinfo=_utc.utc))
+        _overtime(self.member, t_sub, approved_at=_datetime(2026, 3, 5, 10, 0, tzinfo=_utc.utc))
+        result = ot_turnaround_metrics(self.leader.id, date(2026, 3, 1))
+        self.assertEqual(result['decided_count'], 3)
+        self.assertEqual(result['within_sla'], 2)
+        self.assertEqual(result['pct_within_sla'], 66.7)
+
+    def test_ot_sla_does_not_charge_a_public_holiday(self):
+        # Submitted Fri, approved Tue, Monday a global PublicHoliday -> that row counts as within (1 business day)
+        PublicHoliday.objects.create(name='Global holiday', date=date(2026, 3, 9))
+        t_sub = _datetime(2026, 3, 6, 10, 0, tzinfo=_utc.utc)
+        t_app = _datetime(2026, 3, 10, 10, 0, tzinfo=_utc.utc)
+        _overtime(self.member, t_sub, approved_at=t_app)
+        result = ot_turnaround_metrics(self.leader.id, date(2026, 3, 1))
+        self.assertEqual(result['decided_count'], 1)
+        self.assertEqual(result['within_sla'], 1)
+        self.assertEqual(result['pct_within_sla'], 100.0)
+
+    def test_ot_sla_holiday_set_spans_the_new_year(self):
+        # Submitted 31 Dec, approved 4 Jan, 1 Jan a holiday -> elapsed excludes 1 Jan
+        PublicHoliday.objects.create(name='New Year', date=date(2026, 1, 1))
+        t_sub = _datetime(2025, 12, 31, 10, 0, tzinfo=_utc.utc)
+        t_app = _datetime(2026, 1, 4, 10, 0, tzinfo=_utc.utc)
+        _overtime(self.member, t_sub, approved_at=t_app)
+        result = ot_turnaround_metrics(self.leader.id, date(2025, 12, 1))
+        self.assertEqual(result['decided_count'], 1)
+        self.assertEqual(result['within_sla'], 1)
+        self.assertEqual(result['pct_within_sla'], 100.0)
+        self.assertEqual(result['avg_turnaround_days'], 1.0)
+
+    def test_ot_sla_with_no_decided_rows_is_none(self):
+        result = ot_turnaround_metrics(self.leader.id, self.month_start)
+        self.assertEqual(result['decided_count'], 0)
+        self.assertIsNone(result['avg_turnaround_days'])
+        self.assertEqual(result['within_sla'], 0)
+        self.assertIsNone(result['pct_within_sla'])
 
     def test_build_scorecard_resolves_team_size_from_profile(self):
         data = build_scorecard(self.leader, self.month_start)
@@ -238,6 +293,210 @@ class TLScorecardServiceTests(TestCase):
         self.member.profile.save()
         result = seniority_ratio({self.member.id})
         self.assertEqual(result, {'junior': 0, 'mid': 0, 'senior': 1, 'unset': 0})
+
+    def test_onboarding_hire_on_28th_is_owned_by_the_due_month(self):
+        from . import services
+        leader = _make_user('leader_28th')
+        joiner = _make_user('joiner_28th')
+        joiner.profile.italian_tl = leader
+        joiner.profile.hire_date = date(2026, 12, 28)
+        joiner.profile.save()
+        with mock.patch.object(services, 'ONBOARDING_TRACKING_START', date(2025, 1, 1)):
+            dec = services.onboarding_metrics(leader, date(2026, 12, 1))
+            jan = services.onboarding_metrics(leader, date(2027, 1, 1))
+        self.assertEqual(dec['onboarding_due'], 0)
+        self.assertEqual(dec['onboarding_done'], 0)
+        self.assertIsNone(dec['onboarding_pct'])
+        self.assertEqual(jan['onboarding_due'], 1)
+
+    def test_onboarding_counts_a_one_on_one_logged_by_a_previous_organizer(self):
+        from . import services
+        joiner = _make_user('joiner_prev_org')
+        joiner.profile.italian_tl = self.leader
+        joiner.profile.hire_date = date(2027, 1, 5)
+        joiner.profile.save()
+        prev_leader = _make_user('previous_leader')
+        Meeting.objects.create(
+            meeting_type='one_on_one', counterparty=joiner, organizer=prev_leader,
+            onboarding_discussed=True, occurred_on=date(2027, 1, 10),
+        )
+        with mock.patch.object(services, 'ONBOARDING_TRACKING_START', date(2025, 1, 1)):
+            res = services.onboarding_metrics(self.leader, date(2027, 1, 1))
+        self.assertEqual(res['onboarding_due'], 1)
+        self.assertEqual(res['onboarding_done'], 1)
+        self.assertEqual(res['onboarding_pct'], 100.0)
+
+    def test_onboarding_meeting_after_due_date_is_a_miss(self):
+        from . import services
+        joiner = _make_user('joiner_late')
+        joiner.profile.italian_tl = self.leader
+        joiner.profile.hire_date = date(2027, 1, 5)
+        joiner.profile.save()
+        # Due date is 2027-01-19. Meeting is on 2027-01-20 -> miss.
+        Meeting.objects.create(
+            meeting_type='one_on_one', counterparty=joiner, organizer=self.leader,
+            onboarding_discussed=True, occurred_on=date(2027, 1, 20),
+        )
+        with mock.patch.object(services, 'ONBOARDING_TRACKING_START', date(2025, 1, 1)):
+            res = services.onboarding_metrics(self.leader, date(2027, 1, 1))
+        self.assertEqual(res['onboarding_due'], 1)
+        self.assertEqual(res['onboarding_done'], 0)
+        self.assertEqual(res['onboarding_pct'], 0.0)
+
+    def test_onboarding_leaver_still_counts(self):
+        from . import services
+        joiner = _make_user('joiner_leaver', is_active=False)
+        joiner.profile.italian_tl = self.leader
+        joiner.profile.hire_date = date(2027, 1, 5)
+        joiner.profile.save()
+        with mock.patch.object(services, 'ONBOARDING_TRACKING_START', date(2025, 1, 1)):
+            res = services.onboarding_metrics(self.leader, date(2027, 1, 1))
+        self.assertEqual(res['onboarding_due'], 1)
+
+    def test_onboarding_uses_the_roster_it_is_given(self):
+        """Final review 2026-11-21: the freeze job and a past-month export pass the
+        month's roster; a joiner who has since moved away must still be counted."""
+        from . import services
+        moved = _make_user('joiner_moved')
+        moved.profile.hire_date = date(2027, 1, 5)  # no leader link any more
+        moved.profile.save()
+        with mock.patch.object(services, 'ONBOARDING_TRACKING_START', date(2025, 1, 1)):
+            live = services.onboarding_metrics(self.leader, date(2027, 1, 1))
+            frozen = services.onboarding_metrics(self.leader, date(2027, 1, 1), member_ids=[moved.id])
+            blocks = services.month_blocks(self.leader, date(2027, 1, 1), [moved.id])
+            joiners = services.onboarding_joiners(self.leader, date(2027, 1, 1), member_ids=[moved.id])
+        self.assertEqual(live['onboarding_due'], 0)
+        self.assertEqual(frozen['onboarding_due'], 1)
+        self.assertEqual(blocks['meetings']['onboarding_due'], 1)
+        self.assertEqual([j['user_id'] for j in joiners], [moved.id])
+
+    def test_onboarding_pre_boarding_meeting_counts_the_same_in_trend_and_month(self):
+        """Final review 2026-11-21: the trend read meetings from first_month - 14 days
+        only, so a 1-on-1 held before the start date counted in /scorecard, not in /trend."""
+        from . import services
+        joiner = _make_user('joiner_preboard')
+        joiner.profile.italian_tl = self.leader
+        joiner.profile.hire_date = date(2027, 1, 5)
+        joiner.profile.save()
+        Meeting.objects.create(
+            organizer=self.leader, counterparty=joiner, meeting_type='one_on_one',
+            occurred_on=date(2026, 12, 1), onboarding_discussed=True,
+        )
+        with mock.patch.object(services, 'ONBOARDING_TRACKING_START', date(2025, 1, 1)):
+            single = services.onboarding_metrics(self.leader, date(2027, 1, 1))
+            trend = services.scorecard_trend(self.leader, 1, date(2027, 1, 1))
+        self.assertEqual(single['onboarding_done'], 1)
+        self.assertEqual(trend[-1]['meetings']['onboarding_done'], 1)
+
+    def test_onboarding_date_joined_start_is_the_tirane_date(self):
+        """Final review 2026-11-21: 00:30 Tirane on 18 Jan is 23:30 UTC on 17 Jan;
+        the start is the 18th, so the due date (1 Feb) falls in February, not January."""
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        from . import services
+        joiner = _make_user('joiner_tirane')
+        joiner.date_joined = datetime(2027, 1, 18, 0, 30, tzinfo=ZoneInfo('Europe/Tirane'))
+        joiner.save()
+        joiner.profile.italian_tl = self.leader
+        joiner.profile.hire_date = None
+        joiner.profile.save()
+        with mock.patch.object(services, 'ONBOARDING_TRACKING_START', date(2025, 1, 1)):
+            january = services.onboarding_metrics(self.leader, date(2027, 1, 1))
+            february = services.onboarding_metrics(self.leader, date(2027, 2, 1))
+            trend = services.scorecard_trend(self.leader, 2, date(2027, 2, 1))
+        self.assertEqual(january['onboarding_due'], 0)
+        self.assertEqual(february['onboarding_due'], 1)
+        self.assertEqual([p['meetings']['onboarding_due'] for p in trend], [0, 1])
+
+    def test_onboarding_pre_cutover_hire_is_not_counted(self):
+        from . import services
+        joiner = _make_user('joiner_old')
+        joiner.profile.italian_tl = self.leader
+        joiner.profile.hire_date = date(2026, 11, 15)
+        joiner.profile.save()
+        # Default ONBOARDING_TRACKING_START is date(2026, 12, 1). Hire in Nov is pre-cutover.
+        res = services.onboarding_metrics(self.leader, date(2026, 11, 1))
+        self.assertEqual(res['onboarding_due'], 0)
+        self.assertIsNone(res['onboarding_pct'])
+
+    def test_onboarding_null_hire_date_falls_back_to_date_joined(self):
+        from . import services
+        joiner = _make_user('joiner_null_hire')
+        joiner.profile.italian_tl = self.leader
+        joiner.profile.hire_date = None
+        joiner.profile.save()
+        joiner.date_joined = _datetime(2027, 1, 5, 9, 0, tzinfo=_utc.utc)
+        joiner.save(update_fields=['date_joined'])
+        with mock.patch.object(services, 'ONBOARDING_TRACKING_START', date(2025, 1, 1)):
+            res = services.onboarding_metrics(self.leader, date(2027, 1, 1))
+        self.assertEqual(res['onboarding_due'], 1)
+
+    def test_onboarding_no_joiners_pct_is_none(self):
+        from . import services
+        res = services.onboarding_metrics(self.leader, date(2027, 5, 1))
+        self.assertEqual(res['onboarding_due'], 0)
+        self.assertEqual(res['onboarding_done'], 0)
+        self.assertIsNone(res['onboarding_pct'])
+
+    def test_onboarding_frozen_month_does_not_change_when_hire_date_is_later_edited(self):
+        from .models import ScorecardMonthSnapshot
+        from .services import build_scorecard
+        frozen_month = date(2026, 9, 1)
+        # Create a frozen snapshot for September 2026
+        ScorecardMonthSnapshot.objects.create(
+            leader=self.leader,
+            month=frozen_month,
+            computed_at=timezone.now(),
+            payload={
+                'team_size': 1,
+                'leave': {'decided_count': 0, 'within_2_days': 0, 'pct_within_2_days': None, 'pending_at_month_end': 0},
+                'overtime': {'decided_count': 0, 'avg_turnaround_days': None, 'within_sla': 0, 'pct_within_sla': None},
+                'meetings': {
+                    'one_on_one_compliance_pct': 100.0,
+                    'one_on_one_compliant': 1,
+                    'one_on_one_eligible': 1,
+                    'tl_sync_count': 2,
+                    'team_meetings_held': 1,
+                    'team_meetings_with_hrbp': 1,
+                    'team_meeting_notes_within_24h': 1,
+                },
+            },
+        )
+        card_before = build_scorecard(self.leader, frozen_month)
+        self.assertNotIn('onboarding_due', card_before['meetings'])
+
+        # Now edit a joiner's hire_date into September 2026
+        joiner = _make_user('joiner_retro')
+        joiner.profile.italian_tl = self.leader
+        joiner.profile.hire_date = date(2026, 9, 5)
+        joiner.profile.save()
+
+        # Scorecard for the frozen month remains unchanged
+        card_after = build_scorecard(self.leader, frozen_month)
+        self.assertEqual(card_after['meetings'], card_before['meetings'])
+        self.assertNotIn('onboarding_due', card_after['meetings'])
+
+    def test_onboarding_trend_matches_summary_and_adds_no_per_month_queries(self):
+        from .services import build_scorecard, scorecard_trend
+        joiner = _make_user('joiner_trend')
+        joiner.profile.italian_tl = self.leader
+        joiner.profile.hire_date = date(2027, 2, 5)
+        joiner.profile.save()
+        Meeting.objects.create(
+            meeting_type='one_on_one', counterparty=joiner, organizer=self.leader,
+            onboarding_discussed=True, occurred_on=date(2027, 2, 10),
+        )
+        end_month = date(2027, 6, 1)
+        # Warm any one-time caches
+        scorecard_trend(self.leader, 6, end_month)
+        with self.assertNumQueries(24):
+            trend = scorecard_trend(self.leader, 6, end_month)
+        self.assertEqual(len(trend), 6)
+        for point in trend:
+            single = build_scorecard(self.leader, date.fromisoformat(point['month']))
+            for key in ('onboarding_due', 'onboarding_done', 'onboarding_pct'):
+                self.assertEqual(point['meetings'].get(key), single['meetings'].get(key), f'{key} mismatch for {point["month"]}')
 
 
 class TLScorecardAPITests(TestCase):

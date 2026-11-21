@@ -44,6 +44,8 @@ class LeaveSlaSerializer(serializers.Serializer):
 class OvertimeTurnaroundSerializer(serializers.Serializer):
     decided_count = serializers.IntegerField()
     avg_turnaround_days = serializers.FloatField(allow_null=True)
+    within_sla = serializers.IntegerField(required=False)
+    pct_within_sla = serializers.FloatField(allow_null=True, required=False)
 
 
 class MeetingComplianceSerializer(serializers.Serializer):
@@ -54,6 +56,9 @@ class MeetingComplianceSerializer(serializers.Serializer):
     team_meetings_held = serializers.IntegerField()
     team_meetings_with_hrbp = serializers.IntegerField()
     team_meeting_notes_within_24h = serializers.IntegerField()
+    onboarding_due = serializers.IntegerField(allow_null=True, required=False)
+    onboarding_done = serializers.IntegerField(allow_null=True, required=False)
+    onboarding_pct = serializers.FloatField(allow_null=True, required=False)
 
 
 class IdleMetricsSerializer(serializers.Serializer):
@@ -199,11 +204,23 @@ class MeetingSerializer(serializers.ModelSerializer):
             'team', 'occurred_on', 'notes', 'notes_published_at', 'reference_url',
             'shared_summary', 'shared_at',
             'recorded_by', 'recorded_by_name', 'recorded_at', 'attendees',
+            'onboarding_discussed',
         ]
         read_only_fields = [
             'id', 'organizer', 'recorded_by', 'recorded_at', 'shared_summary', 'shared_at',
             'notes_published_at',  # the 24h KPI clock: stamped by the server only
         ]
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        instance = getattr(self, 'instance', None)
+        meeting_type = attrs.get('meeting_type', instance.meeting_type if instance else None)
+        flag = attrs.get('onboarding_discussed', instance.onboarding_discussed if instance else False)
+        if flag and meeting_type != 'one_on_one':
+            raise serializers.ValidationError(
+                {'onboarding_discussed': 'Only a one-on-one meeting can be an onboarding meeting.'}
+            )
+        return attrs
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

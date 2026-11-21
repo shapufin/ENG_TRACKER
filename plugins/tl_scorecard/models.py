@@ -61,6 +61,7 @@ class Meeting(TrackedFieldsMixin, BaseModel, DocumentedEventMixin):
         help_text='Set for team_meeting; optional for one_on_one/tl_sync.',
     )
     occurred_on = models.DateField()
+    onboarding_discussed = models.BooleanField(default=False)
     notes_published_at = models.DateTimeField(null=True, blank=True)
     # What the counterparty may read. `notes` stays the organizer's private
     # record; `notes_published_at` is the 24h team-meeting KPI clock, not this.

@@ -104,7 +104,7 @@ def _print_setup(ws, title_rows=None):
         ws.repeat_rows(*title_rows)
 
 
-def _build_summary_sheet(wb, fmt, scorecard, period_label, include_leave_overtime=True):
+def _build_summary_sheet(wb, fmt, scorecard, period_label, include_restricted=True):
     ws = wb.add_worksheet("Summary")
     ws.hide_gridlines(2)
     _print_setup(ws, (3, 3))
@@ -127,7 +127,7 @@ def _build_summary_sheet(wb, fmt, scorecard, period_label, include_leave_overtim
     for col, label in enumerate(["Area", "Metric", "Value", "Target", "Status"]):
         ws.write(3, col, label, fmt.header)
 
-    for offset, item in enumerate(kpi_rows(scorecard, include_leave_overtime=include_leave_overtime)):
+    for offset, item in enumerate(kpi_rows(scorecard, include_restricted=include_restricted)):
         r = 4 + offset
         ws.write(r, 0, item["area"], fmt.area)
         ws.write(r, 1, item["metric"], fmt.label)
@@ -143,7 +143,7 @@ def _build_summary_sheet(wb, fmt, scorecard, period_label, include_leave_overtim
         ws.write(r, 4, item["status"], fmt.status.get(item["status"], fmt.status_none))
 
 
-def _build_trend_sheet(wb, fmt, trend):
+def _build_trend_sheet(wb, fmt, trend, include_restricted=True):
     """Month table plus a native column/line chart. `trend` is already masked."""
     ws = wb.add_worksheet("Trend")
     ws.hide_gridlines(2)
@@ -152,8 +152,10 @@ def _build_trend_sheet(wb, fmt, trend):
         "Month", "1:1 compliance", "Manager syncs", "Team meetings with HRBP",
         "Management reviews (YTD)", "Promotion ratio",
     ]
+    if include_restricted:
+        headers.append("Onboarding 1-on-1s")
     ws.set_column(0, 0, 14)
-    ws.set_column(1, 5, 18)
+    ws.set_column(1, 6 if include_restricted else 5, 18)
     for col, label in enumerate(headers):
         ws.write(0, col, label, fmt.header)
 
@@ -173,6 +175,12 @@ def _build_trend_sheet(wb, fmt, trend):
             ws.write(idx, 5, NO_DATA, fmt.dash)
         else:
             ws.write_number(idx, 5, promoted, fmt.pct)
+        if include_restricted:
+            onb = meetings.get("onboarding_pct")
+            if onb is None:
+                ws.write(idx, 6, NO_DATA, fmt.dash)
+            else:
+                ws.write_number(idx, 6, onb, fmt.pct)
 
     last_row = len(trend)
     if last_row < 2:
@@ -215,7 +223,7 @@ def _attended_cell(row, flag, done_key):
     return "Yes" if row.get(flag) else "No"
 
 
-def _build_governance_sheet(wb, fmt, governance):
+def _build_governance_sheet(wb, fmt, governance, include_restricted=True):
     """Four banded, filterable tables. An empty table keeps a "None open" row."""
     ws = wb.add_worksheet("Governance")
     ws.hide_gridlines(2)
@@ -265,6 +273,16 @@ def _build_governance_sheet(wb, fmt, governance):
              lambda r: r["summary"] or "—",
          ]),
     ]
+    if include_restricted:
+        sections.append((
+            "Onboarding", "Onboarding",
+            ["Employee", "Onboarding date", "With"], governance.get("onboarding", []),
+            [
+                lambda r: r.get("name") or r.get("employee", ""),
+                lambda r: r["met_on"].isoformat() if hasattr(r.get("met_on"), "isoformat") else (r.get("met_on") or "—"),
+                lambda r: r.get("organizer_name") or "—",
+            ],
+        ))
 
     row = 2
     for title, table_name, headers, records, getters in sections:
@@ -327,7 +345,7 @@ def _build_hbpr_evidence_sheet(wb, fmt, evidence):
 
 
 def build_workbook_bytes(scorecard, governance, period_label, hbpr_evidence=None, trend=None,
-                         include_leave_overtime=True):
+                         include_restricted=True):
     """Build the tl_scorecard summary workbook and return raw .xlsx bytes.
 
     ``trend`` (optional) is the list of scorecard points, oldest first, with the
@@ -346,10 +364,10 @@ def build_workbook_bytes(scorecard, governance, period_label, hbpr_evidence=None
         "comments": "Generated live from tl_scorecard data.",
     })
     fmt = _Formats(wb)
-    _build_summary_sheet(wb, fmt, scorecard, period_label, include_leave_overtime)
+    _build_summary_sheet(wb, fmt, scorecard, period_label, include_restricted)
     if trend:
-        _build_trend_sheet(wb, fmt, trend)
-    _build_governance_sheet(wb, fmt, governance)
+        _build_trend_sheet(wb, fmt, trend, include_restricted=include_restricted)
+    _build_governance_sheet(wb, fmt, governance, include_restricted=include_restricted)
     _build_hbpr_evidence_sheet(wb, fmt, hbpr_evidence or [])
     wb.close()
     return buffer.getvalue()

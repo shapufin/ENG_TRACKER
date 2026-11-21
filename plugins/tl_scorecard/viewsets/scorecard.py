@@ -33,6 +33,7 @@ from ..services import (
     epr_metrics,
     escalation_candidates,
     governance_records,
+    onboarding_joiners,
     scorecard_trend,
 )
 from core.mixins.permissions import is_staff_user
@@ -152,6 +153,9 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             meetings['one_on_one_compliance_pct'] = None
             meetings['one_on_one_compliant'] = None
             meetings['one_on_one_eligible'] = None
+            meetings['onboarding_due'] = None
+            meetings['onboarding_done'] = None
+            meetings['onboarding_pct'] = None
 
     @staticmethod
     def _hbpr_subject_ids(request, leader):
@@ -436,7 +440,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         scorecard = trend[-1]
         self._mask_one_on_one(request, leader, *trend)
         # The builders read the leave/overtime blocks themselves (and skip them
-        # via include_leave_overtime); only the escalation count needs recounting.
+        # via include_restricted); only the escalation count needs recounting.
         self._mask_hbpr_only(request, leader, *trend, drop_blocks=False)
         team_member_ids = scoreable_member_ids(leader)
         subject_ids = None
@@ -444,11 +448,16 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             scope = get_hbpr_scope(request.user)
             if scope is not None:
                 subject_ids = set(team_member_ids) & scope.user_ids
+        include_restricted = not is_hbpr_only(request.user)
         month_roster = frozen_member_ids(leader, month, team_member_ids)
         governance = governance_records(
             leader, month_roster, month.year, subject_ids,
             include_review_content=is_staff_user(request.user) or leader.id == request.user.id,
         )
+        # Joiner names and 1-on-1 dates come from employee one-on-ones: owner or staff
+        # only (the _mask_one_on_one rule), never by role mix (an HBPR who is also HR).
+        if is_staff_user(request.user) or leader.id == request.user.id:
+            governance['onboarding'] = onboarding_joiners(leader, month, month_roster)
         period_label = date.fromisoformat(scorecard['month']).strftime('%B %Y')
 
         # HBPR ↔ Line Manager governance evidence for this leader (the Line Manager authors
@@ -475,14 +484,14 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
 
         # Leave and overtime are denied to HBPR-only viewers (CLAUDE.md), so their
         # export omits those KPI rows.
-        include_leave_overtime = not is_hbpr_only(request.user)
+        include_restricted = not is_hbpr_only(request.user)
         if file_format == 'pdf':
             body = build_scorecard_pdf(
                 scorecard, trend, governance, epr_metrics(epr_roster(leader, month.year, team_member_ids), month.year), period_label,
                 leader_name=leader.get_full_name() or leader.username,
                 generated_by=request.user.get_full_name() or request.user.username,
                 hbpr_evidence=evidence_rows,
-                include_leave_overtime=include_leave_overtime,
+                include_restricted=include_restricted,
             )
             content_type = 'application/pdf'
             extension = 'pdf'
@@ -490,7 +499,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             body = build_workbook_bytes(
                 scorecard, governance, period_label,
                 hbpr_evidence=evidence_rows, trend=trend,
-                include_leave_overtime=include_leave_overtime,
+                include_restricted=include_restricted,
             )
             content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             extension = 'xlsx'
