@@ -102,7 +102,10 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
   }, [user?.id, isAdmin, isSuperuser]);
 
   const inRange = (index: number, row: RecordRow): boolean => {
-    const rowDate = RECORD_CONFIGS[index].date(row);
+    // Compare calendar days only: a timestamp must not fall off the end date.
+    const rowDate = (RECORD_CONFIGS[index].date(row) ?? "").slice(0, 10);
+    if (!resolvedFrom && !resolvedTo) return true;
+    if (!rowDate) return false;
     if (resolvedFrom && rowDate < resolvedFrom) return false;
     if (resolvedTo && rowDate > resolvedTo) return false;
     return true;

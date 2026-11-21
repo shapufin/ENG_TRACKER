@@ -17,6 +17,8 @@ interface DateRangePickerPopoverContentProps {
   onClose: () => void;
 }
 
+type Edge = "from" | "to";
+
 const toDate = (iso: string) => new Date(iso + "T00:00:00");
 
 /** Keep the earlier date as the start, whichever order the two were given in. */
@@ -37,30 +39,49 @@ export const DateRangePickerPopoverContent: React.FC<DateRangePickerPopoverConte
   onCommit,
   onClose,
 }) => {
-  const [draft, setDraft] = useState(() => ordered(from, to));
+  const [draft, setDraftState] = useState(() => ordered(from, to));
+  const [texts, setTexts] = useState(() => ({
+    from: formatDateDDMMYYYY(draft.from),
+    to: formatDateDDMMYYYY(draft.to),
+  }));
+  // Which end the next calendar click sets.
+  const [edge, setEdge] = useState<Edge>("from");
   const [month, setMonth] = useState(() => {
     const parsed = from ? toDate(from) : new Date();
     return isValid(parsed) ? parsed : new Date();
   });
 
-  const handleDaySelect = (iso: string) => {
-    if (!draft.from || draft.to) {
-      setDraft({ from: iso, to: "" });
-      return;
-    }
-    setDraft(ordered(draft.from, iso));
+  const setDraft = (next: { from: string; to: string }) => {
+    setDraftState(next);
+    setTexts({ from: formatDateDDMMYYYY(next.from), to: formatDateDDMMYYYY(next.to) });
   };
 
-  const handleTyped = (edge: "from" | "to") => (e: React.FocusEvent<HTMLInputElement>) => {
-    const parsed = parseDDMMYYYYDate(e.target.value);
-    if (!parsed) {
-      // Not a date: put the field back to what the draft holds.
-      e.target.value = formatDateDDMMYYYY(draft[edge]);
+  const handleDaySelect = (iso: string) => {
+    if (edge === "from") {
+      // Keep the end when it still follows the new start, otherwise start over.
+      setDraft({ from: iso, to: draft.to && draft.to >= iso ? draft.to : "" });
+      setEdge("to");
       return;
     }
-    const iso = toLocalISODate(parsed);
-    setDraft(edge === "from" ? ordered(iso, draft.to) : ordered(draft.from, iso));
-    setMonth(parsed);
+    setDraft(ordered(draft.from || iso, iso));
+    setEdge("from");
+  };
+
+  /** Parse a typed value; null when it is not a date. */
+  const parseTyped = (value: string) => {
+    const parsed = parseDDMMYYYYDate(value);
+    return parsed ? { parsed, iso: toLocalISODate(parsed) } : null;
+  };
+
+  const handleTyped = (which: Edge) => () => {
+    const typed = parseTyped(texts[which]);
+    if (!typed) {
+      // Not a date: put the field back to what the draft holds.
+      setTexts((prev) => ({ ...prev, [which]: formatDateDDMMYYYY(draft[which]) }));
+      return;
+    }
+    setDraft(which === "from" ? ordered(typed.iso, draft.to) : ordered(draft.from, typed.iso));
+    setMonth(typed.parsed);
   };
 
   const commitOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -71,8 +92,42 @@ export const DateRangePickerPopoverContent: React.FC<DateRangePickerPopoverConte
   };
 
   const handleApply = () => {
-    onCommit({ from: draft.from, to: draft.to || draft.from });
+    // Typed-but-not-blurred text counts: use it when it is a valid date.
+    const typedFrom = parseTyped(texts.from);
+    const typedTo = parseTyped(texts.to);
+    const range = ordered(typedFrom?.iso ?? draft.from, typedTo?.iso ?? draft.to);
+    if (!range.from) return;
+    onCommit({ from: range.from, to: range.to || range.from });
   };
+
+  const handleReset = () => {
+    setDraft({ from: "", to: "" });
+    setEdge("from");
+  };
+
+  const edgeField = (which: Edge, label: string, id: string, ariaLabel: string) => (
+    <div
+      className={cn(
+        "space-y-1 rounded-md p-1",
+        edge === which && "ring-primary/60 bg-primary/5 ring-2"
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <Label htmlFor={id}>{label}</Label>
+        {edge === which && <span className="text-primary text-xs font-medium">Selecting</span>}
+      </div>
+      <Input
+        id={id}
+        aria-label={ariaLabel}
+        placeholder="DD/MM/YYYY"
+        value={texts[which]}
+        onFocus={() => setEdge(which)}
+        onChange={(e) => setTexts((prev) => ({ ...prev, [which]: e.target.value }))}
+        onBlur={handleTyped(which)}
+        onKeyDown={commitOnEnter}
+      />
+    </div>
+  );
 
   return (
     <Popover.Portal>
@@ -112,30 +167,8 @@ export const DateRangePickerPopoverContent: React.FC<DateRangePickerPopoverConte
 
           <div className="sm:border-border min-w-0 flex-1 space-y-3 sm:border-l sm:pl-4">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="range-start">Start</Label>
-                <Input
-                  id="range-start"
-                  key={`start-${draft.from}`}
-                  aria-label="Start date"
-                  placeholder="DD/MM/YYYY"
-                  defaultValue={formatDateDDMMYYYY(draft.from)}
-                  onBlur={handleTyped("from")}
-                  onKeyDown={commitOnEnter}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="range-end">End</Label>
-                <Input
-                  id="range-end"
-                  key={`end-${draft.to}`}
-                  aria-label="End date"
-                  placeholder="DD/MM/YYYY"
-                  defaultValue={formatDateDDMMYYYY(draft.to)}
-                  onBlur={handleTyped("to")}
-                  onKeyDown={commitOnEnter}
-                />
-              </div>
+              {edgeField("from", "Start", "range-start", "Start date")}
+              {edgeField("to", "End", "range-end", "End date")}
             </div>
 
             <div>
@@ -155,10 +188,18 @@ export const DateRangePickerPopoverContent: React.FC<DateRangePickerPopoverConte
         </div>
 
         <div className="border-border mt-3 flex justify-end gap-2 border-t pt-3">
+          <Button type="button" variant="ghost" size="sm" className="mr-auto" onClick={handleReset}>
+            Reset
+          </Button>
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="button" size="sm" onClick={handleApply} disabled={!draft.from}>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleApply}
+            disabled={!draft.from && !parseTyped(texts.from)}
+          >
             Apply
           </Button>
         </div>
