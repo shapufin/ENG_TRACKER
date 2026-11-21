@@ -140,6 +140,45 @@ describe("DateRangePicker", () => {
     expect(onChange).toHaveBeenCalledWith({ from: "2024-06-02", to: "2024-06-10" });
   });
 
+  it("changes only the end date when the End field is active", () => {
+    const onChange = open("2024-06-01", "2024-06-30");
+    fireEvent.focus(screen.getByLabelText("End date"));
+    fireEvent.click(screen.getByText("15"));
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect(onChange).toHaveBeenCalledWith({ from: "2024-06-01", to: "2024-06-15" });
+  });
+
+  it("changes only the start date and keeps a later end", () => {
+    const onChange = open("2024-06-01", "2024-06-30");
+    fireEvent.click(screen.getByText("10"));
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect(onChange).toHaveBeenCalledWith({ from: "2024-06-10", to: "2024-06-30" });
+  });
+
+  it("shows which field the next click sets", () => {
+    open();
+    expect(screen.getAllByText("Selecting")).toHaveLength(1);
+    fireEvent.click(screen.getByText("16"));
+    expect(screen.getByLabelText("End date").closest("div")?.parentElement).toHaveTextContent(
+      "Selecting"
+    );
+  });
+
+  it("uses typed dates on Apply without a blur", () => {
+    const onChange = open();
+    fireEvent.change(screen.getByLabelText("Start date"), { target: { value: "03/06/2024" } });
+    fireEvent.change(screen.getByLabelText("End date"), { target: { value: "09/06/2024" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    expect(onChange).toHaveBeenCalledWith({ from: "2024-06-03", to: "2024-06-09" });
+  });
+
+  it("clears the draft on Reset", () => {
+    open("2024-06-01", "2024-06-05");
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    expect(screen.getByLabelText("Start date")).toHaveValue("");
+    expect(screen.getByText("Pick the start date")).toBeInTheDocument();
+  });
+
   it("discards the draft range on Cancel", () => {
     const onChange = open("2024-06-01", "2024-06-05");
     fireEvent.click(screen.getByText("20"));
