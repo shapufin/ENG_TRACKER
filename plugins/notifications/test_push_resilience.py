@@ -9,7 +9,12 @@ from rest_framework.test import APIClient
 
 from apps.overtime.models import Client, OvertimeLog
 from plugins.notifications.models import Notification, PushSubscription
-from plugins.notifications.push_service import PUSH_MAX_FAILURES, PUSH_TIMEOUT_SECONDS, send_push_notification
+from plugins.notifications.push_service import (
+    DEFAULT_PUSH_TTL_SECONDS,
+    PUSH_MAX_FAILURES,
+    PUSH_TIMEOUT_SECONDS,
+    send_push_notification,
+)
 
 User = get_user_model()
 
@@ -48,6 +53,22 @@ class PushTimeoutTests(TestCase):
         send_push_notification(self.user, 't', 'm')
         self.assertEqual(mock_webpush.call_args.kwargs['timeout'], PUSH_TIMEOUT_SECONDS)
         self.assertLessEqual(PUSH_TIMEOUT_SECONDS, 10)
+
+    @patch('plugins.notifications.push_service.get_private_key', return_value='key')
+    @patch('plugins.notifications.push_service.webpush')
+    def test_every_send_is_high_urgency_with_a_ttl(self, mock_webpush, _key):
+        # RFC 8030: without Urgency and a TTL the gateway batches the alert and a
+        # sleeping phone does not show it until the browser is opened (2026-11-21).
+        send_push_notification(self.user, 't', 'm')
+        self.assertEqual(mock_webpush.call_args.kwargs['ttl'], DEFAULT_PUSH_TTL_SECONDS)
+        self.assertEqual(mock_webpush.call_args.kwargs['headers'], {'Urgency': 'high'})
+
+    @patch('plugins.notifications.push_service.get_private_key', return_value='key')
+    @patch('plugins.notifications.push_service.webpush')
+    def test_custom_ttl_and_urgency_are_forwarded(self, mock_webpush, _key):
+        send_push_notification(self.user, 't', 'm', ttl=120, urgency='low')
+        self.assertEqual(mock_webpush.call_args.kwargs['ttl'], 120)
+        self.assertEqual(mock_webpush.call_args.kwargs['headers'], {'Urgency': 'low'})
 
     @patch('plugins.notifications.push_service.get_private_key', return_value='key')
     @patch('plugins.notifications.push_service.webpush', side_effect=requests.exceptions.Timeout('slow'))

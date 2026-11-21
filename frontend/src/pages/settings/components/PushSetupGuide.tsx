@@ -1,5 +1,13 @@
 import React from "react";
-import { Bell, Globe, Settings, Share2, Smartphone, type LucideIcon } from "lucide-react";
+import {
+  BatteryCharging,
+  Bell,
+  Globe,
+  Settings,
+  Share2,
+  Smartphone,
+  type LucideIcon,
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Platform = "ios" | "android";
@@ -105,6 +113,16 @@ const ANDROID_STEPS: Step[] = [
   {
     icon: Smartphone,
     text: "Also check that notifications for Chrome are on in the phone's own settings.",
+  },
+  {
+    icon: BatteryCharging,
+    text: (
+      <>
+        If approvals arrive late, open Android <strong>Settings</strong>, <strong>Apps</strong>,{" "}
+        <strong>Chrome</strong>, <strong>Battery</strong> and choose <strong>Unrestricted</strong>;
+        under <strong>Mobile data</strong>, allow background data usage.
+      </>
+    ),
   },
 ];
 

@@ -14,7 +14,8 @@ the existing `_complete_mfa_login`.
 - Backend: `apps/users/services/phone_approval.py`, `phone_pairing.py`, views and routes in
   `apps/users/views/auth.py` and `config/urls.py`, models `PairedPhone` and `PhoneLoginRequest` (migration
   `users.0031_phone_approval`), shared assertion check `webauthn.verify_assertion_for_challenge`,
-  `send_push_notification(..., endpoints=)` in the notifications plugin.
+  `send_push_notification(..., endpoints=)` in the notifications plugin (high urgency plus a TTL, so a
+  sleeping phone shows the alert instead of batching it).
 - Frontend: `PhoneApprovePage` (public route `/phone-approve/:requestId`), the LoginPage `phone` step with
   `PhoneApprovalWait`, Settings `PairedPhonesSection` with `PushSetupGuide` (iPhone/Android steps to turn on
   notifications), `phoneApprovalService`, `AuthContext.completePhoneApproval`.
@@ -36,6 +37,9 @@ pair one phone, test push and QR, tell users. Rollback: switch off, no migration
   120 s window reduce it).
 - iPhone push needs the app on the Home Screen (iOS 16.4 or later). Real push delivery is not covered by an
   automated test (no push service in e2e): check it by hand once on Android and once on iPhone.
+- Alerts carry `Urgency: high` and a TTL (300 s generally, 120 s for an approval) so a sleeping phone shows
+  them; aggressive battery management can still hold a browser's background data, so `PushSetupGuide` tells
+  Android users to set Chrome's battery use to Unrestricted and allow background data.
 - `.env.example` needs one line for `PHONE_APPROVAL_ENABLED` if it does not have it yet (it could not be edited from the build session).
 - Query cost: switch off = no extra query; switch on = exactly one extra `PairedPhone.exists()` per password login, paired or not. The pinned test is the source of truth, do not "optimise" it away.
 - The PC does not push on its own: after the password the user clicks "Approve on my phone" (a deliberate no-surprise-push rule); change that only as a design decision.

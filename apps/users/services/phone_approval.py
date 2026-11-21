@@ -102,6 +102,7 @@ def _push_to_phones(user, approve_url: str) -> bool:
             user, 'Approve this sign-in?',
             'Open to approve with your fingerprint or face. Only if you are signing in now.',
             url=approve_url, endpoints=endpoints,
+            ttl=PHONE_REQUEST_TTL_SECONDS, urgency='high',
         )
     except Exception as exc:  # a push problem must never fail the sign-in step
         logger.warning('Phone approval push failed for user %s: %s', user.pk, exc)

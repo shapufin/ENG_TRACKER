@@ -91,6 +91,10 @@ class RequestTests(PhoneApprovalTestCase):
         kwargs = send.call_args.kwargs
         self.assertEqual(kwargs['endpoints'], [ENDPOINT])
         self.assertEqual(kwargs['url'], started['approve_url'])
+        # The alert is only useful while the request is live: high urgency plus
+        # the request's own TTL, or a sleeping phone gets it late (2026-11-21).
+        self.assertEqual(kwargs['ttl'], service.PHONE_REQUEST_TTL_SECONDS)
+        self.assertEqual(kwargs['urgency'], 'high')
 
     def test_push_failure_or_missing_plugin_still_returns_qr(self):
         with mock.patch(PUSH, return_value=(0, 1)):
