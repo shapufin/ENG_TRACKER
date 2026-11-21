@@ -201,11 +201,23 @@ class MeetingSerializer(serializers.ModelSerializer):
             'team', 'occurred_on', 'notes', 'notes_published_at', 'reference_url',
             'shared_summary', 'shared_at',
             'recorded_by', 'recorded_by_name', 'recorded_at', 'attendees',
+            'onboarding_discussed',
         ]
         read_only_fields = [
             'id', 'organizer', 'recorded_by', 'recorded_at', 'shared_summary', 'shared_at',
             'notes_published_at',  # the 24h KPI clock: stamped by the server only
         ]
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        instance = getattr(self, 'instance', None)
+        meeting_type = attrs.get('meeting_type', instance.meeting_type if instance else None)
+        flag = attrs.get('onboarding_discussed', instance.onboarding_discussed if instance else False)
+        if flag and meeting_type != 'one_on_one':
+            raise serializers.ValidationError(
+                {'onboarding_discussed': 'Only a one-on-one meeting can be an onboarding meeting.'}
+            )
+        return attrs
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

@@ -650,3 +650,135 @@ class NoCadenceAssignmentTests(ActionsBase):
         self.assertEqual(self.post(self.hbpr, {'cadence': 'monthly'}, f'?leader_id={self.tl.id}').status_code, 403)
         self.assertEqual(self.post(self.other_tl, {'cadence': 'monthly'}, f'?leader_id={self.tl.id}').status_code, 403)
         self.assertIsNone(HbprAlbanianTlAssignment.objects.get(albanian_tl=self.tl).cadence)
+
+
+class MeetingOnboardingTests(ActionsBase):
+    """Task 4: onboarding_discussed flag on one-on-one meetings."""
+
+    def test_onboarding_flag_saves_on_a_one_on_one(self):
+        resp = self.call(
+            MeetingViewSet,
+            'create',
+            self.tl,
+            None,
+            {
+                'meeting_type': 'one_on_one',
+                'counterparty': self.member.id,
+                'occurred_on': str(self.today),
+                'onboarding_discussed': True,
+            },
+        )
+        self.assertEqual(resp.status_code, 201, resp.data)
+        self.assertIs(resp.data.get('onboarding_discussed'), True)
+        meeting = Meeting.objects.get(id=resp.data['id'])
+        self.assertIs(meeting.onboarding_discussed, True)
+
+    def test_onboarding_flag_rejected_on_tl_sync_and_team_meeting(self):
+        # tl_sync
+        resp_sync = self.call(
+            MeetingViewSet,
+            'create',
+            self.tl,
+            None,
+            {
+                'meeting_type': 'tl_sync',
+                'counterparty': self.member.id,
+                'occurred_on': str(self.today),
+                'onboarding_discussed': True,
+            },
+        )
+        self.assertEqual(resp_sync.status_code, 400, resp_sync.data)
+        self.assertEqual(
+            resp_sync.data.get('onboarding_discussed'),
+            ['Only a one-on-one meeting can be an onboarding meeting.'],
+        )
+
+        # team_meeting
+        from apps.users.models.core import Team
+        team, _ = Team.objects.get_or_create(name='Scorecard Team')
+        resp_team = self.call(
+            MeetingViewSet,
+            'create',
+            self.tl,
+            None,
+            {
+                'meeting_type': 'team_meeting',
+                'team': team.id,
+                'occurred_on': str(self.today),
+                'onboarding_discussed': True,
+            },
+        )
+        self.assertEqual(resp_team.status_code, 400, resp_team.data)
+        self.assertEqual(
+            resp_team.data.get('onboarding_discussed'),
+            ['Only a one-on-one meeting can be an onboarding meeting.'],
+        )
+
+    def test_patch_type_away_from_one_on_one_with_flag_set_is_rejected(self):
+        from .serializers import MeetingSerializer
+        meeting = Meeting.objects.create(
+            meeting_type='one_on_one',
+            organizer=self.tl,
+            counterparty=self.member,
+            occurred_on=self.today,
+            onboarding_discussed=True,
+        )
+        # PATCH via viewset with meeting_type away from one_on_one while stored flag is True -> 400
+        resp = self.call(
+            MeetingViewSet,
+            'partial_update',
+            self.tl,
+            meeting.id,
+            {'meeting_type': 'tl_sync'},
+            method='patch',
+        )
+        self.assertEqual(resp.status_code, 400, resp.data)
+        self.assertEqual(
+            resp.data.get('onboarding_discussed'),
+            ['Only a one-on-one meeting can be an onboarding meeting.'],
+        )
+
+        # Serializer validate directly for changing meeting_type and setting flag to False -> valid
+        s_ok = MeetingSerializer(
+            meeting,
+            data={'meeting_type': 'tl_sync', 'onboarding_discussed': False},
+            partial=True,
+        )
+        self.assertTrue(s_ok.is_valid(), s_ok.errors)
+
+        # PATCH on viewset resetting onboarding_discussed to False succeeds (200)
+        resp_toggle = self.call(
+            MeetingViewSet,
+            'partial_update',
+            self.tl,
+            meeting.id,
+            {'onboarding_discussed': False},
+            method='patch',
+        )
+        self.assertEqual(resp_toggle.status_code, 200, resp_toggle.data)
+        meeting.refresh_from_db()
+        self.assertIs(meeting.onboarding_discussed, False)
+
+    def test_onboarding_toggle_sends_no_notification(self):
+        from plugins.notifications.models import Notification
+        meeting = Meeting.objects.create(
+            meeting_type='one_on_one',
+            organizer=self.tl,
+            counterparty=self.member,
+            occurred_on=self.today,
+            onboarding_discussed=False,
+        )
+        before = Notification.objects.count()
+        resp = self.call(
+            MeetingViewSet,
+            'partial_update',
+            self.tl,
+            meeting.id,
+            {'onboarding_discussed': True},
+            method='patch',
+        )
+        self.assertEqual(resp.status_code, 200, resp.data)
+        meeting.refresh_from_db()
+        self.assertIs(meeting.onboarding_discussed, True)
+        self.assertEqual(Notification.objects.count(), before)
+
