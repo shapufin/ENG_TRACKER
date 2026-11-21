@@ -830,18 +830,8 @@ def month_blocks(user, month: date, team_member_ids, window: TrendWindow | None 
     }
 
 
-def onboarding_metrics(leader, month: date, window: TrendWindow | None = None) -> dict:
-    """Joiners due within 14 calendar days of hire date whose due date falls in this month.
-
-    Cohort: scoreable_member_ids(leader) (link-only, keeps deactivated users; no is_active filter).
-    start = profile.hire_date or user.date_joined.date().
-    Skip start < ONBOARDING_TRACKING_START.
-    due = start + timedelta(days=ONBOARDING_WINDOW_DAYS).
-    Owned by the month `due` falls in (not the hire month).
-    Done = exists Meeting(meeting_type='one_on_one', counterparty=joiner, onboarding_discussed=True, occurred_on <= due).
-    No organizer filter.
-    pct = round(done / due * 100, 1), None when due == 0.
-    """
+def _onboarding_due_map(leader, month: date, window: TrendWindow | None = None) -> dict[int, date]:
+    """Resolve user_id -> due date for team joiners whose 14-day window closes in month."""
     month = reporting_period(month)
     month_start, month_end = _month_bounds(month)
 
@@ -868,7 +858,22 @@ def onboarding_metrics(leader, month: date, window: TrendWindow | None = None) -
         due = start + timedelta(days=ONBOARDING_WINDOW_DAYS)
         if month_start <= due < month_end:
             due_map[user_id] = due
+    return due_map
 
+
+def onboarding_metrics(leader, month: date, window: TrendWindow | None = None) -> dict:
+    """Joiners due within 14 calendar days of hire date whose due date falls in this month.
+
+    Cohort: scoreable_member_ids(leader) (link-only, keeps deactivated users; no is_active filter).
+    start = profile.hire_date or user.date_joined.date().
+    Skip start < ONBOARDING_TRACKING_START.
+    due = start + timedelta(days=ONBOARDING_WINDOW_DAYS).
+    Owned by the month `due` falls in (not the hire month).
+    Done = exists Meeting(meeting_type='one_on_one', counterparty=joiner, onboarding_discussed=True, occurred_on <= due).
+    No organizer filter.
+    pct = round(done / due * 100, 1), None when due == 0.
+    """
+    due_map = _onboarding_due_map(leader, month, window)
     due_count = len(due_map)
     if not due_map:
         return {'onboarding_due': 0, 'onboarding_done': 0, 'onboarding_pct': None}
@@ -895,6 +900,53 @@ def onboarding_metrics(leader, month: date, window: TrendWindow | None = None) -
         'onboarding_done': done_count,
         'onboarding_pct': pct,
     }
+
+
+def onboarding_joiners(leader, month: date) -> list[dict]:
+    """Joiners due in this month, with their meeting status for the Governance sheet.
+
+    Returns [{user_id, name, due, met_on: date | None, organizer_name: str | None}].
+    met_on = earliest tagged one_on_one (onboarding_discussed=True, counterparty=joiner) with occurred_on <= due, else None.
+    organizer_name = that meeting's organizer str, else None.
+    """
+    due_map = _onboarding_due_map(leader, month)
+    if not due_map:
+        return []
+
+    from django.contrib.auth.models import User
+    users = {
+        u.id: u
+        for u in User.objects.filter(id__in=due_map.keys())
+    }
+
+    meetings = list(
+        Meeting.objects.filter(
+            meeting_type='one_on_one',
+            onboarding_discussed=True,
+            counterparty_id__in=due_map.keys(),
+        ).select_related('organizer').order_by('occurred_on', 'id')
+    )
+
+    earliest_meeting = {}
+    for m in meetings:
+        cid = m.counterparty_id
+        if cid in due_map and m.occurred_on <= due_map[cid]:
+            if cid not in earliest_meeting:
+                earliest_meeting[cid] = m
+
+    joiners = []
+    for user_id in sorted(due_map.keys(), key=lambda uid: (due_map[uid], _pack_name(users.get(uid)) or '')):
+        user = users.get(user_id)
+        due = due_map[user_id]
+        m = earliest_meeting.get(user_id)
+        joiners.append({
+            'user_id': user_id,
+            'name': _pack_name(user) if user else str(user_id),
+            'due': due,
+            'met_on': m.occurred_on if m else None,
+            'organizer_name': _pack_name(m.organizer) if m and m.organizer else None,
+        })
+    return joiners
 
 
 def snapshot_blocks(user, month: date, snapshots: dict | None = None) -> dict | None:

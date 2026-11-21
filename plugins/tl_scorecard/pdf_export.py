@@ -24,7 +24,7 @@ def _dash(value):
     return NO_DATA if value is None else value
 
 
-def _cover(story, scorecard, leader_name, period_label, rows):
+def _cover(story, scorecard, leader_name, period_label, rows, include_restricted=True):
     tiles = [
         (row['metric'], format_value(row['value'], row['kind']), TONE_FOR_STATUS.get(row['status'], 'muted'))
         for row in rows if row['target'] is not None
@@ -36,9 +36,11 @@ def _cover(story, scorecard, leader_name, period_label, rows):
         kpis=tiles,
     )
     targets = scorecard.get('targets') or TARGETS
+    onboarding_phrase = "onboarding 1-on-1s within 14 days; " if include_restricted else ""
     pdf.paragraph(
         story,
         f"Targets: 1:1 compliance {targets['one_on_one_pct']:g}%; overtime within 2 working days; "
+        f"{onboarding_phrase}"
         f"management reviews {targets['reviews_per_year']} a year (pro-rata to the month); "
         f"promotion {targets['promotion_pct']:g}% a year; PIPs pending approval, absences over "
         '5 days and escalations 0. Green is on track, amber is watch, red is off track.',
@@ -56,7 +58,7 @@ def _cover(story, scorecard, leader_name, period_label, rows):
     )
 
 
-def _meetings_section(story, trend):
+def _meetings_section(story, trend, include_restricted=True):
     months = [_month_label(point['month']) for point in trend]
     pdf.section_title(story, 'Meetings & reviews')
     pdf.bar_chart(
@@ -67,9 +69,12 @@ def _meetings_section(story, trend):
         },
     )
     one_on_one = [p['meetings']['one_on_one_compliance_pct'] for p in trend]
-    if any(value is not None for value in one_on_one):
+    compliance_series = {'1:1 compliance': one_on_one}
+    if include_restricted:
+        compliance_series['Onboarding 1-on-1s'] = [p['meetings'].get('onboarding_pct') for p in trend]
+    if any(any(v is not None for v in s) for s in compliance_series.values()):
         pdf.line_chart(
-            story, categories=months, series={'1:1 compliance': one_on_one},
+            story, categories=months, series=compliance_series,
             y_max=100, y_suffix='%',
         )
     pdf.line_chart(
@@ -79,21 +84,29 @@ def _meetings_section(story, trend):
             'Pro-rata target': [reviews_target(p['month'], p.get('targets')) for p in trend],
         },
     )
+    headers = ['Month', 'Manager syncs', 'Team meetings with HRBP', 'Reviews (YTD)', '1:1 compliance']
+    if include_restricted:
+        headers.append('Onboarding 1-on-1s')
+    table_rows = []
+    for p in trend:
+        row = [
+            _month_label(p['month']),
+            p['meetings']['tl_sync_count'],
+            p['meetings']['team_meetings_with_hrbp'],
+            p['review_deliveries_ytd'],
+            _dash(None if p['meetings']['one_on_one_compliance_pct'] is None
+                  else f"{p['meetings']['one_on_one_compliance_pct']}%"),
+        ]
+        if include_restricted:
+            onb = p['meetings'].get('onboarding_pct')
+            row.append(_dash(None if onb is None else f"{onb}%"))
+        table_rows.append(row)
+    numeric_cols = (1, 2, 3, 4, 5) if include_restricted else (1, 2, 3, 4)
     pdf.data_table(
         story,
-        ['Month', 'Manager syncs', 'Team meetings with HRBP', 'Reviews (YTD)', '1:1 compliance'],
-        [
-            [
-                _month_label(p['month']),
-                p['meetings']['tl_sync_count'],
-                p['meetings']['team_meetings_with_hrbp'],
-                p['review_deliveries_ytd'],
-                _dash(None if p['meetings']['one_on_one_compliance_pct'] is None
-                      else f"{p['meetings']['one_on_one_compliance_pct']}%"),
-            ]
-            for p in trend
-        ],
-        numeric_cols=(1, 2, 3, 4),
+        headers,
+        table_rows,
+        numeric_cols=numeric_cols,
     )
 
 
@@ -207,8 +220,8 @@ def build_scorecard_pdf(scorecard, trend, governance, epr, period_label, leader_
         period_label=period_label,
     )
     rows = kpi_rows(scorecard, include_restricted=include_restricted)
-    _cover(story, scorecard, leader_name, period_label, rows)
-    _meetings_section(story, trend)
+    _cover(story, scorecard, leader_name, period_label, rows, include_restricted=include_restricted)
+    _meetings_section(story, trend, include_restricted=include_restricted)
     _epr_section(story, scorecard, epr)
     _risks_section(story, scorecard)
     _governance_section(story, governance)

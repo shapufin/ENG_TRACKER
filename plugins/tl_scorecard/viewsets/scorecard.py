@@ -33,6 +33,7 @@ from ..services import (
     epr_metrics,
     escalation_candidates,
     governance_records,
+    onboarding_joiners,
     scorecard_trend,
 )
 from core.mixins.permissions import is_staff_user
@@ -447,11 +448,14 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             scope = get_hbpr_scope(request.user)
             if scope is not None:
                 subject_ids = set(team_member_ids) & scope.user_ids
+        include_restricted = not is_hbpr_only(request.user)
         month_roster = frozen_member_ids(leader, month, team_member_ids)
         governance = governance_records(
             leader, month_roster, month.year, subject_ids,
             include_review_content=is_staff_user(request.user) or leader.id == request.user.id,
         )
+        if include_restricted:
+            governance['onboarding'] = onboarding_joiners(leader, month)
         period_label = date.fromisoformat(scorecard['month']).strftime('%B %Y')
 
         # HBPR ↔ Line Manager governance evidence for this leader (the Line Manager authors
