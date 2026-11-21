@@ -83,6 +83,23 @@ class SummaryExportFormatTests(TestCase):
         self.assertIsInstance(row[2].value, (int, float))
         self.assertNotIsInstance(row[2].value, bool)
 
+    def test_summary_has_ot_within_sla_row(self):
+        scorecard = build_scorecard(self.leader, date.today())
+        governance = {'open_pips': [], 'pending_promotions': [], 'epr_cycles': [], 'open_absences': []}
+
+        for pct, expected_status in [(100.0, 'On track'), (90.0, 'Watch'), (79.0, 'Off track')]:
+            scorecard['overtime']['pct_within_sla'] = pct
+            wb = load_workbook(io.BytesIO(build_workbook_bytes(scorecard, governance, 'Oct 2026')))
+            ws = wb['Summary']
+            row_turnaround = _find_row(ws, 'OT approval turnaround (days)')
+            row_within = _find_row(ws, 'OT decided within 2 working days')
+            self.assertEqual(row_turnaround[3].value, '—')
+            self.assertEqual(row_turnaround[4].value, '—')
+            self.assertEqual(row_within[0].row, row_turnaround[0].row + 1)
+            self.assertEqual(row_within[2].value, pct)
+            self.assertEqual(row_within[3].value, 100.0)
+            self.assertEqual(row_within[4].value, expected_status)
+
     def test_unknown_file_format_is_rejected(self):
         resp = self._get({'file_format': 'docx'})
         self.assertEqual(resp.status_code, 400)

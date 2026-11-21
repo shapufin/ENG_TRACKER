@@ -38,8 +38,8 @@ def _cover(story, scorecard, leader_name, period_label, rows):
     targets = scorecard.get('targets') or TARGETS
     pdf.paragraph(
         story,
-        f"Targets: 1:1 compliance {targets['one_on_one_pct']:g}%; management reviews "
-        f"{targets['reviews_per_year']} a year (pro-rata to the month); "
+        f"Targets: 1:1 compliance {targets['one_on_one_pct']:g}%; overtime within 2 working days; "
+        f"management reviews {targets['reviews_per_year']} a year (pro-rata to the month); "
         f"promotion {targets['promotion_pct']:g}% a year; PIPs pending approval, absences over "
         '5 days and escalations 0. Green is on track, amber is watch, red is off track.',
     )

@@ -37,7 +37,8 @@ Working day = Monday to Friday, not a public holiday.
 | Request | Deadline |
 |---|---|
 | Leave | End of the same working day it was submitted. Submitted on a weekend or holiday: end of the next working day. |
-| Overtime, standby | End of the 5th working day after the submission date. |
+| Overtime | End of the 2nd working day after the submission date. |
+| Standby | End of the 5th working day after the submission date. |
 
 Public holidays are the global holidays plus holidays of calendars the TL has
 active (`UserCalendarPreference.is_active`). Deadlines do not pause during the

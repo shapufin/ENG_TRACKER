@@ -243,12 +243,22 @@ def ot_turnaround_metrics(leader_id: int, month: date, window: TrendWindow | Non
         )
     decided = [r for r in rows if r.status in ('approved', 'rejected') and r.approved_at]
     if not decided:
-        return {'decided_count': 0, 'avg_turnaround_days': None}
+        return {'decided_count': 0, 'avg_turnaround_days': None, 'within_sla': 0, 'pct_within_sla': None}
 
-    total_days = sum(_business_days_elapsed(r.submitted_at, r.approved_at) for r in decided)
+    if window is not None:
+        holidays = window.leave_holidays
+    else:
+        holidays = global_holiday_dates(
+            min(_local_date(r.submitted_at) for r in decided),
+            max(_local_date(r.approved_at) for r in decided),
+        )
+    decided_days = [_business_days_elapsed(r.submitted_at, r.approved_at, holidays) for r in decided]
+    within = sum(1 for d in decided_days if d <= OT_SLA_WORKING_DAYS)
     return {
         'decided_count': len(decided),
-        'avg_turnaround_days': round(total_days / len(decided), 1),
+        'avg_turnaround_days': round(sum(decided_days) / len(decided), 1),
+        'within_sla': within,
+        'pct_within_sla': round(within / len(decided) * 100, 1),
     }
 
 
@@ -354,6 +364,7 @@ ESCALATION_PIP_PENDING_DAYS = 14
 ESCALATION_ABSENCE_SLA_DAYS = 5
 
 PROMOTION_TARGET_PCT = 3.0
+OT_SLA_WORKING_DAYS = 2  # must equal plugins/engagement/sla.py SLA_WORKING_DAYS['overtime']
 # Scorecard targets per role code. The first role the viewer holds wins, in this order.
 # Line Manager (albanian_tl) is the KPI owner's set (Enri). A new role such as PM gets its
 # own entry here; a viewer with no listed role gets the Line Manager set.
@@ -363,6 +374,7 @@ SCORECARD_TARGETS_BY_ROLE = {
         'reviews_per_year': 12,
         'one_on_one_pct': 100.0,
         'promotion_pct': PROMOTION_TARGET_PCT,
+        'ot_within_sla_pct': 100.0,
     },
 }
 DEFAULT_TARGET_ROLE = 'albanian_tl'

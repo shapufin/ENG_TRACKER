@@ -141,11 +141,13 @@ class TLScorecardServiceTests(TestCase):
         self.assertEqual(data['targets'], {
             'tl_sync_per_year': 45, 'reviews_per_year': 12,
             'one_on_one_pct': 100.0, 'promotion_pct': 3.0,
+            'ot_within_sla_pct': 100.0,
         })
 
     def test_targets_follow_the_viewers_role(self):
         pm_targets = {
             'tl_sync_per_year': 24, 'reviews_per_year': 4, 'one_on_one_pct': 100.0, 'promotion_pct': 3.0,
+            'ot_within_sla_pct': 100.0,
         }
         with mock.patch.dict('plugins.tl_scorecard.services.SCORECARD_TARGETS_BY_ROLE', {'pm': pm_targets}):
             _assign_tl_role(self.leader, 'pm')
@@ -168,6 +170,47 @@ class TLScorecardServiceTests(TestCase):
         result = ot_turnaround_metrics(self.leader.id, self.month_start)
         self.assertEqual(result['decided_count'], 0)
         self.assertIsNone(result['avg_turnaround_days'])
+
+    def test_ot_pct_within_sla_counts_rows_at_or_under_two_business_days(self):
+        # 3 decided rows at 1, 2 and 3 business days -> within_sla == 2, pct_within_sla == 66.7
+        t_sub = _datetime(2026, 3, 2, 10, 0, tzinfo=_utc.utc)
+        _overtime(self.member, t_sub, approved_at=_datetime(2026, 3, 3, 10, 0, tzinfo=_utc.utc))
+        _overtime(self.member, t_sub, approved_at=_datetime(2026, 3, 4, 10, 0, tzinfo=_utc.utc))
+        _overtime(self.member, t_sub, approved_at=_datetime(2026, 3, 5, 10, 0, tzinfo=_utc.utc))
+        result = ot_turnaround_metrics(self.leader.id, date(2026, 3, 1))
+        self.assertEqual(result['decided_count'], 3)
+        self.assertEqual(result['within_sla'], 2)
+        self.assertEqual(result['pct_within_sla'], 66.7)
+
+    def test_ot_sla_does_not_charge_a_public_holiday(self):
+        # Submitted Fri, approved Tue, Monday a global PublicHoliday -> that row counts as within (1 business day)
+        PublicHoliday.objects.create(name='Global holiday', date=date(2026, 3, 9))
+        t_sub = _datetime(2026, 3, 6, 10, 0, tzinfo=_utc.utc)
+        t_app = _datetime(2026, 3, 10, 10, 0, tzinfo=_utc.utc)
+        _overtime(self.member, t_sub, approved_at=t_app)
+        result = ot_turnaround_metrics(self.leader.id, date(2026, 3, 1))
+        self.assertEqual(result['decided_count'], 1)
+        self.assertEqual(result['within_sla'], 1)
+        self.assertEqual(result['pct_within_sla'], 100.0)
+
+    def test_ot_sla_holiday_set_spans_the_new_year(self):
+        # Submitted 31 Dec, approved 4 Jan, 1 Jan a holiday -> elapsed excludes 1 Jan
+        PublicHoliday.objects.create(name='New Year', date=date(2026, 1, 1))
+        t_sub = _datetime(2025, 12, 31, 10, 0, tzinfo=_utc.utc)
+        t_app = _datetime(2026, 1, 4, 10, 0, tzinfo=_utc.utc)
+        _overtime(self.member, t_sub, approved_at=t_app)
+        result = ot_turnaround_metrics(self.leader.id, date(2025, 12, 1))
+        self.assertEqual(result['decided_count'], 1)
+        self.assertEqual(result['within_sla'], 1)
+        self.assertEqual(result['pct_within_sla'], 100.0)
+        self.assertEqual(result['avg_turnaround_days'], 1.0)
+
+    def test_ot_sla_with_no_decided_rows_is_none(self):
+        result = ot_turnaround_metrics(self.leader.id, self.month_start)
+        self.assertEqual(result['decided_count'], 0)
+        self.assertIsNone(result['avg_turnaround_days'])
+        self.assertEqual(result['within_sla'], 0)
+        self.assertIsNone(result['pct_within_sla'])
 
     def test_build_scorecard_resolves_team_size_from_profile(self):
         data = build_scorecard(self.leader, self.month_start)

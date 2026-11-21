@@ -21,6 +21,7 @@ TARGETS = {
     'pip_pending': 0,
     'absences_breached': 0,
     'escalations': 0,
+    'ot_within_sla_pct': 100.0,
 }
 
 ON_TRACK = 'On track'
@@ -95,6 +96,8 @@ def kpi_rows(scorecard, *, include_leave_overtime=True) -> list[dict]:
         row('Leave', 'Leave decided within 2 business days', leave['pct_within_2_days'], 'pct'),
         row('Leave', 'Pending leave at month-end', leave['pending_at_month_end'], 'count'),
         row('Overtime', 'OT approval turnaround (days)', scorecard['overtime']['avg_turnaround_days'], 'num'),
+        row('Overtime', 'OT decided within 2 working days', scorecard['overtime'].get('pct_within_sla'),
+            'pct', targets.get('ot_within_sla_pct', TARGETS['ot_within_sla_pct'])),
         row('Meetings', '1:1 compliance', meetings['one_on_one_compliance_pct'], 'pct',
             targets['one_on_one_pct']),
         row('Meetings', 'Manager syncs', meetings['tl_sync_count'], 'count'),

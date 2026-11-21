@@ -44,6 +44,8 @@ class LeaveSlaSerializer(serializers.Serializer):
 class OvertimeTurnaroundSerializer(serializers.Serializer):
     decided_count = serializers.IntegerField()
     avg_turnaround_days = serializers.FloatField(allow_null=True)
+    within_sla = serializers.IntegerField(required=False)
+    pct_within_sla = serializers.FloatField(allow_null=True, required=False)
 
 
 class MeetingComplianceSerializer(serializers.Serializer):
