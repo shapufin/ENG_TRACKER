@@ -479,11 +479,15 @@ the authenticator app and passkeys (workflow-invariants item 90, spec
   and `VAPID_PRIVATE_KEY` are set (push); (3) set the switch and restart the backend; (4) on one phone open
   Settings, Security, "Set up this phone"; (5) sign in on a computer and approve with the notification, then
   again with "Show QR code instead"; (6) tell users. **Android**: Chrome needs no install. **iPhone**: push needs
-  the app added to the Home Screen (iOS 16.4 or later); otherwise the QR code is the path. If an Android
-  approval arrives late, set Chrome's battery use to **Unrestricted** and allow background data (the
-  `PushSetupGuide` Android tab says this). Users do not need
+  the app added to the Home Screen (iOS 16.4 or later); otherwise the QR code is the path. Users do not need
   this runbook: Settings, Security, Phone approval has "How to turn on notifications" with iPhone and Android
   tabs (`PushSetupGuide`), and opens it by itself where notifications cannot work yet.
+- **Push delivery**: the server sends every alert with `Urgency: high` and a TTL (300 s generally; an approval
+  carries 120 s, matching `PHONE_REQUEST_TTL_SECONDS`), so a sleeping phone is woken instead of the alert being
+  batched until the browser opens. If approvals arrive late anyway, the cause is device-side: Android Chrome
+  battery use must be **Unrestricted** with background data allowed (the `PushSetupGuide` Android tab says this),
+  and iPhone needs the app on the Home Screen (iOS 16.4+). Server-side contract: `plugins/notifications/push_service.py`
+  (`DEFAULT_PUSH_TTL_SECONDS`), rules in `docs/workflow-invariants.md` item 90(d).
 - **Approval link host**: the link in the notification and the QR code uses the first entry of `WEBAUTHN_ORIGINS`;
   it must be the host users open the app on (the service worker only opens same-origin links).
 - **Before production** (all in git on `main`): (1) `.env` has `PHONE_APPROVAL_ENABLED=true` plus the `WEBAUTHN_*` and `VAPID_*` values; (2) deploy: the container start runs `users.0031_phone_approval` (two new tables) with the other migrations; (3) recreate `backend` and `scheduler` and run the check command above; (4) Site Backup needs no action: `users.pairedphone` and `users.phoneloginrequest` are excluded from archives on purpose (`EXCLUDED_MODELS`, guarded by `test_backup_coverage_guard.py`), a restore never touches or revives pairings, and a server move carries them in `pg_dump`; (5) pair one phone and run the rollout steps below.

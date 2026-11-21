@@ -44,6 +44,21 @@ def is_hbpr(user) -> bool:
     return has_role(user, HBPR_ROLE_CODE)
 
 
+def _active_member_ids(tl_ids) -> set:
+    """Active users whose leader link points at one of ``tl_ids``.
+
+    One batched lookup for every Line Manager, so resolving a scope never costs a
+    query per assignment (2026-11-21). Same source as
+    ``UserProfile.get_team_member_ids()``.
+    """
+    from apps.users.services.team_leaders import managed_member_ids_bulk
+
+    members: set = set()
+    for ids in managed_member_ids_bulk(tl_ids, active_only=True).values():
+        members |= ids
+    return members
+
+
 def _assignment_population(hbpr) -> tuple[frozenset, frozenset, frozenset]:
     """Return ``(assignment_ids, tl_ids, member_ids)`` for one HBPR.
 
@@ -68,19 +83,7 @@ def _assignment_population(hbpr) -> tuple[frozenset, frozenset, frozenset]:
 
     assignment_ids = frozenset(a.id for a in assignments)
     tl_ids = frozenset(a.albanian_tl_id for a in assignments)
-    member_ids: set = set()
-    for assignment in assignments:
-        profile = getattr(assignment.albanian_tl, 'profile', None)
-        if profile is not None:
-            member_ids |= profile.get_team_member_ids()
-    member_ids -= tl_ids
-    if member_ids:
-        active_ids = set(
-            User.objects.filter(id__in=member_ids, is_active=True).values_list(
-                'id', flat=True
-            )
-        )
-        member_ids &= active_ids
+    member_ids = _active_member_ids(tl_ids) - tl_ids
     return assignment_ids, tl_ids, frozenset(member_ids)
 
 
@@ -105,6 +108,37 @@ def get_hbpr_scope(user) -> 'HbprScope | None':
     )
     setattr(user, _SCOPE_ATTR, scope)
     return scope
+
+
+def full_scope() -> HbprScope:
+    """Every open assignment's population: what a superuser opens the workspace with.
+
+    ``get_hbpr_scope`` deliberately returns ``None`` for a superuser without the
+    ``hbpr`` role (pinned by ``test_staff_without_role_has_no_scope``). Staff and
+    superusers already bypass the per-resource scoping in ``viewer_scope``, so the
+    workspace view uses this instead of the role-derived scope to avoid being the
+    one surface that 403s them (ruling 2026-11-21).
+    """
+    from apps.users.models.hbpr import HbprAlbanianTlAssignment
+    from apps.users.services.hbpr_assignments import in_effect_q, today
+
+    rows = list(
+        HbprAlbanianTlAssignment.objects.filter(
+            in_effect_q(today()), albanian_tl__is_active=True
+        ).values_list('id', 'albanian_tl_id')
+    )
+    if not rows:
+        return HbprScope(
+            assignment_ids=frozenset(), tl_ids=frozenset(), member_ids=frozenset()
+        )
+    assignment_ids = frozenset(assignment_id for assignment_id, _ in rows)
+    tl_ids = frozenset(tl_id for _, tl_id in rows)
+    member_ids = _active_member_ids(tl_ids) - tl_ids
+    return HbprScope(
+        assignment_ids=assignment_ids,
+        tl_ids=tl_ids,
+        member_ids=frozenset(member_ids),
+    )
 
 
 def hbpr_user_ids_for(subject_user, owner_id=None) -> list:

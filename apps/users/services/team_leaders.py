@@ -81,3 +81,31 @@ def albanian_tl_user_ids(among=None):
         for user_id, codes in profiles.values_list('user_id', 'role_codes')
         if 'albanian_tl' in (codes or [])
     }
+
+
+def managed_member_ids_bulk(leader_ids, *, active_only: bool = False) -> dict[int, set[int]]:
+    """``{leader_id: member_ids}`` in a fixed number of queries.
+
+    Same source as ``UserProfile.get_team_member_ids()`` (direct italian/albanian
+    FK only; teams are calendar-only), batched so a year with 30 pairs does not
+    cost 60 queries, and so HBPR scope resolution stays flat at any number of
+    assignments (2026-11-21). ``test_managed_members_match_core`` pins the parity.
+
+    Lives in core because core services may not import a plugin; the year-close
+    builder imports it from here.
+    """
+    from apps.users.models import UserProfile
+
+    leader_ids = set(leader_ids)
+    result: dict[int, set[int]] = {leader_id: set() for leader_id in leader_ids}
+    if not leader_ids:
+        return result
+
+    for field in ('italian_tl_id', 'albanian_tl_id'):
+        qs = UserProfile.objects.filter(**{f'{field}__in': leader_ids})
+        if active_only:
+            qs = qs.filter(user__is_active=True)
+        for leader_id, user_id in qs.values_list(field, 'user_id'):
+            result[leader_id].add(user_id)
+
+    return result

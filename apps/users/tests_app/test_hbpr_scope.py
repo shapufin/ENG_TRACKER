@@ -23,6 +23,7 @@ from apps.users.services.hbpr_assignments import (
     today,
 )
 from apps.users.services.hbpr_scope import (
+    full_scope,
     get_hbpr_scope,
     hbpr_user_ids_for,
     is_hbpr,
@@ -398,3 +399,57 @@ class HbprAssignmentDatesTests(HbprScopeTestBase):
         self.assignment.refresh_from_db()
         self.assignment.effective_to = self.today - timedelta(days=1)
         self.assignment.save(update_fields=['effective_to'])
+
+
+class HbprFullScopeTests(HbprScopeTestBase):
+    """`full_scope()` is the whole population a superuser opens the workspace with."""
+
+    def test_covers_every_open_assignment(self):
+        other_hbpr = _user('hbpr-2')
+        assign_role(other_hbpr, 'hbpr')
+        other = create_assignment(
+            hbpr=other_hbpr, albanian_tl=self.other_al_tl,
+            cadence='weekly', effective_from=date(2026, 10, 1),
+        )
+
+        scope = full_scope()
+
+        self.assertEqual(
+            scope.assignment_ids, frozenset({self.assignment.id, other.id})
+        )
+        self.assertTrue(scope.has_tl(self.al_tl.id))
+        self.assertTrue(scope.has_tl(self.other_al_tl.id))
+        self.assertTrue(scope.has_user(self.fk_report.id))
+        self.assertTrue(scope.has_user(self.other_report.id))
+        self.assertFalse(scope.has_user(self.outsider.id))
+
+    def test_ignores_ended_assignments(self):
+        end_assignment(assignment=self.assignment, effective_to=date(2026, 10, 2))
+        self.assertNotIn(self.assignment.id, full_scope().assignment_ids)
+
+    def test_ignores_a_deactivated_line_manager(self):
+        self.al_tl.is_active = False
+        self.al_tl.save(update_fields=['is_active'])
+        self.assertNotIn(self.assignment.id, full_scope().assignment_ids)
+
+
+class HbprScopeQueryBudgetTests(HbprScopeTestBase):
+    def _count(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        fresh = User.objects.get(pk=self.hbpr.pk)  # scope is memoised per instance
+        with CaptureQueriesContext(connection) as ctx:
+            get_hbpr_scope(fresh)
+        return len(ctx)
+
+    def test_query_count_does_not_grow_with_assignments(self):
+        before = self._count()
+        for i in range(5):
+            tl = _user(f'bulk-tl-{i}')
+            assign_role(tl, 'albanian_tl')
+            create_assignment(
+                hbpr=self.hbpr, albanian_tl=tl,
+                cadence='weekly', effective_from=date(2026, 10, 1),
+            )
+        self.assertEqual(self._count(), before)

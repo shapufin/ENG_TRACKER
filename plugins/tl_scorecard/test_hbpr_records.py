@@ -6,6 +6,7 @@ from rest_framework.test import force_authenticate
 from . import hbpr_records
 from .models import Absence, IdleFlag, Meeting, PIPRecord, PromotionFlag
 from .test_tl_scorecard_hbpr import HbprScorecardBase
+from .testing import make_user as _make_user
 from .viewsets import PIPRecordViewSet
 from .viewsets_hbpr import HbprViewSet
 
@@ -39,6 +40,11 @@ class HbprRecordsEndpointTests(HbprScorecardBase):
         for user in (self.tl, self.member, self.staff):
             with self.subTest(user=user.username):
                 self.assertEqual(self._get(user, kind='pips').status_code, 403)
+
+    def test_superuser_may_call_it_and_sees_every_row(self):
+        root = _make_user('root_rec', is_superuser=True, is_staff=True)
+        data = self._get(root, kind='pips', limit=100).data
+        self.assertEqual(data['count'], PIPRecord.objects.count())
 
     def test_limit_offset_and_count(self):
         for i in range(3):
@@ -171,6 +177,10 @@ class HbprRecordsSummaryTests(HbprScorecardBase):
         for user in (self.tl, self.member, self.staff):
             with self.subTest(user=user.username):
                 self.assertEqual(self._get(user).status_code, 403)
+
+    def test_superuser_may_call_it(self):
+        root = _make_user('root_summary', is_superuser=True, is_staff=True)
+        self.assertEqual(self._get(root).status_code, 200)
 
     def test_leader_filter_cannot_widen_scope(self):
         in_scope = self._get(self.hbpr, leader=self.tl.id).data
