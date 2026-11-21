@@ -22,6 +22,7 @@ from django.utils import timezone
 
 from apps.overtime.models import OvertimeLog
 from apps.standby.models import StandbyLog
+from apps.users.services.team_leaders import managed_member_ids_bulk
 from core.utils.sheet_titles import safe_sheet_title
 from core.utils.timezone_local import business_tz
 
@@ -57,29 +58,6 @@ def _year_window(year: int) -> tuple[date, date]:
 
 
 # --------------------------------------------------------------------- pairs
-
-
-def managed_member_ids_bulk(leader_ids) -> dict[int, set[int]]:
-    """``{leader_id: member_ids}`` in a fixed number of queries.
-
-    Same source as ``UserProfile.get_team_member_ids()`` (direct italian/albanian
-    FK only; teams are calendar-only), batched so a year with 30 pairs does not
-    cost 60 queries. ``test_managed_members_match_core`` pins the parity.
-    """
-    from apps.users.models import UserProfile
-
-    leader_ids = set(leader_ids)
-    result: dict[int, set[int]] = {leader_id: set() for leader_id in leader_ids}
-    if not leader_ids:
-        return result
-
-    for field in ('italian_tl_id', 'albanian_tl_id'):
-        for leader_id, user_id in UserProfile.objects.filter(
-            **{f'{field}__in': leader_ids}
-        ).values_list(field, 'user_id'):
-            result[leader_id].add(user_id)
-
-    return result
 
 
 def candidate_pairs() -> list[tuple[int, int]]:

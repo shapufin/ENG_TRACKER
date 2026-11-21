@@ -5,7 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
-from apps.users.services.hbpr_scope import get_hbpr_scope
+from apps.users.services.hbpr_scope import full_scope, get_hbpr_scope
 from core.mixins.permissions import PluginPermissionMixin
 
 from . import hbpr_records, services_hbpr
@@ -20,6 +20,12 @@ class HbprViewSet(PluginPermissionMixin, viewsets.ViewSet):
     pagination_class = None
 
     def _scope(self, request):
+        # A superuser keeps full access (ruling 2026-11-21): staff already bypass
+        # the per-resource scoping in `viewer_scope`, so the workspace must not be
+        # the one surface that 403s them. The `hbpr` role still governs everyone
+        # else, and `get_hbpr_scope` keeps returning None for staff without it.
+        if request.user.is_superuser:
+            return full_scope()
         scope = get_hbpr_scope(request.user)
         if scope is None:
             raise PermissionDenied('Only HR business partners can open this view.')

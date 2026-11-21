@@ -11,6 +11,9 @@ from datetime import date, timedelta
 
 from rest_framework.test import APIRequestFactory, force_authenticate
 
+from apps.permissions.services.role_service import assign_role
+from apps.users.models.hbpr import HbprAlbanianTlAssignment
+
 from .models import HbprGovernanceEvidence
 from .test_tl_scorecard_hbpr import HbprScorecardBase, _make_user
 from .viewsets_hbpr import HbprViewSet
@@ -171,6 +174,28 @@ class HbprWorkspaceOverviewTests(HbprScorecardBase):
         for user in (self.tl, self.member, self.staff, self.other_tl):
             self.assertEqual(self._get('overview', user).status_code, 403, user.username)
             self.assertEqual(self._get('people', user).status_code, 403, user.username)
+
+    def test_superuser_opens_it_and_sees_every_leader(self):
+        # Ruling 2026-11-21: a superuser keeps full access. Staff bypass the
+        # per-resource scoping (viewer_scope), so the workspace must not be the
+        # one surface that 403s them.
+        other_hbpr = _make_user('other_hbpr_dash')
+        assign_role(other_hbpr, 'hbpr')
+        HbprAlbanianTlAssignment.objects.create(
+            hbpr=other_hbpr, albanian_tl=self.other_tl,
+            cadence='weekly', effective_from=date(2020, 1, 1),
+        )
+        root = _make_user('root_sc', is_superuser=True, is_staff=True)
+        overview = self._get('overview', root)
+        self.assertEqual(overview.status_code, 200)
+        leader_ids = {row['id'] for row in overview.data['leaders']}
+        self.assertIn(self.tl.id, leader_ids)
+        self.assertIn(self.other_tl.id, leader_ids)
+        people = self._get('people', root)
+        self.assertEqual(people.status_code, 200)
+        people_ids = {p['id'] for p in people.data['results']}
+        self.assertIn(self.member.id, people_ids)
+        self.assertIn(self.other_member.id, people_ids)
 
     def _query_count(self):
         from django.contrib.auth.models import User
