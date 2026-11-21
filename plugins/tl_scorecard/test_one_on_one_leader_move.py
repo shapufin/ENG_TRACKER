@@ -1,8 +1,13 @@
 """R2 (audit 2026-11-16): a recurring 1-on-1 plan ends when the employee leaves that Line Manager."""
 from datetime import date
 
-from apps.users.services.user_creation import clear_lm_link_on_promotion, record_leader_link_change
+from apps.users.services.user_creation import (
+    clear_lm_link_on_promotion,
+    leader_link_changed,
+    record_leader_link_change,
+)
 
+from . import leader_moves
 from .models import OneOnOnePlan, OneOnOneSkip
 from .test_one_on_one_plans import OneOnOneBase
 from .testing import make_user
@@ -11,6 +16,15 @@ from .testing import make_user
 class LeaderMoveEndsThePlanTests(OneOnOneBase):
     def setUp(self):
         super().setUp()
+        # The receiver under test is wired by the plugin's ready(). A suite that boots before
+        # the plugin switch table exists (CI's Postgres job starts on an empty database, so
+        # PluginsConfig.ready() skips every ready() call) would otherwise run with no receiver
+        # at all and the plan would survive - green locally, red in CI. Connect it here so the
+        # result never depends on the database the process booted against.
+        before = len(leader_link_changed.receivers)
+        leader_moves.connect()
+        if len(leader_link_changed.receivers) > before:
+            self.addCleanup(leader_moves.disconnect)
         self.plan()
         self.other = make_user('oo_other_emp')
         self.other.profile.albanian_tl = self.lm
