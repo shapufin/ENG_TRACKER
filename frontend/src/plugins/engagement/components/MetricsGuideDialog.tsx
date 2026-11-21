@@ -62,7 +62,8 @@ export const MetricsGuideDialog: React.FC<MetricsGuideDialogProps> = ({ open, on
                 Leave: end of the same working day it was submitted. Submitted on a weekend or
                 holiday: end of the next working day.
               </li>
-              <li>Overtime and standby: end of the 5th working day after submission.</li>
+              <li>Overtime: end of the 2nd working day after submission.</li>
+              <li>Standby: end of the 5th working day after submission.</li>
               <li>
                 Working days are Monday to Friday, excluding public holidays, in Albanian time.
               </li>

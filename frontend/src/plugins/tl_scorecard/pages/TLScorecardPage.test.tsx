@@ -152,7 +152,7 @@ describe("TLScorecardPage", () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByText("66.7%")).toBeInTheDocument());
-    expect(screen.getByText("1.5d")).toBeInTheDocument();
+    expect(screen.getByText(/average 1\.5d/)).toBeInTheDocument();
     expect(screen.getByText("4")).toBeInTheDocument();
   });
 
@@ -453,7 +453,12 @@ describe("TLScorecardPage", () => {
     (tlScorecardService.getScorecard as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: {
         ...SCORECARD,
-        leave: { decided_count: 0, within_2_days: null, pct_within_2_days: null, pending_at_month_end: 0 },
+        leave: {
+          decided_count: 0,
+          within_2_days: null,
+          pct_within_2_days: null,
+          pending_at_month_end: 0,
+        },
         overtime: { decided_count: 0, avg_turnaround_days: null },
         meetings: {
           ...SCORECARD.meetings,
@@ -468,7 +473,7 @@ describe("TLScorecardPage", () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText("No decisions yet this month")).toBeInTheDocument();
+      expect(screen.getAllByText("No decisions yet this month")).toHaveLength(2);
     });
     expect(screen.queryByText("n/a")).not.toBeInTheDocument();
     const dashes = screen.getAllByText("—");

@@ -11,6 +11,8 @@ export interface LeaveSla {
 export interface OvertimeTurnaround {
   decided_count: number;
   avg_turnaround_days: number | null;
+  within_sla?: number;
+  pct_within_sla?: number | null;
 }
 
 export interface MeetingCompliance {
@@ -67,6 +69,7 @@ export interface ScorecardTargets {
   reviews_per_year: number;
   one_on_one_pct: number;
   promotion_pct: number;
+  ot_within_sla_pct?: number;
 }
 
 export interface Scorecard {

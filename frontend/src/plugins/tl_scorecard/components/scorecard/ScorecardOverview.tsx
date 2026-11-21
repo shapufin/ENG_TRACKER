@@ -161,16 +161,22 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
           trend="Target: 0"
         />
         <StatCard
-          label="OT approval turnaround"
+          label="Overtime decided within 2 working days"
           labelClassName={MICRO_LABEL}
-          value={overtime.avg_turnaround_days !== null ? `${overtime.avg_turnaround_days}d` : "—"}
+          value={overtime.pct_within_sla != null ? `${overtime.pct_within_sla}%` : "—"}
           icon={CalendarClock}
-          iconWellClass={`border ${toneSurfaceClass.info}`}
-          iconColorClass={toneTextClass.info}
+          iconWellClass={slaWell(overtime.pct_within_sla ?? null)}
+          iconColorClass={slaTone(overtime.pct_within_sla ?? null) ?? "text-tone-info-text"}
           valueColorClass={
-            overtime.avg_turnaround_days !== null ? undefined : "text-muted-foreground font-normal"
+            slaTone(overtime.pct_within_sla ?? null) ?? "text-muted-foreground font-normal"
           }
-          trend={`${overtime.decided_count} requests submitted this month`}
+          trend={
+            overtime.decided_count === 0
+              ? "No decisions yet this month"
+              : `${overtime.within_sla ?? 0} of ${overtime.decided_count} decided in time · average ${overtime.avg_turnaround_days}d`
+          }
+          progressPercent={overtime.pct_within_sla ?? undefined}
+          progressColorClass={slaBar(overtime.pct_within_sla ?? null)}
         />
         <StatCard
           label="Team size"
