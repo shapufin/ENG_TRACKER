@@ -164,18 +164,13 @@ class TrendWindow:
                 leader=leader, slot_date__gte=first_month, slot_date__lt=end,
             ).values_list('employee_id', 'slot_date', 'reason') if reason.strip()
         ]
-        from django.contrib.auth.models import User
-        self.hire_dates = {
-            u_id: (h_date, dj.date() if dj else None)
-            for u_id, h_date, dj in User.objects.filter(id__in=team_member_ids).values_list(
-                'id', 'profile__hire_date', 'date_joined',
-            )
-        }
+        self.hire_dates = _onboarding_hire_dates(team_member_ids)
+        # No lower bound: the single-month path has none either, so a 1-on-1 held
+        # before the start date counts the same in /trend and /scorecard.
         self.onboarding_meetings = list(Meeting.objects.filter(
             meeting_type='one_on_one',
             onboarding_discussed=True,
             counterparty_id__in=team_member_ids,
-            occurred_on__gte=first_month - timedelta(days=ONBOARDING_WINDOW_DAYS),
             occurred_on__lt=end,
         ))
 
@@ -821,7 +816,7 @@ def _current_state_metrics(user, team_member_ids) -> dict:
 def month_blocks(user, month: date, team_member_ids, window: TrendWindow | None = None) -> dict:
     """The month-bound part of a scorecard: what the freeze stores."""
     meetings = meeting_compliance_metrics(user, team_member_ids, month, window)
-    meetings.update(onboarding_metrics(user, month, window))
+    meetings.update(onboarding_metrics(user, month, window, member_ids=team_member_ids))
     return {
         'team_size': len(team_member_ids),
         'leave': leave_sla_metrics(team_member_ids, month, window),
@@ -830,29 +825,37 @@ def month_blocks(user, month: date, team_member_ids, window: TrendWindow | None 
     }
 
 
-def _onboarding_due_map(leader, month: date, window: TrendWindow | None = None) -> dict[int, date]:
-    """Resolve user_id -> due date for team joiners whose 14-day window closes in month."""
+def _onboarding_hire_dates(member_ids) -> dict[int, date | None]:
+    """user_id -> onboarding start: ``hire_date``, else the Tirane date of ``date_joined``
+    (a UTC ``.date()`` put a 00:30 sign-up on the previous day, and so in another month)."""
+    from django.contrib.auth.models import User
+    return {
+        user_id: hire_date or (_local_date(joined) if joined else None)
+        for user_id, hire_date, joined in User.objects.filter(id__in=member_ids).values_list(
+            'id', 'profile__hire_date', 'date_joined',
+        )
+    }
+
+
+def _onboarding_due_map(leader, month: date, window: TrendWindow | None = None,
+                        member_ids=None) -> dict[int, date]:
+    """Resolve user_id -> due date for team joiners whose 14-day window closes in month.
+
+    ``member_ids`` is the month's roster when the caller has one (the freeze job, a
+    past-month export); otherwise the leader's live scoreable roster.
+    """
     month = reporting_period(month)
     month_start, month_end = _month_bounds(month)
 
     if window is not None:
-        hire_dates = window.hire_dates
+        starts = window.hire_dates
     else:
-        if isinstance(leader, int):
-            from django.contrib.auth.models import User
-            leader = User.objects.select_related('profile').get(pk=leader)
-        team_member_ids = scoreable_member_ids(leader)
-        from django.contrib.auth.models import User
-        hire_dates = {
-            u_id: (h_date, dj.date() if dj else None)
-            for u_id, h_date, dj in User.objects.filter(id__in=team_member_ids).values_list(
-                'id', 'profile__hire_date', 'date_joined',
-            )
-        }
+        starts = _onboarding_hire_dates(
+            scoreable_member_ids(leader) if member_ids is None else member_ids,
+        )
 
     due_map = {}
-    for user_id, (hire_date, date_joined) in hire_dates.items():
-        start = hire_date or (date_joined.date() if hasattr(date_joined, 'date') else date_joined)
+    for user_id, start in starts.items():
         if start is None or start < ONBOARDING_TRACKING_START:
             continue
         due = start + timedelta(days=ONBOARDING_WINDOW_DAYS)
@@ -861,7 +864,8 @@ def _onboarding_due_map(leader, month: date, window: TrendWindow | None = None) 
     return due_map
 
 
-def onboarding_metrics(leader, month: date, window: TrendWindow | None = None) -> dict:
+def onboarding_metrics(leader, month: date, window: TrendWindow | None = None,
+                       member_ids=None) -> dict:
     """Joiners due within 14 calendar days of hire date whose due date falls in this month.
 
     Cohort: scoreable_member_ids(leader) (link-only, keeps deactivated users; no is_active filter).
@@ -873,7 +877,7 @@ def onboarding_metrics(leader, month: date, window: TrendWindow | None = None) -
     No organizer filter.
     pct = round(done / due * 100, 1), None when due == 0.
     """
-    due_map = _onboarding_due_map(leader, month, window)
+    due_map = _onboarding_due_map(leader, month, window, member_ids)
     due_count = len(due_map)
     if not due_map:
         return {'onboarding_due': 0, 'onboarding_done': 0, 'onboarding_pct': None}
@@ -902,14 +906,15 @@ def onboarding_metrics(leader, month: date, window: TrendWindow | None = None) -
     }
 
 
-def onboarding_joiners(leader, month: date) -> list[dict]:
+def onboarding_joiners(leader, month: date, member_ids=None) -> list[dict]:
     """Joiners due in this month, with their meeting status for the Governance sheet.
 
     Returns [{user_id, name, due, met_on: date | None, organizer_name: str | None}].
     met_on = earliest tagged one_on_one (onboarding_discussed=True, counterparty=joiner) with occurred_on <= due, else None.
     organizer_name = that meeting's organizer str, else None.
+    Names and 1-on-1 dates: callers serve this to the leader and staff only.
     """
-    due_map = _onboarding_due_map(leader, month)
+    due_map = _onboarding_due_map(leader, month, member_ids=member_ids)
     if not due_map:
         return []
 

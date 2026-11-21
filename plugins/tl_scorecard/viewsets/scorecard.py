@@ -454,8 +454,10 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             leader, month_roster, month.year, subject_ids,
             include_review_content=is_staff_user(request.user) or leader.id == request.user.id,
         )
-        if include_restricted:
-            governance['onboarding'] = onboarding_joiners(leader, month)
+        # Joiner names and 1-on-1 dates come from employee one-on-ones: owner or staff
+        # only (the _mask_one_on_one rule), never by role mix (an HBPR who is also HR).
+        if is_staff_user(request.user) or leader.id == request.user.id:
+            governance['onboarding'] = onboarding_joiners(leader, month, month_roster)
         period_label = date.fromisoformat(scorecard['month']).strftime('%B %Y')
 
         # HBPR ↔ Line Manager governance evidence for this leader (the Line Manager authors

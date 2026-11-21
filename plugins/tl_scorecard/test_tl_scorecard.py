@@ -353,6 +353,62 @@ class TLScorecardServiceTests(TestCase):
             res = services.onboarding_metrics(self.leader, date(2027, 1, 1))
         self.assertEqual(res['onboarding_due'], 1)
 
+    def test_onboarding_uses_the_roster_it_is_given(self):
+        """Final review 2026-11-21: the freeze job and a past-month export pass the
+        month's roster; a joiner who has since moved away must still be counted."""
+        from . import services
+        moved = _make_user('joiner_moved')
+        moved.profile.hire_date = date(2027, 1, 5)  # no leader link any more
+        moved.profile.save()
+        with mock.patch.object(services, 'ONBOARDING_TRACKING_START', date(2025, 1, 1)):
+            live = services.onboarding_metrics(self.leader, date(2027, 1, 1))
+            frozen = services.onboarding_metrics(self.leader, date(2027, 1, 1), member_ids=[moved.id])
+            blocks = services.month_blocks(self.leader, date(2027, 1, 1), [moved.id])
+            joiners = services.onboarding_joiners(self.leader, date(2027, 1, 1), member_ids=[moved.id])
+        self.assertEqual(live['onboarding_due'], 0)
+        self.assertEqual(frozen['onboarding_due'], 1)
+        self.assertEqual(blocks['meetings']['onboarding_due'], 1)
+        self.assertEqual([j['user_id'] for j in joiners], [moved.id])
+
+    def test_onboarding_pre_boarding_meeting_counts_the_same_in_trend_and_month(self):
+        """Final review 2026-11-21: the trend read meetings from first_month - 14 days
+        only, so a 1-on-1 held before the start date counted in /scorecard, not in /trend."""
+        from . import services
+        joiner = _make_user('joiner_preboard')
+        joiner.profile.italian_tl = self.leader
+        joiner.profile.hire_date = date(2027, 1, 5)
+        joiner.profile.save()
+        Meeting.objects.create(
+            organizer=self.leader, counterparty=joiner, meeting_type='one_on_one',
+            occurred_on=date(2026, 12, 1), onboarding_discussed=True,
+        )
+        with mock.patch.object(services, 'ONBOARDING_TRACKING_START', date(2025, 1, 1)):
+            single = services.onboarding_metrics(self.leader, date(2027, 1, 1))
+            trend = services.scorecard_trend(self.leader, 1, date(2027, 1, 1))
+        self.assertEqual(single['onboarding_done'], 1)
+        self.assertEqual(trend[-1]['meetings']['onboarding_done'], 1)
+
+    def test_onboarding_date_joined_start_is_the_tirane_date(self):
+        """Final review 2026-11-21: 00:30 Tirane on 18 Jan is 23:30 UTC on 17 Jan;
+        the start is the 18th, so the due date (1 Feb) falls in February, not January."""
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        from . import services
+        joiner = _make_user('joiner_tirane')
+        joiner.date_joined = datetime(2027, 1, 18, 0, 30, tzinfo=ZoneInfo('Europe/Tirane'))
+        joiner.save()
+        joiner.profile.italian_tl = self.leader
+        joiner.profile.hire_date = None
+        joiner.profile.save()
+        with mock.patch.object(services, 'ONBOARDING_TRACKING_START', date(2025, 1, 1)):
+            january = services.onboarding_metrics(self.leader, date(2027, 1, 1))
+            february = services.onboarding_metrics(self.leader, date(2027, 2, 1))
+            trend = services.scorecard_trend(self.leader, 2, date(2027, 2, 1))
+        self.assertEqual(january['onboarding_due'], 0)
+        self.assertEqual(february['onboarding_due'], 1)
+        self.assertEqual([p['meetings']['onboarding_due'] for p in trend], [0, 1])
+
     def test_onboarding_pre_cutover_hire_is_not_counted(self):
         from . import services
         joiner = _make_user('joiner_old')

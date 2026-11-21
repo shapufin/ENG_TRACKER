@@ -276,6 +276,34 @@ class HbprExportScopeTests(HbprScorecardBase):
         self.assertIn('Leave decided within 2 business days', text)
         self.assertIn('OT approval turnaround', text)
 
+    def test_hbpr_with_another_role_never_gets_onboarding_joiners(self):
+        """Final review 2026-11-21: the joiner list was gated on is_hbpr_only, so an
+        HBPR who also holds HR got names and 1-on-1 dates. Owner or staff only."""
+        from datetime import timedelta
+        from unittest import mock
+
+        from core.utils.timezone_local import business_today
+
+        from . import services
+        from .models import Meeting
+
+        Role.objects.get_or_create(code='hr', defaults={'name': 'hr'})
+        assign_role(self.hbpr, 'hr')
+        joiner = _make_user('onb_joiner_sc', first_name='Zelda', last_name='Joiner')
+        start = business_today().replace(day=1)
+        joiner.profile.albanian_tl = self.tl
+        joiner.profile.hire_date = start
+        joiner.profile.save()
+        Meeting.objects.create(
+            organizer=self.tl, counterparty=joiner, meeting_type='one_on_one',
+            occurred_on=start + timedelta(days=2), onboarding_discussed=True,
+        )
+        with mock.patch.object(services, 'ONBOARDING_TRACKING_START', date(2020, 1, 1)):
+            owner_text = self._xlsx_text(self._export_body(self.tl, 'xlsx'))
+            hbpr_hr_text = self._xlsx_text(self._export_body(self.hbpr, 'xlsx'))
+        self.assertIn('Zelda', owner_text)  # control: the owner's workbook lists the joiner
+        self.assertNotIn('Zelda', hbpr_hr_text)
+
     def test_hbpr_export_has_no_onboarding_row(self):
         xlsx_text = self._xlsx_text(self._export_body(self.hbpr, 'xlsx'))
         self.assertNotIn('Onboarding', xlsx_text)
