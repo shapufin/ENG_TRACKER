@@ -140,7 +140,7 @@ class Year2027Simulation(TestCase):
             _api(self.admin).get(BALANCES)  # the admin balances list is the first read of the year
             carry = {b.user_id: b for b in LeaveBalance.objects.filter(is_carry_over=True)}
             self.assertEqual(carry[self.old.pk].total_days, Decimal('12'))   # 22 - 10 used
-            self.assertEqual(carry[self.mid.pk].total_days, Decimal('10'))   # 13 accrued - 3 used
+            self.assertEqual(carry[self.mid.pk].total_days, Decimal('9'))    # 12 accrued - 3 used
             self.assertEqual(carry[self.new.pk].total_days, Decimal('2'))    # 2 accrued - 0 used
             self.assertTrue(all(c.expires_at == date(2027, 3, 31) for c in carry.values()))
             self.assertEqual(GlobalSettings.objects.get(pk=1).carry_over_applied_year, 2027)
@@ -150,12 +150,15 @@ class Year2027Simulation(TestCase):
             for person in (self.old, self.mid, self.new):  # each person's first visit creates their 2027 row
                 _api(person).get(BALANCES + 'user_balance_summary/')
 
-            # 2. 2027 accrual restarts from the hire date, capped at 12 months.
+            # 2. 2027 accrual restarts with the monthly model (1.8 days/month, rounded up):
+            # 4 days into January is 0.23 of a month, so every person has accrued 1 day.
             current = {u.pk: LeaveBalance.objects.get(user=u, year=2027, is_carry_over=False)
                        for u in (self.old, self.mid, self.new)}
-            self.assertEqual(current[self.old.pk].get_monthly_accrued_days(), Decimal('22'))
-            self.assertEqual(current[self.mid.pk].get_monthly_accrued_days(), Decimal('13'))
-            self.assertEqual(current[self.new.pk].get_monthly_accrued_days(), Decimal('4'))
+            self.assertEqual(current[self.old.pk].get_monthly_accrued_days(), Decimal('1'))
+            self.assertEqual(current[self.mid.pk].get_monthly_accrued_days(), Decimal('1'))
+            self.assertEqual(current[self.new.pk].get_monthly_accrued_days(), Decimal('1'))
+            # The yearly entitlement is still a full 12 months in the new year for a 2026 hire.
+            self.assertEqual(current[self.mid.pk].get_yearly_entitlement(), Decimal('22'))
             self.assertEqual(current[self.old.pk].used_days, Decimal('0'))   # a fresh year
 
             # 3. Old books 11-15 January before any 2027 holiday exists: carry is used first.
