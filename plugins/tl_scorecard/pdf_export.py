@@ -36,11 +36,15 @@ def _cover(story, scorecard, leader_name, period_label, rows, include_restricted
         kpis=tiles,
     )
     targets = scorecard.get('targets') or TARGETS
-    onboarding_phrase = "onboarding 1-on-1s within 14 days; " if include_restricted else ""
+    # An HBPR-only export carries no overtime or onboarding rows, so it names neither target.
+    restricted_phrase = (
+        "overtime within 2 working days; onboarding 1-on-1s within 14 days; "
+        if include_restricted else ""
+    )
     pdf.paragraph(
         story,
-        f"Targets: 1:1 compliance {targets['one_on_one_pct']:g}%; overtime within 2 working days; "
-        f"{onboarding_phrase}"
+        f"Targets: 1:1 compliance {targets['one_on_one_pct']:g}%; "
+        f"{restricted_phrase}"
         f"management reviews {targets['reviews_per_year']} a year (pro-rata to the month); "
         f"promotion {targets['promotion_pct']:g}% a year; PIPs pending approval, absences over "
         '5 days and escalations 0. Green is on track, amber is watch, red is off track.',

@@ -268,7 +268,8 @@ class HbprExportScopeTests(HbprScorecardBase):
         self.assertIn('1:1 compliance', text)
         self.assertNotIn('Leave decided within 2 business days', text)
         self.assertNotIn('Pending leave at month-end', text)
-        self.assertNotIn('Overtime', text)
+        # Case-insensitive: the cover's "Targets:" sentence must not name the overtime target either.
+        self.assertNotIn('overtime', text.lower())
 
     def test_tl_xlsx_export_keeps_leave_and_overtime_kpis(self):
         text = self._xlsx_text(self._export_body(self.tl, 'xlsx'))
