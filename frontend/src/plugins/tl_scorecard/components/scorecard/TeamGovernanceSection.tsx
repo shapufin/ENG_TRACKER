@@ -10,6 +10,7 @@ import {
   Plus,
   ShieldAlert,
   UserMinus,
+  UserPlus,
   UsersRound,
   UserX,
 } from "lucide-react";
@@ -20,7 +21,7 @@ import { toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
 import { EPRSection } from "../EPRSection";
 import { EscalationsPanel } from "../EscalationsPanel";
 import { PIPListPanel } from "../PIPListPanel";
-import { slaTone, slaWell } from "./scorecardMeta";
+import { slaBar, slaTone, slaWell } from "./scorecardMeta";
 
 /** Uppercase micro-label shared by every scorecard metric card. */
 const MICRO_LABEL = "font-semibold uppercase tracking-wider";
@@ -28,6 +29,7 @@ const MICRO_LABEL = "font-semibold uppercase tracking-wider";
 /** Section heading style for the scorecard workspace. */
 const SECTION_HEADING = "text-foreground text-base font-bold tracking-tight";
 
+const CADENCE_GRID = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3";
 const STAT_GRID = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4";
 const SUB_HEADING = `text-muted-foreground text-xs ${MICRO_LABEL}`;
 
@@ -125,6 +127,23 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
   const syncTarget = targets?.tl_sync_per_year;
   const syncFullTarget = targets?.tl_sync_full_year;
   const reviewTarget = targets?.reviews_per_year;
+
+  const onboardingTrend = (() => {
+    if (meetings.onboarding_due === undefined && meetings.onboarding_pct === undefined) {
+      return undefined;
+    }
+    if (
+      meetings.onboarding_due === null ||
+      (meetings.onboarding_pct === null && meetings.onboarding_due == null)
+    ) {
+      return "Not shown";
+    }
+    if (meetings.onboarding_due === 0) {
+      return "No joiners due this month";
+    }
+    return `${meetings.onboarding_done} of ${meetings.onboarding_due} joiners met · Target: 100%`;
+  })();
+
   return (
     <>
       <section aria-labelledby="tl-cadence" className="space-y-4">
@@ -146,7 +165,7 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
             <Plus className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Log monthly management review
           </Button>
         </ModuleHeader>
-        <div className={STAT_GRID}>
+        <div className={CADENCE_GRID}>
           <StatCard
             label="1-on-1 compliance (individual meetings)"
             labelClassName={MICRO_LABEL}
@@ -168,6 +187,25 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
               </span>
             }
             progressPercent={meetings.one_on_one_compliance_pct ?? undefined}
+          />
+          <StatCard
+            label="Onboarding 1-on-1s within 14 days"
+            labelClassName={MICRO_LABEL}
+            value={meetings.onboarding_pct != null ? `${meetings.onboarding_pct}%` : "—"}
+            icon={UserPlus}
+            iconWellClass={slaWell(meetings.onboarding_pct ?? null)}
+            iconColorClass={slaTone(meetings.onboarding_pct ?? null) ?? toneTextClass.neutral}
+            valueColorClass={
+              slaTone(meetings.onboarding_pct ?? null) ?? "text-muted-foreground font-normal"
+            }
+            trend={onboardingTrend}
+            footer={
+              <span className="text-muted-foreground">
+                Counted in the month a joiner's 14 days end
+              </span>
+            }
+            progressPercent={meetings.onboarding_pct ?? undefined}
+            progressColorClass={slaBar(meetings.onboarding_pct ?? null)}
           />
           <StatCard
             label="Manager syncs"

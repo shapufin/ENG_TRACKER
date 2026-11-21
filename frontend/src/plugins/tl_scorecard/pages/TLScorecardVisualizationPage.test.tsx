@@ -174,4 +174,31 @@ describe("TLScorecardVisualizationPage", () => {
     expect(tlScorecardService.getTrend).not.toHaveBeenCalled();
     perms.value = { isHBPROnly: false };
   });
+
+  it("renders the onboarding KPI tile when onboarding_pct is present and omits it when null", async () => {
+    const withOnboarding = (month: string, pct: number | null) => {
+      const p = point(month, 4);
+      p.meetings.onboarding_pct = pct;
+      return p;
+    };
+
+    mockTrend([withOnboarding("2026-04-01", 100), withOnboarding("2026-05-01", 100)]);
+    (tlScorecardService.getEprProgress as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: eprProgress,
+    });
+
+    const { unmount } = renderPage();
+    await waitFor(() =>
+      expect(screen.getByText("Onboarding 1-on-1s within 14 days")).toBeInTheDocument()
+    );
+    unmount();
+
+    // When onboarding_pct is null, the tile is omitted
+    mockTrend([withOnboarding("2026-04-01", null), withOnboarding("2026-05-01", null)]);
+    renderPage();
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "This month at a glance" })).toBeInTheDocument()
+    );
+    expect(screen.queryByText("Onboarding 1-on-1s within 14 days")).not.toBeInTheDocument();
+  });
 });

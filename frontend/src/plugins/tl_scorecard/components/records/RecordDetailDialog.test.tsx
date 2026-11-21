@@ -112,6 +112,14 @@ describe("RecordDetailDialog — meetings", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("displays Onboarding discussed Yes/No detail item", () => {
+    const meetingWithOnboarding: Meeting = { ...MEETING, onboarding_discussed: true };
+    renderDialog("meetings", meetingWithOnboarding);
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("Onboarding discussed")).toBeInTheDocument();
+    expect(within(dialog).getByText("Yes")).toBeInTheDocument();
+  });
+
   it("marks section captions up as level-3 headings", () => {
     renderDialog("meetings", MEETING);
     const dialog = screen.getByRole("dialog");

@@ -111,3 +111,67 @@ describe("TeamGovernanceSection (Manager syncs footer & pace)", () => {
     expect(screen.getByText("5 of 26 YTD · 7 needed by now")).toBeInTheDocument();
   });
 });
+
+describe("TeamGovernanceSection (Onboarding 1-on-1s card)", () => {
+  it("renders the onboarding card with percentage and trend when joiners were due", () => {
+    const scorecard: Scorecard = {
+      ...BASE_SCORECARD,
+      meetings: {
+        ...BASE_SCORECARD.meetings,
+        onboarding_due: 2,
+        onboarding_done: 2,
+        onboarding_pct: 100,
+      },
+    };
+    renderSection(scorecard);
+    expect(screen.getByText("Onboarding 1-on-1s within 14 days")).toBeInTheDocument();
+    expect(screen.getByText("2 of 2 joiners met · Target: 100%")).toBeInTheDocument();
+    expect(screen.getByText("Counted in the month a joiner's 14 days end")).toBeInTheDocument();
+  });
+
+  it("renders em-dash and no joiners due when due is 0", () => {
+    const scorecard: Scorecard = {
+      ...BASE_SCORECARD,
+      meetings: {
+        ...BASE_SCORECARD.meetings,
+        onboarding_due: 0,
+        onboarding_done: 0,
+        onboarding_pct: null,
+      },
+    };
+    renderSection(scorecard);
+    expect(screen.getByText("Onboarding 1-on-1s within 14 days")).toBeInTheDocument();
+    expect(screen.getByText("No joiners due this month")).toBeInTheDocument();
+  });
+
+  it("renders em-dash and 'Not shown' when values are masked (null) for non-owner/HBPR (Review Focus 1)", () => {
+    const scorecard: Scorecard = {
+      ...BASE_SCORECARD,
+      meetings: {
+        ...BASE_SCORECARD.meetings,
+        onboarding_due: null,
+        onboarding_done: null,
+        onboarding_pct: null,
+      },
+    };
+    renderSection(scorecard);
+    expect(screen.getByText("Onboarding 1-on-1s within 14 days")).toBeInTheDocument();
+    expect(screen.getByText("Not shown")).toBeInTheDocument();
+  });
+
+  it("renders em-dash with no trend text when onboarding values are absent (undefined frozen month)", () => {
+    const scorecard: Scorecard = {
+      ...BASE_SCORECARD,
+      meetings: {
+        ...BASE_SCORECARD.meetings,
+        onboarding_due: undefined,
+        onboarding_done: undefined,
+        onboarding_pct: undefined,
+      },
+    };
+    renderSection(scorecard);
+    expect(screen.getByText("Onboarding 1-on-1s within 14 days")).toBeInTheDocument();
+    expect(screen.queryByText("Not shown")).not.toBeInTheDocument();
+    expect(screen.queryByText("No joiners due this month")).not.toBeInTheDocument();
+  });
+});

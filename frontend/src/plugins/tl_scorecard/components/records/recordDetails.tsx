@@ -117,6 +117,7 @@ const meetingItems = (row: RecordRow): DetailItem[] => {
   const m = row as Meeting;
   return [
     { label: "With", text: m.counterparty_name ?? "Whole team" },
+    { label: "Onboarding discussed", text: m.onboarding_discussed ? "Yes" : "No" },
     {
       label: "Notes",
       text: m.notes,

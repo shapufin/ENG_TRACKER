@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { FieldLabel } from "@/components/ui/FieldLabel";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { InfoCallout } from "@/components/ui/InfoCallout";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -28,6 +30,7 @@ interface LogMeetingDialogProps {
     occurred_on: string;
     notes: string;
     reference_url?: string;
+    onboarding_discussed?: boolean;
   }) => Promise<void>;
   /** In edit mode type, counterparty and team are fixed; `onCreate` receives the edited values. */
   mode?: "create" | "edit";
@@ -64,6 +67,9 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
   );
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [referenceUrl, setReferenceUrl] = useState(initial?.reference_url ?? "");
+  const [onboardingDiscussed, setOnboardingDiscussed] = useState<boolean>(
+    initial?.onboarding_discussed ?? false
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const needsCounterparty = meetingType === "one_on_one" || meetingType === "tl_sync";
@@ -119,11 +125,13 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
         occurred_on: occurredOn,
         notes,
         reference_url: referenceUrl.trim(),
+        onboarding_discussed: meetingType === "one_on_one" ? onboardingDiscussed : false,
       });
       if (!isEdit) {
         setNotes("");
         setCounterpartyId(null);
         setReferenceUrl("");
+        setOnboardingDiscussed(false);
       }
       onOpenChange(false);
     } catch {
@@ -167,9 +175,13 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
               <Select
                 value={meetingType}
                 onValueChange={(v) => {
-                  setMeetingType(v as MeetingType);
+                  const nextType = v as MeetingType;
+                  setMeetingType(nextType);
                   setCounterpartyId(null);
                   setOptions([]);
+                  if (nextType !== "one_on_one") {
+                    setOnboardingDiscussed(false);
+                  }
                 }}
               >
                 <SelectTrigger id="meeting-type">
@@ -227,6 +239,25 @@ export const LogMeetingDialog: React.FC<LogMeetingDialogProps> = ({
               </p>
             )}
           </>
+        )}
+
+        {meetingType === "one_on_one" && (
+          <div className="space-y-1.5">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="meeting-onboarding"
+                checked={onboardingDiscussed}
+                onCheckedChange={(checked) => setOnboardingDiscussed(checked === true)}
+              />
+              <Label htmlFor="meeting-onboarding" className="cursor-pointer font-medium">
+                Onboarding conversation
+              </Label>
+            </div>
+            <p className="text-muted-foreground pl-6 text-xs">
+              Tick when this 1-on-1 covered a new joiner's onboarding (within 14 days of their start
+              date).
+            </p>
+          </div>
         )}
 
         <div className="space-y-2">

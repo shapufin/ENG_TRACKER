@@ -5,6 +5,16 @@ import { LogMeetingDialog } from "./LogMeetingDialog";
 import { userService } from "@/services/userService";
 import type { Meeting } from "../types/tlScorecard";
 
+// Radix Checkbox measures itself; jsdom has no ResizeObserver.
+vi.stubGlobal(
+  "ResizeObserver",
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+);
+
 // Radix Select is unreliable to drive via fireEvent in JSDOM, so render it flat:
 // the trigger is a labelled combobox and each item is an option that calls onValueChange.
 vi.mock("@/components/ui/select", () => {
@@ -194,5 +204,102 @@ describe("LogMeetingDialog", () => {
         expect.objectContaining({ counterparty: 20, occurred_on: "2026-09-02", notes: "new notes" })
       )
     );
+  });
+
+  it("renders the onboarding conversation checkbox only for a 1-on-1 and submits the flag", async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined);
+    render(<LogMeetingDialog open onOpenChange={() => {}} onCreate={onCreate} />);
+
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: "Member One" })).toBeInTheDocument()
+    );
+    pick("Member One");
+
+    const checkbox = screen.getByRole("checkbox", { name: /onboarding conversation/i });
+    expect(checkbox).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Tick when this 1-on-1 covered a new joiner's onboarding (within 14 days of their start date)."
+      )
+    ).toBeInTheDocument();
+    expect(checkbox).not.toBeChecked();
+
+    fireEvent.click(checkbox);
+    expect(checkbox).toBeChecked();
+
+    fireEvent.click(screen.getByRole("button", { name: /log meeting/i }));
+    await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        meeting_type: "one_on_one",
+        onboarding_discussed: true,
+      })
+    );
+  });
+
+  it("omits the onboarding checkbox for TL sync and team meeting, and switching type resets the flag", async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined);
+    render(<LogMeetingDialog open onOpenChange={() => {}} onCreate={onCreate} />);
+
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: "Member One" })).toBeInTheDocument()
+    );
+    const checkbox = screen.getByRole("checkbox", { name: /onboarding conversation/i });
+    fireEvent.click(checkbox);
+    expect(checkbox).toBeChecked();
+
+    // Switch to TL sync: checkbox is gone
+    pick("TL sync (Technical Lead in Italy)");
+    expect(
+      screen.queryByRole("checkbox", { name: /onboarding conversation/i })
+    ).not.toBeInTheDocument();
+
+    // Switch back to 1-on-1: checkbox is present again, but reset to unchecked
+    pick("1-on-1 (Individual meeting)");
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: "Member One" })).toBeInTheDocument()
+    );
+    const resetCheckbox = screen.getByRole("checkbox", { name: /onboarding conversation/i });
+    expect(resetCheckbox).not.toBeChecked();
+
+    pick("Member One");
+    fireEvent.click(screen.getByRole("button", { name: /log meeting/i }));
+    await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        meeting_type: "one_on_one",
+        onboarding_discussed: false,
+      })
+    );
+  });
+
+  it("pre-populates onboarding checkbox in edit mode when already flagged", () => {
+    const initial = {
+      id: 3,
+      meeting_type: "one_on_one",
+      organizer: 1,
+      organizer_name: "Me",
+      counterparty: 20,
+      counterparty_name: "Member One",
+      team: null,
+      occurred_on: "2026-09-02",
+      notes: "some notes",
+      shared_summary: "",
+      shared_at: null,
+      onboarding_discussed: true,
+    } as Meeting;
+
+    render(
+      <LogMeetingDialog
+        open
+        mode="edit"
+        initial={initial}
+        onOpenChange={() => {}}
+        onCreate={vi.fn()}
+      />
+    );
+
+    const checkbox = screen.getByRole("checkbox", { name: /onboarding conversation/i });
+    expect(checkbox).toBeChecked();
   });
 });

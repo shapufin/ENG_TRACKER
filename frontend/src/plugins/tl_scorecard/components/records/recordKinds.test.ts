@@ -15,6 +15,9 @@ describe("recordKind person/focus/typeChip", () => {
     expect(config.typeChip({ meeting_type: "one_on_one" } as never)).toBe(
       "1-on-1 (Individual meeting)"
     );
+    expect(
+      config.typeChip({ meeting_type: "one_on_one", onboarding_discussed: true } as never)
+    ).toBe("One-on-one · Onboarding");
     expect(config.typeChip({ meeting_type: "tl_sync" } as never)).toBe("TL sync");
   });
 

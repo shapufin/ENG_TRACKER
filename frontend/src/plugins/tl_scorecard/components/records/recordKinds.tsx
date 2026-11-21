@@ -161,7 +161,10 @@ export const RECORD_CONFIGS: KindConfig<RecordRow>[] = [
     title: (r) => `${MEETING_LABELS[r.meeting_type]} on ${r.occurred_on}`,
     person: (r) => r.counterparty_name ?? "Whole team",
     focus: (r) => r.shared_summary || r.notes || null,
-    typeChip: (r) => MEETING_LABELS[r.meeting_type],
+    typeChip: (r) =>
+      r.meeting_type === "one_on_one" && r.onboarding_discussed
+        ? "One-on-one · Onboarding"
+        : MEETING_LABELS[r.meeting_type],
     state: (r) =>
       r.shared_at
         ? { label: "Summary shared", tone: "success", icon: CheckCircle2 }
