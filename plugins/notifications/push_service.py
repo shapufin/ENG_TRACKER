@@ -24,6 +24,10 @@ PUSH_TIMEOUT_SECONDS = 5
 # Consecutive transient failures before a subscription is deactivated (audit
 # 2026-11-16 M7): a dead endpoint otherwise costs PUSH_TIMEOUT_SECONDS on every notice.
 PUSH_MAX_FAILURES = 5
+# RFC 8030 §5.2: pywebpush defaults ``ttl`` to 0, which tells the gateway to
+# deliver only over a connection that exists right now. 5 minutes lets the push
+# service queue a normal alert for a phone that is asleep.
+DEFAULT_PUSH_TTL_SECONDS = 300
 
 # Hosts a browser may hand out as a push endpoint (audit 2026-11-16 H2). The
 # server POSTs to whatever is stored, so anything else is a request primitive.
@@ -82,7 +86,15 @@ def _count_failure(sub):
     sub.save(update_fields=['failure_count', 'is_active'])
 
 
-def send_push_notification(user, title, message, url=None, endpoints=None):
+def send_push_notification(
+    user,
+    title,
+    message,
+    url=None,
+    endpoints=None,
+    ttl=DEFAULT_PUSH_TTL_SECONDS,
+    urgency="high",
+):
     """Send a push notification to all active subscriptions for a user.
 
     Args:
@@ -92,6 +104,9 @@ def send_push_notification(user, title, message, url=None, endpoints=None):
         url: Optional URL to open when clicked
         endpoints: Optional list; when given, only subscriptions with one of these
             endpoints are used (phone approval targets paired phones, item 90)
+        ttl: RFC 8030 Time-To-Live in seconds; how long the push service may queue it
+        urgency: RFC 8030 urgency (``high`` wakes a sleeping phone; ``normal``/``low``
+            are batched by Android Doze and iOS power management)
 
     Returns:
         (sent_count, failed_count) tuple
@@ -142,6 +157,8 @@ def send_push_notification(user, title, message, url=None, endpoints=None):
                 vapid_private_key=private_key,
                 vapid_claims={"sub": VAPID_SUBJECT},
                 timeout=PUSH_TIMEOUT_SECONDS,
+                ttl=ttl,
+                headers={"Urgency": urgency},
             )
             sent += 1
             if sub.failure_count:

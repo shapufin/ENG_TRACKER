@@ -18,6 +18,7 @@ describe("PushSetupGuide", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Android" }));
     expect(await screen.findByText(/Chrome asks/)).toBeInTheDocument();
     expect(screen.getByText(/lock icon/i)).toBeInTheDocument();
+    expect(screen.getByText(/Unrestricted/)).toBeInTheDocument();
   });
 
   it("always says the QR code works without notifications", () => {
