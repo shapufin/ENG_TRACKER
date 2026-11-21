@@ -150,7 +150,7 @@
 
 **Files:** `plugins/tl_scorecard/excel_export.py` (`_build_trend_sheet`, `_build_governance_sheet`), `plugins/tl_scorecard/pdf_export.py` (`_meetings_section`, `_cover` sentence). Test: `test_scorecard_export_formats.py`.
 
-**Interfaces:** Consumes Task 5's `onboarding_metrics`. The Governance section needs one row per due joiner: Employee, Onboarding date (the earliest tagged 1-on-1 on or before the due date, or `—`), With (the organizer's name). Add a `'joiners'` list to the `onboarding_metrics` return for this: `[{user_id, name, due, met_on: date | None, organizer_name: str | None}]`. The serializer does not expose it, and the HBPR export path never reads it.
+**Interfaces:** Consumes Task 5's `onboarding_metrics`. The Governance section needs one row per due joiner: Employee, Onboarding date (the earliest tagged 1-on-1 on or before the due date, or `—`), With (the organizer's name). Add a separate `onboarding_joiners(leader, month: date) -> list[dict]` in `services.py` returning `[{user_id, name, due, met_on: date | None, organizer_name: str | None}]`, reusing the same cohort/due/done rules as `onboarding_metrics`. Do NOT add it to the `onboarding_metrics` return: that dict lands in `month_blocks`, which `snapshots.py` stores in a JSON field (dates would not serialize, and names would be frozen into history). Only the Governance sheet calls it, and only when `include_restricted` is true.
 
 - [ ] **Step 1: Write the failing tests.** The Trend sheet has an `"Onboarding 1-on-1s"` column and shows `—` for a month with no joiners. The Governance sheet has an Onboarding section that lists one met joiner and one missed joiner, with `—` in Onboarding date for the missed one. The PDF Meetings table has the column. The PDF cover sentence contains `"onboarding 1-on-1s within 14 days"`. The HBPR export has none of these.
 - [ ] **Step 2:** Run → FAIL. **Step 3:** Implement §3.4 rows 2, 3, 5 and the cover sentence. Do not add the column to the native XLSX chart. **Step 4:** Run → PASS.
@@ -224,5 +224,5 @@ Runs once, after Tasks 1–8. It follows `docs/workflow-invariants.md` §Fronten
 ## Self-review notes
 
 - Spec coverage: §2 → Task 3. §3.1–3.2 → Task 4. §3.3 → Task 7. §3.4 → Tasks 5–7. §3.5–3.6 → Task 5. §4 → Tasks 1–2. §6 acceptance → Task 9 Step 7. Additions: the overtime card (Task 2), the onboarding card + Visualize tile (Task 7), both guides (Tasks 2, 8), and the browser gate (Task 9).
-- Deviation from the spec, deliberate: Task 6 adds a non-serialized `joiners` list to `onboarding_metrics`. The Governance sheet needs names, and the spec does not say where they come from.
+- Deviation from the spec, deliberate: Task 6 adds `onboarding_joiners()` beside `onboarding_metrics` (not inside it, because `month_blocks` is stored in frozen snapshots). The Governance sheet needs names, and the spec does not say where they come from.
 - Known inconsistency surfaced, not fixed: the card colour bands (90/70) and the export status bands (target / 80%) differ. The guide states both truthfully. Unifying them needs an owner ruling.
