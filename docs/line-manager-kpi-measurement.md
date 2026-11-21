@@ -1,6 +1,6 @@
 # Handover: Line Manager KPI measurement — three code changes
 
-**Status:** implementation brief, 2026-11-21 (rev 3). Decisions locked by the KPI
+**Status:** implemented 2026-11-21 on `feat/line-manager-kpi-measurement` (plan `docs/superpowers/plans/2026-11-21-line-manager-kpi-measurement.md`; rules now in `docs/workflow-invariants.md` item 91). Brief below kept as written (rev 3). Decisions locked by the KPI
 owner (the Line Manager) with their Manager. Supersedes the findings-only
 version of this file.
 

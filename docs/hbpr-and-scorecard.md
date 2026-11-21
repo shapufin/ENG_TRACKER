@@ -532,3 +532,17 @@ riskiest option for no user-visible gain); `UserViewSet.bulk_update` (complexity
 HBPR is no longer denied Organigrama. `tree_builder.build_hbpr_tree` prunes the company tree to `get_hbpr_scope().user_ids` plus the Manager above each (so the chart keeps its root); the lazy `subtree` check uses the same set (`hbpr_visible_user_ids`). A multi-role TL/HR/staff keeps their own higher scope. The page shows a "Filter by team leader" select when the tree holds more than one Line Manager. Pinned by `plugins/organigrama/tests/test_hbpr_scope.py`. Skills matrix pages (matrix, coverage, gaps, exports) omit Managers via `matrix_user_ids`.
 
 **Moving a member between Line Managers (2026-11-11):** nothing is deleted or re-owned. Leader-authored records (idle flags, absences, PIPs, nominations, meetings, review deliveries) stay with the author; the EPR cycle follows the employee; frozen months never change. Table and the open-item handover gap: `docs/team-lifecycle.md`, test `plugins/tl_scorecard/test_leader_moves.py`.
+
+## Line Manager KPI targets (2026-11-21)
+
+Owner rulings, implemented on `feat/line-manager-kpi-measurement` (rules: `docs/workflow-invariants.md` item 91; spec: `docs/line-manager-kpi-measurement.md`).
+
+| KPI | Target | How it is counted |
+|---|---|---|
+| OT decided within 2 working days | 100% | Share of decided overtime rows at or under 2 business days, public holidays excluded. The average turnaround stays as context, not judged. Engagement's overtime deadline is 2 too; standby stays 5. |
+| Manager syncs | 26 a year (biweekly) or 45 (weekly) | Year-to-date pace uses 26; 45 is shown, never paced. |
+| Onboarding 1-on-1s within 14 days | 100% | Tick **Onboarding conversation** on a 1-on-1. A joiner is due 14 calendar days after `hire_date` (or `date_joined`), counted in the month the due date falls in, from `ONBOARDING_TRACKING_START` (2026-12-01). Any onboarding 1-on-1 with that person on or before the due date counts, whoever logged it. A leaver still counts. No joiners shows the em dash. |
+
+HBPR: one-on-ones stay invisible, so the onboarding values are nulled in the API and absent from the HBPR Excel and PDF (row, Trend column, Governance section, cover sentence); the HBPR export also never names the overtime target. Exports for the Line Manager and staff carry the Summary rows, the Trend column, a Governance section listing each joiner (onboarding date, held by), the PDF Meetings series and column, and the "Onboarding discussed" column in both CSVs.
+
+The scorecard header's **How the scorecard is measured** guide (`ScorecardGuideDialog`) explains every target from the payload's `targets`, the two colour scales (cards: 90/70; reports: target/80%), working days, the freeze on the 10th, and that the HBPR never sees 1-on-1s or onboarding.
