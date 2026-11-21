@@ -370,7 +370,8 @@ OT_SLA_WORKING_DAYS = 2  # must equal plugins/engagement/sla.py SLA_WORKING_DAYS
 # own entry here; a viewer with no listed role gets the Line Manager set.
 SCORECARD_TARGETS_BY_ROLE = {
     'albanian_tl': {
-        'tl_sync_per_year': 45,
+        'tl_sync_per_year': 26,
+        'tl_sync_full_year': 45,
         'reviews_per_year': 12,
         'one_on_one_pct': 100.0,
         'promotion_pct': PROMOTION_TARGET_PCT,

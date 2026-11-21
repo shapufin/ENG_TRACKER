@@ -134,19 +134,30 @@ class TLScorecardServiceTests(TestCase):
             )
         data = build_scorecard(self.leader, date(2026, 3, 1))
         self.assertEqual(data['tl_sync_ytd'], 2)  # April is outside March's YTD
-        self.assertEqual(data['tl_sync_expected_ytd'], 12)  # ceil(45 * 3 / 12)
+        self.assertEqual(data['tl_sync_expected_ytd'], 7)  # ceil(26 * 3 / 12)
+
+    def test_tl_sync_pace_by_month(self):
+        # Month -> expected: 1->3, 3->7, 6->13, 12->26
+        expected_by_month = {1: 3, 3: 7, 6: 13, 12: 26}
+        for month_num, expected in expected_by_month.items():
+            data = build_scorecard(self.leader, date(2026, month_num, 1))
+            self.assertEqual(
+                data['tl_sync_expected_ytd'],
+                expected,
+                f"Month {month_num} expected {expected}, got {data['tl_sync_expected_ytd']}",
+            )
 
     def test_build_scorecard_exposes_the_targets_it_is_measured_against(self):
         data = build_scorecard(self.leader, self.month_start)
         self.assertEqual(data['targets'], {
-            'tl_sync_per_year': 45, 'reviews_per_year': 12,
+            'tl_sync_per_year': 26, 'tl_sync_full_year': 45, 'reviews_per_year': 12,
             'one_on_one_pct': 100.0, 'promotion_pct': 3.0,
             'ot_within_sla_pct': 100.0,
         })
 
     def test_targets_follow_the_viewers_role(self):
         pm_targets = {
-            'tl_sync_per_year': 24, 'reviews_per_year': 4, 'one_on_one_pct': 100.0, 'promotion_pct': 3.0,
+            'tl_sync_per_year': 24, 'tl_sync_full_year': 45, 'reviews_per_year': 4, 'one_on_one_pct': 100.0, 'promotion_pct': 3.0,
             'ot_within_sla_pct': 100.0,
         }
         with mock.patch.dict('plugins.tl_scorecard.services.SCORECARD_TARGETS_BY_ROLE', {'pm': pm_targets}):
@@ -157,7 +168,8 @@ class TLScorecardServiceTests(TestCase):
 
     def test_targets_fall_back_to_the_line_manager_kpi_without_a_mapped_role(self):
         data = build_scorecard(self.leader, date(2026, 3, 1))
-        self.assertEqual(data['targets']['tl_sync_per_year'], 45)
+        self.assertEqual(data['targets']['tl_sync_per_year'], 26)
+        self.assertEqual(data['targets']['tl_sync_full_year'], 45)
         self.assertEqual(data['targets']['reviews_per_year'], 12)
 
     def test_ot_turnaround_average(self):

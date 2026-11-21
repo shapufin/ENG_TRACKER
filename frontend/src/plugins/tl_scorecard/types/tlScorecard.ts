@@ -66,6 +66,7 @@ export interface HbprCadenceBanner {
 /** Targets the scorecard is measured against, served by the backend (Line Manager KPI). */
 export interface ScorecardTargets {
   tl_sync_per_year: number;
+  tl_sync_full_year?: number;
   reviews_per_year: number;
   one_on_one_pct: number;
   promotion_pct: number;

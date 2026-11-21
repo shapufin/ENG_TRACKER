@@ -98,12 +98,12 @@ Plan: `docs/superpowers/plans/2026-10-13-leave-carryover-and-holidays.md`.
   a reason. A slot pushed past month-end is a miss for the month it was due in. Rule kept as
   is; any change is an owner ruling (item 84).
 - **Manager syncs** are meetings between the Line Manager and a Manager (`tl_sync`).
-  `tl_sync_ytd` and `tl_sync_expected_ytd` (ceil of 45 x month / 12) are live, never frozen.
+  `tl_sync_ytd` and `tl_sync_expected_ytd` (ceil of 26 x month / 12; 45 is the weekly option, ruling 2026-11-21) are live, never frozen.
 - **Targets are per role** (`SCORECARD_TARGETS_BY_ROLE` in `services.py`, served as `targets`
   in the payload and used by the cards and the XLSX/PDF exports). The first listed role the
-  viewer holds wins; no role listed means the Line Manager set (`albanian_tl`: 45 syncs,
+  viewer holds wins; no role listed means the Line Manager set (`albanian_tl`: 26 syncs floor [45 weekly option],
   12 reviews, 100% 1-on-1, 3% promotion). A new role (PM) gets its own entry. Editing the
-  numbers needs an owner ruling. Pinned by `test_targets_follow_the_viewers_role` and
+  numbers needs an owner ruling (Manager-sync 26/45 dual target ruled 2026-11-21). Pinned by `test_targets_follow_the_viewers_role` and
   `test_export_targets_come_from_the_viewers_scorecard`.
 - Pinned by `plugins/tl_scorecard/test_tl_scorecard.py` (holiday, counts, YTD, targets),
   `test_tl_scorecard_hbpr.py` (HBPR masks the fraction) and `test_trend_budget.py` (query budget 24).

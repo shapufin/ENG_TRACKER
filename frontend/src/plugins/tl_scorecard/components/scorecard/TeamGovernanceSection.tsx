@@ -123,6 +123,7 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
   const syncYtd = scorecard.tl_sync_ytd;
   const syncExpected = scorecard.tl_sync_expected_ytd;
   const syncTarget = targets?.tl_sync_per_year;
+  const syncFullTarget = targets?.tl_sync_full_year;
   const reviewTarget = targets?.reviews_per_year;
   return (
     <>
@@ -185,7 +186,9 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
             footer={
               syncTarget != null ? (
                 <span className="text-muted-foreground">
-                  Annual target {syncTarget} · about {Math.round(syncTarget / 12)} a month
+                  {syncFullTarget != null
+                    ? `Target ${syncTarget} (biweekly) or ${syncFullTarget} (weekly) — either counts`
+                    : `Annual target ${syncTarget} · about ${Math.round(syncTarget / 12)} a month`}
                 </span>
               ) : undefined
             }
