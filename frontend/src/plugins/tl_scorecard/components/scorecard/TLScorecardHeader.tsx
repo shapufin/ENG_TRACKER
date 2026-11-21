@@ -1,8 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ScrollFadeX } from "@/components/ui/ScrollFadeX";
 import { useQuery } from "@tanstack/react-query";
-import { FolderArchive, LayoutDashboard, LineChart, ListChecks, Users } from "lucide-react";
+import {
+  CircleHelp,
+  FolderArchive,
+  LayoutDashboard,
+  LineChart,
+  ListChecks,
+  Users,
+} from "lucide-react";
 import { PageShell } from "@/components/layout/PageShell";
 import { UserAvatar } from "@/components/calendar/UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -12,6 +19,8 @@ import { userService } from "@/services/userService";
 import { ExportButton } from "../ExportButton";
 import { ReportingMonthSelect } from "./ReportingMonthSelect";
 import { ReportingYearSelect } from "./ReportingYearSelect";
+import { ScorecardGuideDialog } from "./ScorecardGuideDialog";
+import type { ScorecardTargets } from "../../types/tlScorecard";
 
 export type TLScorecardTab = "overview" | "team" | "records" | "evidence";
 
@@ -85,6 +94,7 @@ interface TLScorecardHeaderProps {
   year?: number;
   onMonthChange?: (month: string) => void;
   onYearChange?: (year: number) => void;
+  targets?: ScorecardTargets;
   children: React.ReactNode;
 }
 
@@ -97,62 +107,82 @@ export const TLScorecardHeader: React.FC<TLScorecardHeaderProps> = ({
   year,
   onMonthChange,
   onYearChange,
+  targets,
   children,
-}) => (
-  <PageShell
-    title="TL Scorecard"
-    subtitle={
-      subtitle ? (
-        <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span>{subtitle}</span>
-          <DirectReportStack />
+}) => {
+  const [guideOpen, setGuideOpen] = useState(false);
+
+  return (
+    <PageShell
+      title="TL Scorecard"
+      subtitle={
+        subtitle ? (
+          <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>{subtitle}</span>
+            <DirectReportStack />
+          </span>
+        ) : undefined
+      }
+      titleBadge={
+        <span
+          role="status"
+          aria-label={quarterLabel()}
+          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${toneSurfaceClass.success}`}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+          {quarterLabel()}
         </span>
-      ) : undefined
-    }
-    titleBadge={
-      <span
-        role="status"
-        aria-label={quarterLabel()}
-        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${toneSurfaceClass.success}`}
-      >
-        <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
-        {quarterLabel()}
-      </span>
-    }
-    actions={
-      <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-        {year != null && onYearChange && month != null && onMonthChange && (
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <ReportingMonthSelect year={year} month={month} onMonthChange={onMonthChange} />
-            <ReportingYearSelect year={year} onYearChange={onYearChange} />
+      }
+      actions={
+        <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+          {year != null && onYearChange && month != null && onMonthChange && (
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <ReportingMonthSelect year={year} month={month} onMonthChange={onMonthChange} />
+              <ReportingYearSelect year={year} onYearChange={onYearChange} />
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            {targets && (
+              <Button
+                type="button"
+                variant="outline"
+                size="control-icon-sm"
+                aria-label="How the scorecard is measured"
+                title="How the scorecard is measured"
+                onClick={() => setGuideOpen(true)}
+              >
+                <CircleHelp className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            )}
+            <ExportButton month={month} />
+            <Button size="sm" asChild>
+              <Link to="/tl-scorecard/visualize">
+                <LineChart className="mr-2 h-4 w-4" aria-hidden="true" />
+                Visualize
+              </Link>
+            </Button>
           </div>
-        )}
-        <div className="flex items-center gap-2">
-          <ExportButton month={month} />
-          <Button size="sm" asChild>
-            <Link to="/tl-scorecard/visualize">
-              <LineChart className="mr-2 h-4 w-4" aria-hidden="true" />
-              Visualize
-            </Link>
-          </Button>
         </div>
+      }
+    >
+      <div className="space-y-6">
+        <ScrollFadeX className="-mx-1 px-1 py-1">
+          <Tabs value={tab} onValueChange={(value) => onTabChange(value as TLScorecardTab)}>
+            <TabsList aria-label="Scorecard sections" className="h-auto gap-1 rounded-full p-1">
+              {TABS.map(({ value, label, icon: Icon }) => (
+                <TabsTrigger key={value} value={value} className={TAB_TRIGGER_CLASS}>
+                  <Icon className="mr-2 h-4 w-4" aria-hidden="true" />
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </ScrollFadeX>
+        {children}
       </div>
-    }
-  >
-    <div className="space-y-6">
-      <ScrollFadeX className="-mx-1 px-1 py-1">
-        <Tabs value={tab} onValueChange={(value) => onTabChange(value as TLScorecardTab)}>
-          <TabsList aria-label="Scorecard sections" className="h-auto gap-1 rounded-full p-1">
-            {TABS.map(({ value, label, icon: Icon }) => (
-              <TabsTrigger key={value} value={value} className={TAB_TRIGGER_CLASS}>
-                <Icon className="mr-2 h-4 w-4" aria-hidden="true" />
-                {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      </ScrollFadeX>
-      {children}
-    </div>
-  </PageShell>
-);
+      {targets && (
+        <ScorecardGuideDialog open={guideOpen} onOpenChange={setGuideOpen} targets={targets} />
+      )}
+    </PageShell>
+  );
+};

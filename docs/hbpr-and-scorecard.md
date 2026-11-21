@@ -191,6 +191,9 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
   four URL-backed tabs — `?tab=` overview (default: scorecard metrics +
   governance actions) / team / records / evidence — and each tab's queries are
   `enabled`-gated on it, so no fetch fires for a surface that isn't rendered.
+  The scorecard header has a 'How the scorecard is measured' guide that renders its
+  numbers from the scorecard payload's targets, so editing a target needs no copy
+  change; HBPR-only viewers never reach the page.
   The **Evidence** tab owns the HBPR partnership surface: the "HBPR
   partnership" section reads `GET /api/plugins/tl_scorecard/partnership/`; its
   **Evidence pack** button opens `EvidencePackDialog`, which fetches

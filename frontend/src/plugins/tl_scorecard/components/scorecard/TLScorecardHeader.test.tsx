@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi } from "vitest";
 import { TLScorecardHeader, type TLScorecardTab } from "./TLScorecardHeader";
 import { userService } from "@/services/userService";
+import type { ScorecardTargets } from "../../types/tlScorecard";
 
 vi.mock("@/services/userService", () => ({
   userService: { getMyTeamMembers: vi.fn() },
@@ -58,5 +59,63 @@ describe("TLScorecardHeader (mockup button hierarchy)", () => {
     expect(screen.getByRole("tab", { name: "Partnership log" })).toBeDefined();
     fireEvent.mouseDown(screen.getByRole("tab", { name: "Partnership log" }));
     expect(onTabChange).toHaveBeenCalledWith("evidence");
+  });
+
+  it("does not render the guide button when targets prop is missing", async () => {
+    vi.mocked(userService.getMyTeamMembers).mockResolvedValue([]);
+    renderHeader();
+    expect(screen.queryByRole("button", { name: "How the scorecard is measured" })).toBeNull();
+  });
+
+  it("renders the guide button when targets prop is present and toggles dialog with Escape restoring focus", async () => {
+    vi.mocked(userService.getMyTeamMembers).mockResolvedValue([]);
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const onTabChange = vi.fn();
+    const targets: ScorecardTargets = {
+      tl_sync_per_year: 26,
+      tl_sync_full_year: 45,
+      reviews_per_year: 12,
+      one_on_one_pct: 100,
+      promotion_pct: 3,
+      ot_within_sla_pct: 100,
+    };
+
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={qc}>
+          <TLScorecardHeader
+            subtitle="October 2026 · 6 team member(s)"
+            tab="overview"
+            onTabChange={onTabChange}
+            targets={targets}
+          >
+            <div>child</div>
+          </TLScorecardHeader>
+        </QueryClientProvider>
+      </MemoryRouter>
+    );
+
+    const button = screen.getByRole("button", { name: "How the scorecard is measured" });
+    expect(button).toBeInTheDocument();
+    expect(button).toHaveAttribute("title", "How the scorecard is measured");
+
+    // Open dialog
+    button.focus();
+    fireEvent.click(button);
+
+    // Dialog is visible
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "How the scorecard is measured" })
+    ).toBeInTheDocument();
+
+    // Close on Escape
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape", code: "Escape" });
+
+    // Focus returns to the opener button
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+    expect(button).toHaveFocus();
   });
 });
