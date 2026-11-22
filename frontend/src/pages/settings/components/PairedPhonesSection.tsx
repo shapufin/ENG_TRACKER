@@ -116,12 +116,14 @@ const PhoneDialog = ({
       if (action.kind === "remove")
         return void (await removePhone(action.phone.id, password, code));
 
-      const passkey = await registerPasskey(password, name);
+      // Ask for notifications FIRST: iOS only shows the prompt while the tap's user
+      // activation is alive, and the passkey ceremony below (network + Face ID) outlasts it.
       let pushEndpoint = "";
       if (push.pushAvailability === "available") {
         const allowed = push.permission === "granted" || (await push.requestPermission());
         if (allowed && (await push.subscribe())) pushEndpoint = await currentPushEndpoint();
       }
+      const passkey = await registerPasskey(password, name);
       await pairPhone({ password, code, credentialId: passkey.id, name, pushEndpoint });
       if (!pushEndpoint) {
         toast.message(
