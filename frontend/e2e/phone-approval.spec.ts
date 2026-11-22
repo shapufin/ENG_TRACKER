@@ -22,7 +22,12 @@ let USER = E2E_CREDENTIALS.controlRoom;
 
 const resetFactors = () => {
   // Fail loudly: a silent failed reset leaves a paired phone behind and the next run sees it.
-  execFileSync("python", ["manage.py", "reset_user_mfa", USER.username], {
+  const cmd = process.platform === "win32" ? "py" : "python";
+  const args =
+    process.platform === "win32"
+      ? ["-3.14", "manage.py", "reset_user_mfa", USER.username]
+      : ["manage.py", "reset_user_mfa", USER.username];
+  execFileSync(cmd, args, {
     cwd: "..",
     env: { ...process.env, DJANGO_SETTINGS_MODULE: "config.settings_e2e" },
     stdio: "pipe",
@@ -95,7 +100,9 @@ test.describe("Phone approval", () => {
 
   test("the phone approves a PC sign-in with the right number", async ({ browser }) => {
     const phone = await pairedPhone(browser);
-    const pc = await (await browser.newContext()).newPage();
+    const pc = await (
+      await browser.newContext({ viewport: { width: 1280, height: 720 }, isMobile: false })
+    ).newPage();
     const errors: string[] = [];
     pc.on("console", (m) => {
       if (m.type() === "error" && !/favicon|Failed to load resource/i.test(m.text()))
@@ -119,7 +126,9 @@ test.describe("Phone approval", () => {
     // would ask the new "phone" for approval just to sign in.
     resetFactors();
     const phone = await pairedPhone(browser);
-    const pc = await (await browser.newContext()).newPage();
+    const pc = await (
+      await browser.newContext({ viewport: { width: 1280, height: 720 }, isMobile: false })
+    ).newPage();
     const request = await askForApproval(pc);
     await phone.goto(request.approve_url);
     const numbers = phone.getByRole("button", { name: /^Number \d+$/ });
@@ -137,6 +146,23 @@ test.describe("Phone approval", () => {
     await expect(pc).toHaveURL(/\/login/);
     await phone.context().close();
     await pc.context().close();
+  });
+
+  test("on mobile, an account with a paired phone does not show 'Approve on my phone'", async ({
+    browser,
+  }) => {
+    resetFactors();
+    const phone = await pairedPhone(browser);
+    const mobileContext = await browser.newContext({
+      viewport: { width: 393, height: 851 },
+      isMobile: true,
+      hasTouch: true,
+    });
+    const mobilePage = await mobileContext.newPage();
+    await passwordStep(mobilePage);
+    await expect(mobilePage.getByRole("button", { name: "Approve on my phone" })).toHaveCount(0);
+    await mobileContext.close();
+    await phone.context().close();
   });
 
   test("an account without a paired phone signs in exactly as before", async ({ page }) => {

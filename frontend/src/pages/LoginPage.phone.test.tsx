@@ -213,4 +213,48 @@ describe("LoginPage phone approval", () => {
     expect(await screen.findByLabelText(/username/i)).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent(/expired/i);
   });
+
+  describe("on mobile devices", () => {
+    beforeEach(() => {
+      vi.stubGlobal(
+        "matchMedia",
+        vi.fn().mockImplementation((query: string) => ({
+          matches: query === "(max-width: 767px)",
+          media: query,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        }))
+      );
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it("does not show 'Approve on my phone' and falls back to passkey (Face ID/fingerprint)", async () => {
+      loginMock.mockResolvedValue(challenge(["passkey", "phone", "totp"]));
+      renderPage();
+      await passwordStep();
+      expect(screen.queryByRole("button", { name: "Approve on my phone" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Approve on my phone instead" })
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /use face id or fingerprint/i })
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Use a code instead" })).toBeInTheDocument();
+    });
+
+    it("does not show 'Approve on my phone' and falls back to code when passkey is not supported", async () => {
+      supported.value = false;
+      loginMock.mockResolvedValue(challenge(["phone", "totp"]));
+      renderPage();
+      await passwordStep();
+      expect(screen.queryByRole("button", { name: "Approve on my phone" })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Approve on my phone instead" })
+      ).not.toBeInTheDocument();
+      expect(screen.getByLabelText("6-digit code")).toBeInTheDocument();
+    });
+  });
 });

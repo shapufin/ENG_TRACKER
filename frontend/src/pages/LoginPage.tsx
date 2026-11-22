@@ -10,6 +10,7 @@ import { GlassCard } from "@/components/ui/GlassCard";
 import { Fingerprint, LogIn, ShieldCheck, Smartphone, Wrench } from "lucide-react";
 import { useSiteBranding } from "@/hooks/useSiteBranding";
 import { useMaintenanceStatus } from "@/hooks/useMaintenanceStatus";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { isMaintenanceError } from "@/lib/api";
 import { BackupCodesPanel } from "@/components/auth/BackupCodesPanel";
 import { MfaCodeField } from "@/components/auth/MfaCodeField";
@@ -94,6 +95,7 @@ export const LoginPage: React.FC = () => {
   } = useAuth();
   const navigate = useNavigate();
   const shouldReduceMotion = useReducedMotion();
+  const isMobile = useIsMobile();
   const { data: branding } = useSiteBranding();
   const { data: maintenance } = useMaintenanceStatus();
   const [logoFailed, setLogoFailed] = useState(false);
@@ -145,6 +147,7 @@ export const LoginPage: React.FC = () => {
       const offered = data.methods ?? [];
       setMethods(offered);
       const passkeyUsable = offered.includes("passkey") && isPasskeySupported();
+      const phoneUsable = offered.includes("phone") && !isMobile;
       if (data.mfa_setup_required) {
         if (passkeyUsable) {
           setStep("choose");
@@ -152,7 +155,7 @@ export const LoginPage: React.FC = () => {
           setSetupData(await startLoginSetup(data.mfa_token));
           setStep("setup");
         }
-      } else if (offered.includes("phone")) {
+      } else if (phoneUsable) {
         setStep("phone");
       } else if (passkeyUsable) {
         setStep("passkey");
@@ -287,7 +290,7 @@ export const LoginPage: React.FC = () => {
   }[step];
   const submitDisabled = isLoading || (step === "backup" && !acknowledged);
   const canUsePasskey = methods.includes("passkey") && isPasskeySupported();
-  const canUsePhone = methods.includes("phone");
+  const canUsePhone = methods.includes("phone") && !isMobile;
   const canUseCode = methods.length === 0 || methods.includes("totp");
 
   return (
