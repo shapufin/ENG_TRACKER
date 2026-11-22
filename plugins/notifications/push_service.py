@@ -13,7 +13,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from pywebpush import webpush, WebPushException
 from .models import PushSubscription
-from .vapid_utils import get_private_key, VAPID_SUBJECT
+from .vapid_utils import get_private_key, get_vapid_subject, VAPID_SUBJECT
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +155,7 @@ def send_push_notification(
                 },
                 data=payload_json,
                 vapid_private_key=private_key,
-                vapid_claims={"sub": VAPID_SUBJECT},
+                vapid_claims={"sub": get_vapid_subject()},
                 timeout=PUSH_TIMEOUT_SECONDS,
                 ttl=ttl,
                 headers={"Urgency": urgency},

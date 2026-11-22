@@ -23,7 +23,29 @@ logger = logging.getLogger(__name__)
 
 # Store VAPID keys in a file outside the repo (not in git)
 VAPID_KEYS_FILE = Path(os.environ.get("VAPID_KEYS_FILE", ".vapid_keys.json"))
-VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:admin@engineering-tracker.local")
+
+
+def get_vapid_subject() -> str:
+    """Return the VAPID subject contact URI (RFC 8292).
+
+    Apple APNs strictly rejects non-resolvable domains (such as .local) with
+    403 Forbidden {"reason": "BadJwtToken"}. If VAPID_SUBJECT is not explicitly
+    configured or points to .local, derive a valid subject from WEBAUTHN_RP_ID
+    or WEBAUTHN_ORIGINS when available.
+    """
+    subject = os.environ.get("VAPID_SUBJECT") or getattr(settings, "VAPID_SUBJECT", None)
+    if subject and not subject.endswith(".local") and "@engineering-tracker.local" not in subject:
+        return subject
+    rp_id = getattr(settings, "WEBAUTHN_RP_ID", "")
+    if rp_id and not rp_id.endswith(".local") and "." in rp_id:
+        return f"mailto:admin@{rp_id}"
+    origins = getattr(settings, "WEBAUTHN_ORIGINS", [])
+    if origins and str(origins[0]).startswith("https://"):
+        return origins[0]
+    return subject or "mailto:admin@engineering-tracker.local"
+
+
+VAPID_SUBJECT = get_vapid_subject()
 
 
 def generate_vapid_keys():

@@ -161,13 +161,13 @@ server {
         # ONLYOFFICE_ORIGIN is unset (feature disabled) — envsubst leaves an
         # empty token in the header value, which every browser's CSP parser
         # ignores.
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' ${ONLYOFFICE_ORIGIN}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://fcm.googleapis.com https://push.services.mozilla.com https://updates.push.services.mozilla.com ${ONLYOFFICE_ORIGIN}; frame-src 'self' ${ONLYOFFICE_ORIGIN}; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' ${ONLYOFFICE_ORIGIN}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://fcm.googleapis.com https://push.services.mozilla.com https://updates.push.services.mozilla.com https://web.push.apple.com https://*.push.apple.com https://*.notify.windows.com ${ONLYOFFICE_ORIGIN}; frame-src 'self' ${ONLYOFFICE_ORIGIN}; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
         # D6 (DEP-09): measure a strict script-src before dropping
         # 'unsafe-inline' from the enforcing policy above. Report-Only blocks
         # nothing; violations show in the browser console (no report-uri
         # endpoint exists). Remove 'unsafe-inline' from the enforcing header
         # once a browser sweep shows zero violations here.
-        add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' ${ONLYOFFICE_ORIGIN}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://fcm.googleapis.com https://push.services.mozilla.com https://updates.push.services.mozilla.com ${ONLYOFFICE_ORIGIN}; frame-src 'self' ${ONLYOFFICE_ORIGIN}; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
+        add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' ${ONLYOFFICE_ORIGIN}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://fcm.googleapis.com https://push.services.mozilla.com https://updates.push.services.mozilla.com https://web.push.apple.com https://*.push.apple.com https://*.notify.windows.com ${ONLYOFFICE_ORIGIN}; frame-src 'self' ${ONLYOFFICE_ORIGIN}; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
         try_files $uri $uri/ /index.html;
     }
 
