@@ -122,7 +122,7 @@ export const AppShell = React.memo(() => {
   const { total: pendingApprovalTotal } = usePendingApprovalCount(isTeamLeader);
 
   return (
-    <div className="bg-background text-foreground flex h-dvh h-screen">
+    <div className="bg-background text-foreground flex h-dvh">
       <MobileOverlay isOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       <Sidebar

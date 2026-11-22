@@ -61,7 +61,7 @@ export const AdminShell = React.memo(() => {
   }, []);
 
   return (
-    <div className="bg-background text-foreground flex h-dvh h-screen">
+    <div className="bg-background text-foreground flex h-dvh">
       <MobileOverlay isOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
       <AdminSidebar
