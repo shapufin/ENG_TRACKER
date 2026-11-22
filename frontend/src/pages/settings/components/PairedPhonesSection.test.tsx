@@ -183,6 +183,10 @@ describe("PairedPhonesSection", () => {
     );
     expect(registerPasskey).toHaveBeenCalledWith("pw", "This phone");
     expect(push.state.requestPermission).toHaveBeenCalled();
+    // iOS drops the prompt once the tap's user activation expires, so ask before the passkey ceremony.
+    expect(push.state.requestPermission.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(registerPasskey).mock.invocationCallOrder[0]
+    );
     expect(toast.success).toHaveBeenCalled();
   });
 
