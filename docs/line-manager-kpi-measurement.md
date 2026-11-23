@@ -1,6 +1,6 @@
 # Handover: Line Manager KPI measurement — three code changes
 
-**Status:** implemented 2026-11-21 on `feat/line-manager-kpi-measurement` (plan `docs/superpowers/plans/2026-11-21-line-manager-kpi-measurement.md`; rules now in `docs/workflow-invariants.md` item 91). Brief below kept as written (rev 3). Decisions locked by the KPI
+**Status:** implemented 2026-11-21 on `feat/line-manager-kpi-measurement`, **merged to `main` as PR #365 (`afde5507`)** (plan `docs/superpowers/plans/2026-11-21-line-manager-kpi-measurement.md`; rules now in `docs/workflow-invariants.md` item 91). Brief below kept as written (rev 3), then §9 records the three follow-ups shipped on 2026-11-22. Decisions locked by the KPI
 owner (the Line Manager) with their Manager. Supersedes the findings-only
 version of this file.
 
@@ -10,7 +10,9 @@ do not need them to implement, only to answer "why".
 
 **No open decisions remain.** Everything an implementer needs is decided below.
 The one outstanding item is a production data correction for the frozen
-26-person months — out of scope here, recorded in §0.
+26-person months — out of scope here, recorded in §0. The three follow-ups
+found after the merge (card colour bands, the stale person in Log meeting, the
+flat meeting summary) are done — §9.
 
 **Suggested order:** C first (smallest, and it makes a number the Manager can
 judge immediately), then A (one constant plus copy), then B (the only item that
@@ -479,7 +481,9 @@ Blast radius, put it in the PR:
    snapshot (`snapshots.py`, freeze at 00:00 on day 10 of M+1). The change is
    forward-only from the month it ships. Do not backfill.
 6. **Colour.** Use tone tokens (`bg-tone-<t>-surface`, `text-tone-<t>-text`).
-   A `dark:` override is a bug in this codebase.
+   A `dark:` override is a bug in this codebase. The band itself is decided
+   once: `scorecardMeta.ts` judges against the target (on track at the target,
+   watch from 80% of it) so the card cannot disagree with the export — §9.1.
 7. **`kpi_rows` is shared** by the XLSX Summary and the PDF cover. One edit keeps
    both consistent — that is the point of `report_kpis.py`.
 8. **Dialog width** comes from `size`, never `max-w-*`. Run
@@ -677,3 +681,68 @@ migration wrote `hire_date = date_joined`, so the two are identical and neither
 is the real employment date. Using `hire_date` with `date_joined` as a fallback
 therefore costs nothing and gives HR one field to correct when it is wrong —
 which `date_joined` can never be, because it is not editable.
+
+---
+
+## 9. Follow-ups shipped 2026-11-22 (after the merge)
+
+Three cosmetic/consistency gaps were found by using the merged scorecard. All
+three are fixed on the branch that carries this section; nothing about the
+measurement itself changed.
+
+### 9.1 Card colour bands now match the export statuses
+
+**Problem.** `scorecardMeta.ts` coloured a card green from 90% and amber from
+70%, while `report_kpis.status_for` calls a value "On track" at its target and
+"Watch" from 80% of it. A 95% month was green on screen and "Watch" in the PDF;
+the scorecard guide had to explain both band sets, which is how the user found
+it.
+
+**Fix.** `slaTone`/`slaWell`/`slaBar` take the KPI's `target` (default 100) and
+apply `WATCH_SHARE = 0.8`, mirroring the backend. Call sites pass the payload
+target: `targets.ot_within_sla_pct` for overtime, `targets.one_on_one_pct` for
+1:1 compliance. Onboarding and leave keep the 100 default (the leave export row
+has `target=None` by design; the card still colours it). The guide now states
+one band set. `scorecardMeta.test.ts` pins 100/80/79 and a custom 50 target, so
+the old 90/70 behaviour cannot come back.
+
+### 9.2 Log meeting no longer keeps the old person after a type change
+
+**Problem.** Changing the meeting type clears the chosen person in state, but
+the picker kept showing the old name, so the form looked filled while it was
+empty. `OptionSelect` passed `value={undefined}` for "nothing selected"; Radix
+treats `undefined` as *uncontrolled* and keeps its last label. `""` is the value
+Radix treats as cleared (the placeholder shows); a `SelectItem` with `""` would
+throw, and none exists.
+
+**Fix.** `OptionSelect` (`MemberSelectField.tsx`) always passes a string:
+`value === null ? "" : String(value)`. `MemberSelectField.test.tsx` captures the
+prop handed to Radix and fails if `undefined` returns.
+
+### 9.3 The meeting summary reads as blocks, not one wall
+
+**Problem.** The record detail dialog (Records tab, row click) stacked every
+block with `space-y-4` and no rules, so long Notes and Shared summary ran
+together and the labels were easy to lose. It also showed "Onboarding discussed
+— No" on a TL sync and a team meeting, where the flag never applies and reads as
+a missed step.
+
+**Fix.** `RecordDetailDialog` wraps the blocks in `divide-y divide-border/60`
+with `py-4 first:pt-0 last:pb-0`; `recordDetails.meetingItems` emits the
+onboarding row only for `meeting_type === "one_on_one"`. Verified in the browser
+on a real 1-on-1 and a real TL sync: one rule between blocks, none above the
+first or below the last, and the row absent on the sync.
+
+### 9.4 Verification (this branch)
+
+- `npx vitest run src/plugins/tl_scorecard` — 50 files / 364 tests OK.
+- `npx tsc -b --noEmit` clean; `npx eslint` clean on the touched files;
+  `npx prettier --check` clean; `node scripts/modal-audit.mjs` PASS.
+- Browser (`e2e_tl_b` on the local review stack): picked a person in Log
+  meeting, switched the type to TL sync, the field shows the placeholder (the
+  stale name is gone); the 1-on-1 detail shows six blocks separated by rules and
+  "Onboarding discussed — Yes"; the TL sync detail shows five blocks and no
+  onboarding row; the Overview cards render 50% overtime and 66.7% 1:1 in the
+  danger tone and a dash in the neutral tone; zero console errors.
+- Not run: a live 80–99% month (the seeded data has none). The band boundary is
+  pinned by `scorecardMeta.test.ts` instead.
