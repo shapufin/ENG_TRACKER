@@ -24,7 +24,6 @@ ALLOWED = {
     "apps/overtime/serializers.py": "datetime.today() only anchors a time-of-day subtraction",
     "apps/standby/models/core.py": "datetime.today() only anchors a time-of-day subtraction",
     "apps/standby/serializers.py": "datetime.today() only anchors a time-of-day subtraction",
-    "core/utils/time_overlap.py": "datetime.today() only anchors a time-of-day comparison",
     "apps/plugins/management/commands/remove_plugin.py": "operator-facing backup folder timestamp",
 }
 

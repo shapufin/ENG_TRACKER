@@ -92,13 +92,6 @@ def get_permission_cache_key(user_id, module, action, team_code=None):
     return CacheKey.permission(user_id, module, action, team_code or 'all')
 
 
-def get_user_cache_key(user_id, data_type=None):
-    """Generate cache key for user data with versioning."""
-    if data_type:
-        return f"{CacheKey.user(user_id)}:{data_type}"
-    return CacheKey.user(user_id)
-
-
 def delete_user_permission_cache(user_id):
     """Delete all permission cache for a user using pattern matching."""
     try:

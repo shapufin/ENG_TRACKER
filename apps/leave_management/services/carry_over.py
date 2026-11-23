@@ -55,36 +55,6 @@ def _entitled_at_year_end(balance: LeaveBalance, year: int) -> Decimal:
     return Decimal(balance.total_days)
 
 
-def ensure_carry_over_for_user(user_id: int, closed_year: int, settings_obj=None):
-    """Create the carry row for one user and closed year. Idempotent."""
-    settings_obj = settings_obj or _settings()
-    if not settings_obj.carry_over_enabled:
-        return None
-    closed = LeaveBalance.objects.filter(
-        user_id=user_id, leave_type='vacation', is_carry_over=False, year=closed_year,
-    ).first()
-    if closed is None:
-        return None
-    existing = LeaveBalance.objects.filter(
-        user_id=user_id, leave_type='vacation', is_carry_over=True, year=closed_year,
-    ).first()
-    if existing is not None:
-        return existing
-    leftover = _entitled_at_year_end(closed, closed_year) - Decimal(closed.used_days) - Decimal(closed.pending_days)
-    if leftover <= ZERO:
-        return None
-    return LeaveBalance.objects.create(
-        user_id=user_id,
-        leave_type='vacation',
-        year=closed_year,
-        is_carry_over=True,
-        total_days=leftover,
-        expires_at=carry_over_expiry_for(
-            closed_year, settings_obj.carry_over_expiry_month, settings_obj.carry_over_expiry_day,
-        ),
-    )
-
-
 def apply_year_end_carry_over(today=None) -> dict:
     """Roll over the year before ``today.year``, once per year. Safe to call often.
 

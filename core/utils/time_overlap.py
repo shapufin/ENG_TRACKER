@@ -10,31 +10,6 @@ old unique_overtime_per_day_client / unique_standby_per_day DB constraints.
 """
 
 from datetime import datetime, timedelta
-from typing import Optional
-
-
-def _range_minutes(start_time, end_time) -> Optional[tuple]:
-    """Return (start_minutes, end_minutes) for a same-day time range.
-
-    Overnight ranges (end <= start) extend end by 24h. Returns None if either
-    time is missing.
-    """
-    if not start_time or not end_time:
-        return None
-    start = datetime.combine(datetime.today(), start_time)
-    end = datetime.combine(datetime.today(), end_time)
-    if end <= start:
-        end += timedelta(days=1)
-    return (start, end)
-
-
-def ranges_overlap(a_start, a_end, b_start, b_end) -> bool:
-    """Check whether two same-day time ranges overlap."""
-    a = _range_minutes(a_start, a_end)
-    b = _range_minutes(b_start, b_end)
-    if a is None or b is None:
-        return False
-    return a[0] < b[1] and b[0] < a[1]
 
 
 def _span(day, start_time, end_time):

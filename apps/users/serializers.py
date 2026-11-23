@@ -18,7 +18,7 @@ from apps.overtime.serializers import ClientSerializer
 from apps.overtime.services.client_lifecycle import archived_client_error
 from core.mixins.permissions import is_cr_admin
 from core.maintenance import MaintenanceModeActive, is_maintenance_active, is_user_exempt
-from .models import Tech, TechLevel, Team, UserProfile, TeamMembership
+from .models import Tech, TechLevel, Team, UserProfile
 from .models.core import _user_has_related, normalize_calendar_group
 from .services import mfa as mfa_service
 from .services.team_leaders import derive_team_tls
@@ -809,24 +809,6 @@ class TeamHierarchySerializer(serializers.ModelSerializer):
         """Recursively serialize sub-teams."""
         sub_teams = obj.sub_teams.all()
         return TeamHierarchySerializer(sub_teams, many=True).data
-
-
-class TeamMembershipSerializer(serializers.ModelSerializer):
-    """
-    Serializer for TeamMembership through model.
-    """
-    team_name = serializers.CharField(source='team.name', read_only=True)
-    team_code = serializers.CharField(source='team.code', read_only=True)
-    user_username = serializers.CharField(source='user_profile.user.username', read_only=True)
-
-    class Meta:
-        model = TeamMembership
-        fields = [
-            'id', 'user_profile', 'team', 'team_name', 'team_code',
-            'user_username', 'joined_date', 'is_primary_team',
-            'created_at', 'updated_at'
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class HbprAlbanianTlAssignmentSerializer(serializers.ModelSerializer):

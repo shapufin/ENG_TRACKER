@@ -602,12 +602,6 @@ class UserProfile(BaseModel):
     def __str__(self):
         return f"{self.user.username} Profile"
 
-    def get_full_team_hierarchy(self):
-        """Get team hierarchy for primary team if user is in teams."""
-        if self.team:
-            return self.team.get_hierarchy()
-        return []
-
     def get_team_member_ids(self):
         """
         Get IDs of all users whose internal data this user can see as a leader.
@@ -649,15 +643,6 @@ class UserProfile(BaseModel):
             .values_list('user_id', flat=True)
             .distinct()
         )
-
-    @property
-    def managed_users(self):
-        """Return queryset of Django User objects managed by this profile."""
-        user_ids = self.get_team_member_ids()
-        if not user_ids:
-            return User.objects.none()
-        return User.objects.filter(id__in=user_ids)
-
 
     @property
     def is_team_leader(self):
