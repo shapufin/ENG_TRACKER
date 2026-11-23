@@ -18,6 +18,7 @@ import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/StatCard";
 import { toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
+import { currentBusinessMonthKey } from "@/lib/date-format-utils";
 import { EPRSection } from "../EPRSection";
 import { EscalationsPanel } from "../EscalationsPanel";
 import { PIPListPanel } from "../PIPListPanel";
@@ -117,6 +118,11 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
   onStartEprCycle,
 }) => {
   const { meetings, idle, absences, pip, promotion, targets } = scorecard;
+  // A month that has not started has no meetings to judge: "0%" and a pace gap
+  // would read as a failure, so the two cadence cards show a dash instead.
+  const notStarted = scorecard.month.slice(0, 7) > currentBusinessMonthKey();
+  const NOT_STARTED = "Month has not started";
+  const oneOnOnePct = notStarted ? null : meetings.one_on_one_compliance_pct;
   const oneOnOneTarget = targets ? `Target: ${targets.one_on_one_pct}%` : undefined;
   const oneOnOneFraction =
     meetings.one_on_one_compliant != null && meetings.one_on_one_eligible != null
@@ -169,24 +175,24 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
           <StatCard
             label="1-on-1 compliance (individual meetings)"
             labelClassName={MICRO_LABEL}
-            value={
-              meetings.one_on_one_compliance_pct !== null
-                ? `${meetings.one_on_one_compliance_pct}%`
-                : "—"
-            }
+            value={oneOnOnePct !== null ? `${oneOnOnePct}%` : "—"}
             icon={Handshake}
-            iconWellClass={slaWell(meetings.one_on_one_compliance_pct)}
-            iconColorClass={slaTone(meetings.one_on_one_compliance_pct) ?? toneTextClass.neutral}
+            iconWellClass={slaWell(oneOnOnePct, targets?.one_on_one_pct)}
+            iconColorClass={slaTone(oneOnOnePct, targets?.one_on_one_pct) ?? toneTextClass.neutral}
             valueColorClass={
-              slaTone(meetings.one_on_one_compliance_pct) ?? "text-muted-foreground font-normal"
+              slaTone(oneOnOnePct, targets?.one_on_one_pct) ?? "text-muted-foreground font-normal"
             }
-            trend={[oneOnOneFraction, oneOnOneTarget].filter(Boolean).join(" · ")}
+            trend={
+              notStarted
+                ? NOT_STARTED
+                : [oneOnOneFraction, oneOnOneTarget].filter(Boolean).join(" · ")
+            }
             footer={
               <span className="text-muted-foreground">
                 Excused: approved leave for the whole month, or a skip with a reason
               </span>
             }
-            progressPercent={meetings.one_on_one_compliance_pct ?? undefined}
+            progressPercent={oneOnOnePct ?? undefined}
           />
           <StatCard
             label="Onboarding 1-on-1s within 14 days"
@@ -210,16 +216,18 @@ export const TeamGovernanceSection: React.FC<TeamGovernanceSectionProps> = ({
           <StatCard
             label="Manager syncs"
             labelClassName={MICRO_LABEL}
-            value={meetings.tl_sync_count}
+            value={notStarted ? "—" : meetings.tl_sync_count}
             icon={PhoneCall}
             iconWellClass={`border ${toneSurfaceClass.info}`}
             iconColorClass={toneTextClass.info}
             trend={
-              syncYtd != null && syncExpected != null && syncTarget != null
-                ? `${syncYtd} of ${syncTarget} YTD · ${
-                    syncYtd >= syncExpected ? "on pace" : `${syncExpected} needed by now`
-                  }`
-                : "This month"
+              notStarted
+                ? NOT_STARTED
+                : syncYtd != null && syncExpected != null && syncTarget != null
+                  ? `${syncYtd} of ${syncTarget} YTD · ${
+                      syncYtd >= syncExpected ? "on pace" : `${syncExpected} needed by now`
+                    }`
+                  : "This month"
             }
             footer={
               syncTarget != null ? (

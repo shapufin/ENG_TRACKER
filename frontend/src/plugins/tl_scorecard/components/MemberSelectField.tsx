@@ -30,7 +30,11 @@ export const OptionSelect: React.FC<OptionSelectProps> = ({
   onChange,
 }) => (
   <Select
-    value={value === null ? undefined : String(value)}
+    // Radix treats `value=""` as "cleared" (placeholder shows) but `undefined`
+    // as uncontrolled, which would keep the previous label on screen after the
+    // caller resets the field (e.g. Log meeting clears the person when the type
+    // changes). Never pass `undefined` here.
+    value={value === null ? "" : String(value)}
     onValueChange={(v) => onChange(Number(v))}
   >
     <SelectTrigger id={id} className="w-full">

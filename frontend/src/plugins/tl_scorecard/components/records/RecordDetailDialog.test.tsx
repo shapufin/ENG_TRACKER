@@ -112,12 +112,22 @@ describe("RecordDetailDialog — meetings", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("displays Onboarding discussed Yes/No detail item", () => {
-    const meetingWithOnboarding: Meeting = { ...MEETING, onboarding_discussed: true };
+  it("shows Onboarding discussed on a 1-on-1", () => {
+    const meetingWithOnboarding: Meeting = {
+      ...MEETING,
+      meeting_type: "one_on_one",
+      onboarding_discussed: true,
+    };
     renderDialog("meetings", meetingWithOnboarding);
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText("Onboarding discussed")).toBeInTheDocument();
     expect(within(dialog).getByText("Yes")).toBeInTheDocument();
+  });
+
+  it("hides Onboarding discussed on a team meeting or a sync", () => {
+    // The flag only exists on a 1-on-1; "No" on a sync reads as a missed step.
+    renderDialog("meetings", { ...MEETING, meeting_type: "tl_sync" });
+    expect(screen.queryByText("Onboarding discussed")).not.toBeInTheDocument();
   });
 
   it("marks section captions up as level-3 headings", () => {
@@ -128,6 +138,23 @@ describe("RecordDetailDialog — meetings", () => {
     }
     // Captions are headings, not orphaned <label> elements.
     expect(within(dialog).queryByText("Shared summary")?.closest("label")).toBeNull();
+  });
+
+  it("separates one-line facts from the long-text blocks", () => {
+    renderDialog("meetings", MEETING);
+    const dialog = screen.getByRole("dialog");
+    // Prose lives in its own labelled section, so the eye can stop at the label.
+    expect(within(dialog).getByRole("region", { name: "Notes" })).toHaveTextContent(
+      /Talked about the new sprint goals/
+    );
+    expect(within(dialog).getByRole("region", { name: "Shared summary" })).toHaveTextContent(
+      "Goals for Q4 agreed"
+    );
+    expect(within(dialog).getByRole("region", { name: "Attendees" })).toHaveTextContent(
+      "Jane Hrbp"
+    );
+    // A one-line fact stays a compact field, not a section.
+    expect(within(dialog).queryByRole("region", { name: "With" })).not.toBeInTheDocument();
   });
 
   it("renders explicit empty text instead of blank space", () => {

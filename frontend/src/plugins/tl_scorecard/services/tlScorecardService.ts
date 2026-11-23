@@ -90,8 +90,10 @@ export const tlScorecardService = {
   // Hits the engagement plugin's own public REST endpoint directly rather
   // than importing its service module — see ApprovalEngagementScore's
   // comment in types/tlScorecard.ts for why.
-  getApprovalEngagementScore: () =>
-    api.get<ApprovalEngagementScore>("/plugins/engagement/metrics/summary/"),
+  getApprovalEngagementScore: (month?: string) =>
+    api.get<ApprovalEngagementScore>("/plugins/engagement/metrics/summary/", {
+      params: month ? { month } : undefined,
+    }),
 
   getEngagementSurveyTeamAverage: (period?: string) => {
     const params: Record<string, string> = {};

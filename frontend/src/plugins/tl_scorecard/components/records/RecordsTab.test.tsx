@@ -220,7 +220,7 @@ describe("RecordsTab URL state", () => {
     await screen.findByText("1-on-1 (Individual meeting)");
     fireEvent.mouseDown(screen.getByRole("tab", { name: /idle flags/i }), { button: 0 });
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("kind=idle"));
-    expect(await screen.findByText("Docs")).toBeInTheDocument();
+    expect(await screen.findByText("Idle flag")).toBeInTheDocument();
   });
 
   it("shows counts beside each kind", async () => {
@@ -253,10 +253,10 @@ describe("RecordsTab URL state", () => {
 describe("RecordsTab mockup layout", () => {
   it("filters by state pills and writes ?state= to the URL", async () => {
     renderTab("?tab=records&kind=idle");
-    await screen.findByText("Docs");
+    await screen.findByText("Idle flag");
     fireEvent.click(screen.getByRole("button", { name: /needs attention/i }));
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("state=attention"));
-    expect(screen.getByText("Docs")).toBeInTheDocument();
+    expect(screen.getByText("Idle flag")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^completed$/i }));
     expect(await screen.findByText("No match")).toBeInTheDocument();
   });
@@ -279,14 +279,15 @@ describe("RecordsTab mockup layout", () => {
     svc.listMeetings.mockResolvedValue([{ ...MEETING, notes: "Discussed roadmap" }]);
     renderTab("?tab=records&kind=meetings&month=2026-09-01");
     expect(await screen.findByText(/Latest meeting \(Jane\):/)).toBeInTheDocument();
-    expect(screen.getByText("Discussed roadmap")).toBeInTheDocument();
+    // The snippet keeps the focus text; it is no longer a table column.
+    expect(screen.getByText(/Discussed roadmap/)).toBeInTheDocument();
     const link = screen.getByRole("link", { name: /view full meeting history/i });
     expect(link).toHaveAttribute("href", "/tl-scorecard?tab=records&kind=meetings");
   });
 
   it("renders the toolbar, sidebar summary and avatars", async () => {
     renderTab("?tab=records&kind=idle");
-    expect(await screen.findByText("Docs")).toBeInTheDocument();
+    expect(await screen.findByText("Idle flag")).toBeInTheDocument();
     expect(await screen.findByText("Timeframe")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search records or members…")).toBeInTheDocument();
     expect(
@@ -300,7 +301,7 @@ describe("RecordsTab mockup layout", () => {
   it("downloads exactly the visible rows as CSV", async () => {
     const { downloadBlobResponse } = await import("@/lib/download");
     renderTab("?tab=records&kind=idle");
-    await screen.findByText("Docs");
+    await screen.findByText("Idle flag");
     fireEvent.click(screen.getByRole("button", { name: "Export visible records (CSV)" }));
     expect(downloadBlobResponse).toHaveBeenCalledTimes(1);
     const [blob, filename] = vi.mocked(downloadBlobResponse).mock.calls[0];
@@ -317,7 +318,7 @@ describe("RecordsTab mockup layout", () => {
 describe("RecordsTab detail dialog", () => {
   it("opens the detail dialog from the eye button without firing the row action", async () => {
     renderTab("?tab=records&kind=idle");
-    await screen.findByText("Docs");
+    await screen.findByText("Idle flag");
     const eyeButtons = screen.getAllByRole("button", { name: /view details of/i });
     expect(eyeButtons).toHaveLength(1);
     fireEvent.click(eyeButtons[0]);
@@ -326,7 +327,7 @@ describe("RecordsTab detail dialog", () => {
 
   it("does not open the detail dialog when a row action is activated by keyboard", async () => {
     renderTab("?tab=records&kind=idle");
-    await screen.findByText("Docs");
+    await screen.findByText("Idle flag");
     fireEvent.keyDown(screen.getByRole("button", { name: /actions for/i }), {
       key: "Enter",
     });
@@ -338,14 +339,14 @@ describe("RecordsTab create entry point", () => {
   it("offers the kind's create action in the toolbar", async () => {
     const onCreateRecord = vi.fn();
     renderTab("?tab=records&kind=idle", { onCreateRecord });
-    await screen.findByText("Docs");
+    await screen.findByText("Idle flag");
     fireEvent.click(screen.getByRole("button", { name: "Flag idle" }));
     expect(onCreateRecord).toHaveBeenCalledWith("idle");
   });
 
   it("renders no create button without a create handler", async () => {
     renderTab("?tab=records&kind=idle");
-    await screen.findByText("Docs");
+    await screen.findByText("Idle flag");
     expect(screen.queryByRole("button", { name: "Flag idle" })).not.toBeInTheDocument();
   });
 });
@@ -353,11 +354,11 @@ describe("RecordsTab create entry point", () => {
 describe("RecordsTab panels", () => {
   it.each([
     ["meetings", "1-on-1 (Individual meeting)", "Not shared"],
-    ["idle", "Docs", "Open"],
-    ["absences", "Sick", "Over 5 working days open"],
-    ["reviews", "GM", "Delivered"],
-    ["promotions", "2026-09-05", "Awaiting decision"],
-    ["pips", "2026-09-06", "Pending approval"],
+    ["idle", "Idle flag", "Open"],
+    ["absences", "Absence", "Over 5 working days open"],
+    ["reviews", "2026-08", "Delivered"],
+    ["promotions", "Nomination", "Awaiting decision"],
+    ["pips", "PIP", "Pending approval"],
   ])("lists %s with a visible state", async (kind, cell, state) => {
     renderTab(`?tab=records&kind=${kind}`);
     expect(await screen.findAllByText(cell)).not.toHaveLength(0);
@@ -383,9 +384,16 @@ describe("RecordsTab panels", () => {
     expect(await screen.findByText("No records yet")).toBeInTheDocument();
   });
 
+  it("leaves the notes preview to the detail dialog instead of a table column", async () => {
+    renderTab("?tab=records&kind=idle");
+    await screen.findByText("Idle flag");
+    const headers = screen.getAllByRole("columnheader").map((cell) => cell.textContent);
+    expect(headers).toEqual(["Date", "Type", "With", "State", "Actions"]);
+  });
+
   it("shows an honest stat strip above the list", async () => {
     renderTab("?tab=records&kind=idle");
-    await screen.findByText("Docs");
+    await screen.findByText("Idle flag");
     expect(screen.getByText("Needs attention")).toBeInTheDocument();
     expect(screen.getAllByText("Completed")).toHaveLength(2);
     expect(screen.getByTestId("stat-card-progress-fill")).toHaveStyle({ width: "0%" });
@@ -451,14 +459,14 @@ describe("RecordsTab state actions", () => {
 
   it("resolves an idle flag", async () => {
     renderTab("?tab=records&kind=idle");
-    await screen.findByText("Docs");
+    await screen.findByText("Idle flag");
     openAction("Idle flag for Jane", "Mark resolved");
     await waitFor(() => expect(svc.resolveIdleFlag).toHaveBeenCalledWith(2));
   });
 
   it("addresses an absence", async () => {
     renderTab("?tab=records&kind=absences");
-    await screen.findByText("Sick");
+    await screen.findByText("Absence");
     openAction("Absence of Jane on 2020-01-01", "Mark addressed");
     await waitFor(() => expect(svc.addressAbsence).toHaveBeenCalledWith(3));
   });
@@ -524,14 +532,14 @@ describe("RecordsTab state actions", () => {
   it("surfaces the server message when an action fails", async () => {
     svc.resolveIdleFlag.mockRejectedValue({ response: { data: { error: "Already resolved." } } });
     renderTab("?tab=records&kind=idle");
-    await screen.findByText("Docs");
+    await screen.findByText("Idle flag");
     openAction("Idle flag for Jane", "Mark resolved");
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Already resolved."));
   });
 
   it("edits a record through its dialog", async () => {
     renderTab("?tab=records&kind=idle");
-    await screen.findByText("Docs");
+    await screen.findByText("Idle flag");
     openAction("Idle flag for Jane", "Edit");
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Edit idle flag")).toBeInTheDocument();
@@ -550,7 +558,7 @@ describe("RecordsTab state actions", () => {
 
   it("asks for confirmation naming the record before deleting", async () => {
     renderTab("?tab=records&kind=idle");
-    await screen.findByText("Docs");
+    await screen.findByText("Idle flag");
     openAction("Idle flag for Jane", "Delete");
     expect(await screen.findByText("Delete Idle flag for Jane?")).toBeInTheDocument();
     expect(svc.deleteRecord).not.toHaveBeenCalled();
@@ -563,8 +571,7 @@ describe("RecordsTab record detail", () => {
   it("opens the detail dialog from the row's eye button", async () => {
     svc.listIdleFlags.mockResolvedValue([{ ...IDLE, notes: "Weekly check-ins agreed" }]);
     renderTab("?tab=records&kind=idle");
-    // The list cell joins task and notes, so match the joined preview.
-    await screen.findByText("Docs — Weekly check-ins agreed");
+    await screen.findByText("Idle flag");
     fireEvent.click(screen.getByRole("button", { name: "View details of Idle flag for Jane" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Idle flag for Jane")).toBeInTheDocument();
@@ -574,8 +581,8 @@ describe("RecordsTab record detail", () => {
 
   it("opens the detail dialog on row click and logs a weekly update", async () => {
     renderTab("?tab=records&kind=idle");
-    await screen.findByText("Docs");
-    fireEvent.click(screen.getByText("Docs").closest("tr")!);
+    await screen.findByText("Idle flag");
+    fireEvent.click(screen.getByText("Idle flag").closest("tr")!);
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: /log weekly update/i }));
     fireEvent.change(await screen.findByLabelText(/^Status note/), {

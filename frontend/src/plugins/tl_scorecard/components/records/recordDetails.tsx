@@ -117,7 +117,11 @@ const meetingItems = (row: RecordRow): DetailItem[] => {
   const m = row as Meeting;
   return [
     { label: "With", text: m.counterparty_name ?? "Whole team" },
-    { label: "Onboarding discussed", text: m.onboarding_discussed ? "Yes" : "No" },
+    // The flag only exists on a 1-on-1; showing "No" on a sync or team meeting
+    // reads as a missed onboarding step that was never applicable.
+    ...(m.meeting_type === "one_on_one"
+      ? [{ label: "Onboarding discussed", text: m.onboarding_discussed ? "Yes" : "No" }]
+      : []),
     {
       label: "Notes",
       text: m.notes,

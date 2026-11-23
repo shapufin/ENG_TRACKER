@@ -70,7 +70,7 @@ describe("ScorecardGuideDialog", () => {
     expect(screen.getByRole("heading", { name: "Colours and status" })).toBeInTheDocument();
     expect(
       screen.getByText(
-        "On the cards, green is 90% or more, amber 70% to 89%, red below 70%. In the Excel and PDF reports, a value at its target is On track, from 80% of it is Watch, and below that Off track."
+        "The cards and the Excel and PDF reports use the same bands: a value at its target is green (On track), from 80% of it is amber (Watch), and below that red (Off track). A month with nothing to judge shows a dash."
       )
     ).toBeInTheDocument();
 

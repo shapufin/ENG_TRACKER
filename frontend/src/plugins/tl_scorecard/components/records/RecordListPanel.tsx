@@ -175,9 +175,6 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
                 With
               </th>
               <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "py-2")}>
-                Focus / Notes preview
-              </th>
-              <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "py-2")}>
                 State
               </th>
               <th scope="col" className={cn(TABLE_HEAD_CELL_CLASS, "py-2")}>
@@ -189,7 +186,6 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
             {rows.map((record) => {
               const state = config.state(record);
               const person = config.person(record);
-              const focus = config.focus(record);
               return (
                 <tr
                   key={record.id}
@@ -224,15 +220,6 @@ export const RecordListPanel: React.FC<RecordListPanelProps> = ({
                         {person}
                       </span>
                     </div>
-                  </td>
-                  <td data-label="Focus" className={cellClass}>
-                    {focus ? (
-                      <span className="text-muted-foreground block max-w-xs truncate" title={focus}>
-                        {focus}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
                   </td>
                   <td data-label="State" className={cellClass}>
                     <StateBadge {...state} />

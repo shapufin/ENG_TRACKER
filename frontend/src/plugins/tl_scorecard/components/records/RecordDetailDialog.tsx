@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 import { Lock, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,18 +46,38 @@ const VisibilityChip: React.FC<{ item: DetailItem }> = ({ item }) => {
   return null;
 };
 
-const DetailBlock: React.FC<{ item: DetailItem }> = ({ item }) => (
-  <section>
-    <div className="flex flex-wrap items-center gap-2">
-      <h3 className="text-muted-foreground flex items-center gap-1.5 font-mono text-xs font-semibold tracking-wider uppercase">
+/**
+ * A block carries prose, a custom node or a privacy label; anything else is a
+ * one-line fact. Splitting the two stops a five-word value and a wall of notes
+ * from carrying the same visual weight.
+ */
+const isBlock = (item: DetailItem): boolean =>
+  Boolean(item.node || item.visibility || item.emptyText);
+
+const DetailFact: React.FC<{ item: DetailItem }> = ({ item }) => (
+  <div className="border-line-subtle rounded-lg border px-3.5 py-2.5">
+    <h3 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+      {item.label}
+    </h3>
+    <p className="mt-1 text-sm font-medium break-words">{item.text}</p>
+  </div>
+);
+
+const DetailBlock: React.FC<{ item: DetailItem; headingId: string }> = ({ item, headingId }) => (
+  <section
+    aria-labelledby={headingId}
+    className="border-line-subtle overflow-hidden rounded-lg border"
+  >
+    <div className="border-line-subtle bg-muted/40 flex flex-wrap items-center gap-2 border-b px-3.5 py-2">
+      <h3 id={headingId} className="text-foreground text-xs font-semibold tracking-wider uppercase">
         {item.label}
       </h3>
       <VisibilityChip item={item} />
     </div>
-    <div className="mt-1.5">
+    <div className="px-3.5 py-3">
       {item.node ??
         (item.text ? (
-          <p className="text-sm break-words whitespace-pre-wrap">{item.text}</p>
+          <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">{item.text}</p>
         ) : (
           <p className="text-muted-foreground text-sm italic">
             {item.emptyText ?? "None recorded."}
@@ -81,6 +101,9 @@ export const RecordDetailDialog: React.FC<RecordDetailDialogProps> = ({
   onLogUpdate,
 }) => {
   const items = DETAIL_ITEMS[config.key](record, viewer);
+  const facts = items.filter((item) => !isBlock(item));
+  const blocks = items.filter(isBlock);
+  const idPrefix = useId();
   const state = config.state(record);
   const canLogUpdate =
     config.key === "idle" &&
@@ -102,9 +125,20 @@ export const RecordDetailDialog: React.FC<RecordDetailDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
-          {items.map((item) => (
-            <DetailBlock key={item.label} item={item} />
-          ))}
+          {facts.length > 0 && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {facts.map((item) => (
+                <DetailFact key={item.label} item={item} />
+              ))}
+            </div>
+          )}
+          {blocks.length > 0 && (
+            <div className="space-y-3">
+              {blocks.map((item, index) => (
+                <DetailBlock key={item.label} item={item} headingId={`${idPrefix}-${index}`} />
+              ))}
+            </div>
+          )}
         </DialogBody>
         <DialogFooter>
           {canLogUpdate && (

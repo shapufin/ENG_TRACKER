@@ -126,10 +126,12 @@ const TLScorecardAuthoring: React.FC = () => {
   const [eprDialogOpen, setEprDialogOpen] = useState(false);
   const [cadenceDialogOpen, setCadenceDialogOpen] = useState(false);
 
-  const invalidateScorecard = () =>
+  // A new record changes the metrics AND the Records tab (list + category counts);
+  // refreshing only the scorecard left the tab stale until a reload.
+  const invalidateScorecard = () => {
     queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "scorecard"] });
-  const invalidatePips = () =>
-    queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "records", "pips"] });
+    queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "records"] });
+  };
   const invalidateEprCycles = () =>
     queryClient.invalidateQueries({ queryKey: ["tl-scorecard", "epr-cycles"] });
   const invalidatePartnership = () => {
@@ -167,7 +169,6 @@ const TLScorecardAuthoring: React.FC = () => {
     mutationFn: tlScorecardService.createPIPRecord,
     onSuccess: () => {
       invalidateScorecard();
-      invalidatePips();
     },
     onError: notifyError,
   });
@@ -175,7 +176,6 @@ const TLScorecardAuthoring: React.FC = () => {
     mutationFn: tlScorecardService.approvePIPRecord,
     onSuccess: () => {
       invalidateScorecard();
-      invalidatePips();
     },
     onError: notifyError,
   });
@@ -229,14 +229,18 @@ const TLScorecardAuthoring: React.FC = () => {
     queryFn: async () => (await tlScorecardService.getScorecard(month)).data,
     enabled: onOverview,
   });
+  // Scoped to the selected month: without `month` the engagement summary always
+  // answers for the latest month, so picking a future year kept showing the
+  // current score instead of an em dash.
   const engagementQuery = useQuery({
-    queryKey: ["tl-scorecard", "engagement-summary"],
-    queryFn: async () => (await tlScorecardService.getApprovalEngagementScore()).data,
+    queryKey: ["tl-scorecard", "engagement-summary", month],
+    queryFn: async () => (await tlScorecardService.getApprovalEngagementScore(month)).data,
     enabled: onOverview,
   });
   const surveyQuery = useQuery({
-    queryKey: ["tl-scorecard", "engagement-survey-average"],
-    queryFn: async () => (await tlScorecardService.getEngagementSurveyTeamAverage()).data,
+    queryKey: ["tl-scorecard", "engagement-survey-average", month],
+    queryFn: async () =>
+      (await tlScorecardService.getEngagementSurveyTeamAverage(month.slice(0, 7))).data,
     enabled: onOverview,
   });
   const escalationsQuery = useQuery({

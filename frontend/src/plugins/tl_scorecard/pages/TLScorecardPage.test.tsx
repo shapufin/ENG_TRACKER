@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi } from "vitest";
 import { TLScorecardPage } from "./TLScorecardPage";
+import { currentBusinessYear } from "@/lib/date-format-utils";
 import { tlScorecardService } from "../services/tlScorecardService";
 import { downloadBlobResponse } from "@/lib/download";
 import type { Scorecard } from "../types/tlScorecard";
@@ -209,6 +210,27 @@ describe("TLScorecardPage", () => {
     expect(screen.getByText("Approval engagement (automated)")).toBeInTheDocument();
     expect(screen.getByText(/on-time decisions \(40%\)/)).toBeInTheDocument();
     expect(screen.getByText(/No pulse-survey responses yet/i)).toBeInTheDocument();
+  });
+
+  it("scopes the approval engagement and pulse survey to the selected month", async () => {
+    mockDefaults();
+    // A non-current year starts at January, so a year with no snapshot must
+    // stop showing the latest month's score.
+    const futureYear = currentBusinessYear() + 2;
+    (tlScorecardService.getApprovalEngagementScore as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: { engagement_score: null },
+    });
+
+    renderPage(`/tl-scorecard?year=${futureYear}`);
+
+    await waitFor(() => expect(screen.getByText("66.7%")).toBeInTheDocument());
+    expect(tlScorecardService.getApprovalEngagementScore).toHaveBeenCalledWith(
+      `${futureYear}-01-01`
+    );
+    expect(tlScorecardService.getEngagementSurveyTeamAverage).toHaveBeenCalledWith(
+      `${futureYear}-01`
+    );
+    expect(screen.queryByText("8.2/10")).not.toBeInTheDocument();
   });
 
   it("shows the real pulse-survey average once responses exist", async () => {
@@ -446,6 +468,25 @@ describe("TLScorecardPage", () => {
     await waitFor(() => {
       expect(tlScorecardService.getScorecard).toHaveBeenCalledWith("2027-01-01");
     });
+  });
+
+  it("shows dashes, not 0% or a pace gap, for the meeting cards of a month that has not started", async () => {
+    mockDefaults();
+    (tlScorecardService.getScorecard as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: {
+        ...SCORECARD,
+        month: "2099-01-01",
+        meetings: { ...SCORECARD.meetings, one_on_one_compliance_pct: 0, tl_sync_count: 0 },
+        tl_sync_ytd: 0,
+        tl_sync_expected_ytd: 4,
+      },
+    });
+
+    renderPage("/tl-scorecard?year=2099");
+
+    expect((await screen.findAllByText("Month has not started")).length).toBe(2);
+    expect(screen.queryByText(/needed by now/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/of 4 met/)).not.toBeInTheDocument();
   });
 
   it("renders em-dash instead of n/a when metrics have no decisions or data", async () => {

@@ -122,7 +122,7 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
   engagement,
   survey,
 }) => {
-  const { leave, overtime, team_size, seniority } = scorecard;
+  const { leave, overtime, team_size, seniority, targets } = scorecard;
   return (
     <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -165,10 +165,14 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
           labelClassName={MICRO_LABEL}
           value={overtime.pct_within_sla != null ? `${overtime.pct_within_sla}%` : "—"}
           icon={CalendarClock}
-          iconWellClass={slaWell(overtime.pct_within_sla ?? null)}
-          iconColorClass={slaTone(overtime.pct_within_sla ?? null) ?? "text-tone-info-text"}
+          iconWellClass={slaWell(overtime.pct_within_sla ?? null, targets?.ot_within_sla_pct)}
+          iconColorClass={
+            slaTone(overtime.pct_within_sla ?? null, targets?.ot_within_sla_pct) ??
+            "text-tone-info-text"
+          }
           valueColorClass={
-            slaTone(overtime.pct_within_sla ?? null) ?? "text-muted-foreground font-normal"
+            slaTone(overtime.pct_within_sla ?? null, targets?.ot_within_sla_pct) ??
+            "text-muted-foreground font-normal"
           }
           trend={
             overtime.decided_count === 0
@@ -178,7 +182,7 @@ export const ScorecardOverview: React.FC<ScorecardOverviewProps> = ({
                 : `${overtime.decided_count} requests submitted this month · average ${overtime.avg_turnaround_days}d`
           }
           progressPercent={overtime.pct_within_sla ?? undefined}
-          progressColorClass={slaBar(overtime.pct_within_sla ?? null)}
+          progressColorClass={slaBar(overtime.pct_within_sla ?? null, targets?.ot_within_sla_pct)}
         />
         <StatCard
           label="Team size"
