@@ -281,7 +281,7 @@ REST_FRAMEWORK = {
         'mfa': '30/min' if not DEBUG else None,           # second-factor verify/enrol
         # The PC polls phone-collect every 2 s while it waits; sized for an office behind one NAT.
         'phone_poll': '240/min' if not DEBUG else None,
-        'upload': '30/hour' if not DEBUG else None,       # file parsing endpoints
+        'upload': '120/hour' if not DEBUG else None,      # file parsing endpoints (analyze/preview/import)
         'export': '20/hour' if not DEBUG else None,       # report/export endpoints
         'evidence_upload': '60/hour' if not DEBUG else None,
         'control_room': '120/hour' if not DEBUG else None,  # dashboard summary/trend/roster reads

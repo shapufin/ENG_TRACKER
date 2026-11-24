@@ -351,8 +351,13 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
     # carries only a list of IDs and is plain JSON — both parsers are always
     # registered, DRF picks the one matching the request's Content-Type.
     parser_classes = [MultiPartParser, FormParser, JSONParser]
-    # Throttle file-parsing endpoints to prevent resource exhaustion.
-    throttle_scope = 'upload'
+    # Throttle the file-parsing endpoints only. A class-wide scope also counted the
+    # batch lists, reviews and deletes, and a leader importing for the squad ran
+    # the 30/hour bucket dry (429 on analyze in production, 2026-11-24).
+    @property
+    def throttle_scope(self):
+        return 'upload' if self.action in ('analyze', 'preview', 'import_batch') else None
+
     permission_action_map = {
         'analyze': 'manage',
         'preview': 'manage',

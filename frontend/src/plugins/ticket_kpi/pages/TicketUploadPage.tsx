@@ -179,7 +179,7 @@ export const TicketUploadPage: React.FC = () => {
       setPreview(previewRes.data);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Analyze failed");
+      toast.error(err.response?.data?.error || err.response?.data?.detail || "Analyze failed");
     } finally {
       setIsAnalyzing(false);
     }
@@ -207,7 +207,7 @@ export const TicketUploadPage: React.FC = () => {
       toast.success("Mapping updated");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      toast.error(err.response?.data?.error || "Could not re-preview with this mapping");
+      toast.error(err.response?.data?.error || err.response?.data?.detail || "Could not re-preview with this mapping");
     } finally {
       setIsRemapping(false);
     }
@@ -260,7 +260,7 @@ export const TicketUploadPage: React.FC = () => {
       } else if (err.response?.status === 409) {
         toast.error("Import exists. Only administrators can override.");
       } else {
-        toast.error(err.response?.data?.error || "Import failed");
+        toast.error(err.response?.data?.error || err.response?.data?.detail || "Import failed");
       }
     } finally {
       setIsImporting(false);
