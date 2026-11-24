@@ -1442,6 +1442,12 @@ class EndToEndUploadFlowTests(TestCase):
     These tests verify that nothing breaks when users actually use the system.
     """
 
+    def setUp(self):
+        # The KPI recompute and delete receivers come from the plugin's ready(), which a
+        # suite booted on an empty database never ran; ready() is idempotent.
+        from plugins.ticket_kpi.plugin import TicketKPIPlugin
+        TicketKPIPlugin().ready()
+
     @classmethod
     def setUpTestData(cls):
         cls.factory = APIRequestFactory()

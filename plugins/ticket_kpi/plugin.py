@@ -118,17 +118,10 @@ class TicketKPIPlugin(BasePlugin):
         Django startup for a disabled plugin (which would happen if they
         were connected in ``apps.py ready()``).
         """
-        from . import signals  # noqa: F401
+        from . import signals
+        signals.connect()
 
     def disable(self):
         """Disconnect signals when plugin is disabled."""
-        from django.db.models.signals import post_save, post_delete
-        from .models import TicketImportBatch
-        from .signals import (
-            compute_kpi_on_import,
-            delete_kpi_on_batch_remove,
-            auto_match_links_on_batch_import,
-        )
-        post_save.disconnect(compute_kpi_on_import, sender=TicketImportBatch)
-        post_delete.disconnect(delete_kpi_on_batch_remove, sender=TicketImportBatch)
-        post_save.disconnect(auto_match_links_on_batch_import, sender=TicketImportBatch)
+        from . import signals
+        signals.disconnect()

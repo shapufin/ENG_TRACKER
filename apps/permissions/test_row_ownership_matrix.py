@@ -642,6 +642,15 @@ class WalkerCatchesAnUnscopedRouteTests(TestCase):
 
 class RowOwnershipMatrixTests(TestCase):
     @classmethod
+    def setUpClass(cls):
+        # The plugin's ready() wires the receivers this test needs. A suite booted on an empty
+        # database (CI, a fresh worktree) skips every ready() in PluginsConfig, so connect
+        # them here; ready() is idempotent, and it is the state of an enabled plugin.
+        from plugins.skills.plugin import SkillsPlugin
+        SkillsPlugin().ready()  # skills/history rows come from the rating signal
+        super().setUpClass()
+
+    @classmethod
     def setUpTestData(cls):
         build_world(cls)
         populate_rows(cls)

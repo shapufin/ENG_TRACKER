@@ -156,6 +156,13 @@ class ProfileSuggestionTests(TestCase):
 class SignalCostTests(TestCase):
     """B7 and B9: a review does not recompute the month; a raw delete is ignored."""
 
+    def setUp(self):
+        # The plugin's ready() wires the receivers this test needs. A suite booted on an empty
+        # database (CI, a fresh worktree) skips every ready() in PluginsConfig, so connect
+        # them here; ready() is idempotent, and it is the state of an enabled plugin.
+        from plugins.ticket_kpi.plugin import TicketKPIPlugin
+        TicketKPIPlugin().ready()
+
     def test_review_does_not_recompute_the_month(self):
         from unittest import mock
         user = User.objects.create_user(username='b7_user', password='x')

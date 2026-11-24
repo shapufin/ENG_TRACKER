@@ -13,7 +13,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from pywebpush import webpush, WebPushException
 from .models import PushSubscription
-from .vapid_utils import get_private_key, get_vapid_subject, VAPID_SUBJECT
+from .vapid_utils import get_private_key, get_vapid_subject
 
 logger = logging.getLogger(__name__)
 

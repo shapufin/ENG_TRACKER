@@ -635,6 +635,12 @@ class TicketKpiLeaderBatchRestoreTests(TestCase):
     def test_leader_imported_batch_round_trips(self):
         import datetime as dt
 
+        # The plugin's ready() wires the receivers this test needs. A suite booted on an empty
+        # database (CI, a fresh worktree) skips every ready() in PluginsConfig, so connect
+        # them here; ready() is idempotent, and it is the state of an enabled plugin.
+        from plugins.ticket_kpi.plugin import TicketKPIPlugin
+        TicketKPIPlugin().ready()
+
         from plugins.ticket_kpi.analytics import compute_monthly_kpi
         from plugins.ticket_kpi.models import MonthlyKPI, NormalizedTicket, TicketImportBatch
 

@@ -249,6 +249,11 @@ class SkillsImporterTests(TestCase):
 
 class UserSkillImporterTests(TestCase):
     def setUp(self):
+        # The plugin's ready() wires the receivers this test needs. A suite booted on an empty
+        # database (CI, a fresh worktree) skips every ready() in PluginsConfig, so connect
+        # them here; ready() is idempotent, and it is the state of an enabled plugin.
+        from plugins.skills.plugin import SkillsPlugin
+        SkillsPlugin().ready()
         self.importer = UserSkillImporter()
         self.user = User.objects.create_user(
             username="mrossi", email="m.rossi@example.com", password="pw"

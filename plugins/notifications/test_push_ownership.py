@@ -12,6 +12,10 @@ ENDPOINT = "https://fcm.googleapis.com/fcm/send/shared-browser"
 
 class PushOwnershipTests(TestCase):
     def setUp(self):
+        # Deactivation reaches the subscriptions through the plugin's account signals, which a
+        # suite booted on an empty database never connected; ready() is idempotent.
+        from plugins.notifications.plugin import NotificationPlugin
+        NotificationPlugin().ready()
         self.a = User.objects.create_user(username="a", email="a@t.test", password="x")
         self.b = User.objects.create_user(username="b", email="b@t.test", password="x")
 

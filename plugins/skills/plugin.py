@@ -104,7 +104,10 @@ class SkillsPlugin(BasePlugin):
         Django startup for a disabled plugin (which would happen if they
         were connected in ``apps.py ready()``).
         """
-        from . import signals  # noqa: F401 — connects via dispatch_uid
+        # The module connects on first import only; connect() again so a re-enable
+        # after disable() (no restart) restores the rating history.
+        from . import signals
+        signals.connect()
 
     def disable(self):
         """Disconnect audit signals when plugin is disabled."""

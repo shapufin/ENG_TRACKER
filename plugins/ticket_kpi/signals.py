@@ -126,3 +126,25 @@ def auto_match_links_on_batch_import(sender, instance, created, **kwargs):
                     continue
 
     transaction.on_commit(_match)
+
+
+_RECEIVERS = (
+    (post_save, compute_kpi_on_import),
+    (post_delete, delete_kpi_on_batch_remove),
+    (post_save, auto_match_links_on_batch_import),
+)
+
+
+def connect():
+    """Connect every receiver. Idempotent: Django keys a receiver by function and sender.
+
+    The ``@receiver`` decorators connect on first import only, so ``plugin.ready()`` calls
+    this to reconnect after ``disable()`` (re-enabling the plugin without a restart).
+    """
+    for signal, handler in _RECEIVERS:
+        signal.connect(handler, sender=TicketImportBatch)
+
+
+def disconnect():
+    for signal, handler in _RECEIVERS:
+        signal.disconnect(handler, sender=TicketImportBatch)

@@ -394,6 +394,7 @@ class TicketOvertimeLinkTests(TestCase):
         self.assertTrue(any(delete_kpi_on_batch_remove in r for r in delete_before))
 
         plugin.disable()
+        self.addCleanup(plugin.ready)  # later tests in this process expect the plugin enabled
         # _live_receivers() returns (sync_receivers, async_receivers).
         save_after = post_save._live_receivers(TicketImportBatch)
         delete_after = post_delete._live_receivers(TicketImportBatch)
@@ -406,6 +407,7 @@ class TicketOvertimeLinkTests(TestCase):
         plugin = TicketKPIPlugin()
         plugin.ready()
         plugin.disable()
+        self.addCleanup(plugin.ready)  # later tests in this process expect the plugin enabled
         # Saving a new batch must NOT trigger auto-match because the
         # signal is disconnected. Verify via the signal path, not by
         # calling the receiver directly (which would bypass disable()).
