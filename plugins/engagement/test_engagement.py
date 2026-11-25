@@ -556,3 +556,26 @@ class EngagementPdfExportTests(TestCase):
         with CaptureQueriesContext(connection) as pdf:
             self._call('export', self.leader, file_format='pdf', **params)
         self.assertEqual(len(pdf.captured_queries), len(xlsx.captured_queries))
+
+    def test_export_pdf_uses_unified_table_and_compact_year_pagination(self):
+        resp = self._call('export', self.leader, month=self.july.isoformat(), scope='year', file_format='pdf')
+        self.assertEqual(resp.status_code, 200)
+        reader = PdfReader(io.BytesIO(resp.content))
+        # Unified table + aging chart fits 1 month per page instead of 2 pages per month.
+        self.assertLessEqual(len(reader.pages), 5)
+        text = self._pdf_text(resp)
+        self.assertIn('Engagement Score & Approval Speed', text)
+        self.assertIn('Monthly Requests by Outcome vs Submitted Total', text)
+        self.assertIn('Metric', text)
+
+    def test_export_xlsx_has_monthly_volume_and_linear_combo_trend(self):
+        from openpyxl import load_workbook
+
+        resp = self._call('export', self.leader, month=self.july.isoformat(), scope='year', file_format='xlsx')
+        self.assertEqual(resp.status_code, 200)
+        wb = load_workbook(io.BytesIO(resp.content))
+        self.assertEqual(wb.sheetnames, ['Summary', 'Trend', 'Approval Aging', 'Monthly Volume'])
+        self.assertEqual(wb['Summary'].freeze_panes, 'A5')
+        self.assertEqual(wb['Trend'].page_setup.orientation, 'landscape')
+        self.assertEqual(len(wb['Trend']._charts), 2)
+        self.assertEqual(len(wb['Monthly Volume']._charts), 1)

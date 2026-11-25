@@ -20,7 +20,7 @@ import xlsxwriter
 
 from core.utils.csv_safe import xlsx_safe
 
-from .report_kpis import NO_DATA, kpi_rows
+from .report_kpis import NO_DATA, kpi_rows, reviews_target
 from core.utils.timezone_local import business_today
 
 PRIMARY = "#1D4ED8"
@@ -104,7 +104,7 @@ def _print_setup(ws, title_rows=None):
         ws.repeat_rows(*title_rows)
 
 
-def _build_summary_sheet(wb, fmt, scorecard, period_label, include_restricted=True):
+def _build_summary_sheet(wb, fmt, scorecard, period_label, include_restricted=True, epr=None):
     ws = wb.add_worksheet("Summary")
     ws.hide_gridlines(2)
     _print_setup(ws, (3, 3))
@@ -127,7 +127,8 @@ def _build_summary_sheet(wb, fmt, scorecard, period_label, include_restricted=Tr
     for col, label in enumerate(["Area", "Metric", "Value", "Target", "Status"]):
         ws.write(3, col, label, fmt.header)
 
-    for offset, item in enumerate(kpi_rows(scorecard, include_restricted=include_restricted)):
+    items = kpi_rows(scorecard, include_restricted=include_restricted)
+    for offset, item in enumerate(items):
         r = 4 + offset
         ws.write(r, 0, item["area"], fmt.area)
         ws.write(r, 1, item["metric"], fmt.label)
@@ -142,24 +143,59 @@ def _build_summary_sheet(wb, fmt, scorecard, period_label, include_restricted=Tr
             ws.write_number(r, 3, item["target"], target_fmt)
         ws.write(r, 4, item["status"], fmt.status.get(item["status"], fmt.status_none))
 
+    if epr and epr.get("stages"):
+        stage_labels = {
+            "goal_setting": "Goal setting", "mid_year": "Mid-year", "final_review": "Final review",
+        }
+        r = 4 + len(items) + 2
+        year = scorecard["month"][:4]
+        ws.write(r, 0, f"EPR progress ({year})", fmt.section)
+        r += 1
+        for col, label in enumerate(["Stage", "Due date", "Completed on time", "Team size", "On time %"]):
+            ws.write(r, col, label, fmt.header)
+        for stage_key, stage_data in epr["stages"].items():
+            r += 1
+            ws.write(r, 0, stage_labels.get(stage_key, stage_key), fmt.area)
+            ws.write(r, 1, stage_data["due_date"], fmt.cell_center)
+            ws.write_number(r, 2, stage_data["completed_on_time"], fmt.count)
+            ws.write_number(r, 3, stage_data["team_size"], fmt.count)
+            if stage_data["pct_on_time"] is None:
+                ws.write(r, 4, NO_DATA, fmt.dash)
+            else:
+                ws.write_number(r, 4, stage_data["pct_on_time"], fmt.pct)
+
 
 def _build_trend_sheet(wb, fmt, trend, include_restricted=True):
-    """Month table plus a native column/line chart. `trend` is already masked."""
+    """Month table plus two native charts (compliance + cadence/reviews). `trend` is already masked."""
     ws = wb.add_worksheet("Trend")
     ws.hide_gridlines(2)
-    _print_setup(ws, (1, 1))
+    _print_setup(ws, (3, 3))
     headers = [
-        "Month", "1:1 compliance", "Manager syncs", "Team meetings with HRBP",
-        "Management reviews (YTD)", "Promotion ratio",
+        "Month", "1:1 compliance", "Team meetings held", "Manager syncs",
+        "Team meetings with HRBP", "Management reviews (YTD)", "Pro-rata target",
+        "Promotion ratio",
     ]
     if include_restricted:
         headers.append("Onboarding 1-on-1s")
+    last_col = len(headers) - 1
     ws.set_column(0, 0, 14)
-    ws.set_column(1, 6 if include_restricted else 5, 18)
-    for col, label in enumerate(headers):
-        ws.write(0, col, label, fmt.header)
+    ws.set_column(1, last_col, 18)
+    ws.freeze_panes(4, 0)
 
-    for idx, point in enumerate(trend, start=1):
+    ws.merge_range(0, 0, 0, last_col, "TL Scorecard — Monthly Trend", fmt.title)
+    ws.set_row(0, 30)
+    ws.merge_range(
+        1, 0, 1, last_col,
+        f"Months: {len(trend)} · Generated on {business_today().strftime('%d %b %Y')}",
+        fmt.subtitle,
+    )
+    ws.set_row(1, 20)
+
+    for col, label in enumerate(headers):
+        ws.write(3, col, label, fmt.header)
+
+    for offset, point in enumerate(trend):
+        idx = 4 + offset
         meetings = point["meetings"]
         ws.write(idx, 0, date.fromisoformat(point["month"]).strftime("%b %Y"), fmt.cell_center)
         one_on_one = meetings["one_on_one_compliance_pct"]
@@ -167,49 +203,86 @@ def _build_trend_sheet(wb, fmt, trend, include_restricted=True):
             ws.write(idx, 1, NO_DATA, fmt.dash)
         else:
             ws.write_number(idx, 1, one_on_one, fmt.pct)
-        ws.write_number(idx, 2, meetings["tl_sync_count"], fmt.count)
-        ws.write_number(idx, 3, meetings["team_meetings_with_hrbp"], fmt.count)
-        ws.write_number(idx, 4, point["review_deliveries_ytd"], fmt.count)
+        ws.write_number(idx, 2, meetings.get("team_meetings_held", 0), fmt.count)
+        ws.write_number(idx, 3, meetings["tl_sync_count"], fmt.count)
+        ws.write_number(idx, 4, meetings["team_meetings_with_hrbp"], fmt.count)
+        ws.write_number(idx, 5, point["review_deliveries_ytd"], fmt.count)
+        ws.write_number(idx, 6, reviews_target(point["month"], point.get("targets")), fmt.count)
         promoted = point["promotion"]["promoted_pct"]
         if promoted is None:
-            ws.write(idx, 5, NO_DATA, fmt.dash)
+            ws.write(idx, 7, NO_DATA, fmt.dash)
         else:
-            ws.write_number(idx, 5, promoted, fmt.pct)
+            ws.write_number(idx, 7, promoted, fmt.pct)
         if include_restricted:
             onb = meetings.get("onboarding_pct")
             if onb is None:
-                ws.write(idx, 6, NO_DATA, fmt.dash)
+                ws.write(idx, 8, NO_DATA, fmt.dash)
             else:
-                ws.write_number(idx, 6, onb, fmt.pct)
+                ws.write_number(idx, 8, onb, fmt.pct)
 
-    last_row = len(trend)
-    if last_row < 2:
+    first_row = 4
+    last_row = 3 + len(trend)
+    if len(trend) < 2:
         return
+
+    # Chart 1: Compliance & Promotion (%) — only add series that contain real data
+    # so HBPR exports (masked 1:1) never draw a flat 0% line from "—" cells.
+    pct_cols = []
+    if any(p["meetings"]["one_on_one_compliance_pct"] is not None for p in trend):
+        pct_cols.append((1, SERIES[0]))
+    if include_restricted and any(p["meetings"].get("onboarding_pct") is not None for p in trend):
+        pct_cols.append((8, SERIES[1]))
+    if any(p["promotion"]["promoted_pct"] is not None for p in trend):
+        pct_cols.append((7, SERIES[2]))
+    if pct_cols:
+        pct_chart = wb.add_chart({"type": "line"})
+        for col, colour in pct_cols:
+            pct_chart.add_series({
+                "name": ["Trend", 3, col],
+                "categories": ["Trend", first_row, 0, last_row, 0],
+                "values": ["Trend", first_row, col, last_row, col],
+                "line": {"color": colour, "width": 2.25},
+                "marker": {"type": "circle", "size": 5, "fill": {"color": "white"},
+                           "border": {"color": colour}},
+                "smooth": False,
+            })
+        pct_chart.set_title({"name": "Compliance & Promotion (%)"})
+        pct_chart.set_y_axis({"name": "%", "min": 0, "max": 100})
+        pct_chart.set_x_axis({"name": "Month"})
+        pct_chart.set_legend({"position": "bottom"})
+        pct_chart.set_style(11)
+        pct_chart.set_size({"width": 620, "height": 340})
+        ws.insert_chart(f"A{last_row + 3}", pct_chart)
+
+    # Chart 2: Meeting cadence (bars) + YTD management reviews vs target (lines)
     columns = wb.add_chart({"type": "column"})
-    for col, colour in ((2, SERIES[0]), (3, SERIES[1])):
+    for col, colour in ((2, SERIES[0]), (3, SERIES[1]), (4, "#64748B")):
         columns.add_series({
-            "name": ["Trend", 0, col],
-            "categories": ["Trend", 1, 0, last_row, 0],
-            "values": ["Trend", 1, col, last_row, col],
+            "name": ["Trend", 3, col],
+            "categories": ["Trend", first_row, 0, last_row, 0],
+            "values": ["Trend", first_row, col, last_row, col],
             "fill": {"color": colour},
             "gap": 80,
         })
     reviews = wb.add_chart({"type": "line"})
-    reviews.add_series({
-        "name": ["Trend", 0, 4],
-        "categories": ["Trend", 1, 0, last_row, 0],
-        "values": ["Trend", 1, 4, last_row, 4],
-        "line": {"color": SERIES[2], "width": 2.5},
-        "marker": {"type": "circle", "size": 6, "fill": {"color": "white"},
-                   "border": {"color": SERIES[2]}},
-    })
+    for col, colour, dash in ((5, SERIES[2], "solid"), (6, "#475569", "dash")):
+        reviews.add_series({
+            "name": ["Trend", 3, col],
+            "categories": ["Trend", first_row, 0, last_row, 0],
+            "values": ["Trend", first_row, col, last_row, col],
+            "line": {"color": colour, "width": 2.25, "dash_type": dash},
+            "marker": {"type": "circle", "size": 5, "fill": {"color": "white"},
+                       "border": {"color": colour}},
+            "smooth": False,
+        })
     columns.combine(reviews)
     columns.set_title({"name": "Meetings and reviews by month"})
     columns.set_y_axis({"name": "Count", "min": 0})
     columns.set_x_axis({"name": "Month"})
     columns.set_legend({"position": "bottom"})
-    columns.set_size({"width": 760, "height": 360})
-    ws.insert_chart("H1", columns)
+    columns.set_style(11)
+    columns.set_size({"width": 680, "height": 340})
+    ws.insert_chart(f"E{last_row + 3}", columns)
 
 
 def _stage_cell(row, stage):
@@ -228,9 +301,12 @@ def _build_governance_sheet(wb, fmt, governance, include_restricted=True):
     ws = wb.add_worksheet("Governance")
     ws.hide_gridlines(2)
     _print_setup(ws)
-    ws.set_column("A:A", 26)
-    ws.set_column("B:H", 20)
-    ws.set_column("I:I", 50)
+    ws.set_column("A:A", 24)
+    ws.set_column("B:B", 16)
+    ws.set_column("C:D", 18)
+    ws.set_column("E:G", 20)
+    ws.set_column("H:H", 36)
+    ws.set_column("I:I", 48)
     ws.merge_range("A1:I1", "Governance records", fmt.title)
     ws.set_row(0, 30)
 
@@ -323,11 +399,19 @@ def _build_hbpr_evidence_sheet(wb, fmt, evidence):
         "Kind", "Occurred on", "Year", "Status", "Cancel reason", "Recorded by",
         "Shared summary", "Action items", "Reference",
     ]
-    ws.merge_range(0, 0, 0, len(headers) - 1, "HBPR ↔ Line Manager partnership log", fmt.header)
+    ws.freeze_panes(4, 0)
+    ws.merge_range(0, 0, 0, len(headers) - 1, "HBPR ↔ Line Manager partnership log", fmt.title)
+    ws.set_row(0, 30)
+    ws.merge_range(
+        1, 0, 1, len(headers) - 1,
+        f"Entries: {len(evidence)} · Generated on {business_today().strftime('%d %b %Y')}",
+        fmt.subtitle,
+    )
+    ws.set_row(1, 20)
     for col, label in enumerate(headers):
-        ws.write(1, col, label, fmt.label)
+        ws.write(3, col, label, fmt.header)
 
-    row = 2
+    row = 4
     if not evidence:
         ws.write(row, 0, "No entries logged yet", fmt.empty)
         return
@@ -345,7 +429,7 @@ def _build_hbpr_evidence_sheet(wb, fmt, evidence):
 
 
 def build_workbook_bytes(scorecard, governance, period_label, hbpr_evidence=None, trend=None,
-                         include_restricted=True):
+                         include_restricted=True, epr=None):
     """Build the tl_scorecard summary workbook and return raw .xlsx bytes.
 
     ``trend`` (optional) is the list of scorecard points, oldest first, with the
@@ -364,7 +448,7 @@ def build_workbook_bytes(scorecard, governance, period_label, hbpr_evidence=None
         "comments": "Generated live from tl_scorecard data.",
     })
     fmt = _Formats(wb)
-    _build_summary_sheet(wb, fmt, scorecard, period_label, include_restricted)
+    _build_summary_sheet(wb, fmt, scorecard, period_label, include_restricted, epr=epr)
     if trend:
         _build_trend_sheet(wb, fmt, trend, include_restricted=include_restricted)
     _build_governance_sheet(wb, fmt, governance, include_restricted=include_restricted)

@@ -3,6 +3,7 @@ import {
   ComposedChart,
   Area,
   Line,
+  ReferenceLine,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -122,9 +123,33 @@ export const TTATrendChart: React.FC<TTATrendChartProps> = ({ data }) => (
               wrapperStyle={{ fontSize: 12, color: "hsl(var(--foreground))" }}
               iconType="line"
             />
+            <ReferenceLine
+              yAxisId="score"
+              y={80}
+              stroke="hsl(var(--tone-success-text))"
+              strokeDasharray="4 4"
+              label={{
+                value: "Healthy 80",
+                position: "insideTopLeft",
+                fontSize: 10,
+                fill: "hsl(var(--tone-success-text))",
+              }}
+            />
+            <ReferenceLine
+              yAxisId="score"
+              y={50}
+              stroke="hsl(var(--tone-warning-text))"
+              strokeDasharray="4 4"
+              label={{
+                value: "Watch 50",
+                position: "insideTopLeft",
+                fontSize: 10,
+                fill: "hsl(var(--tone-warning-text))",
+              }}
+            />
             <Area
               yAxisId="score"
-              type="monotone"
+              type="linear"
               dataKey="engagement_score"
               name="Engagement Score"
               stroke="hsl(var(--chart-1))"
@@ -141,7 +166,7 @@ export const TTATrendChart: React.FC<TTATrendChartProps> = ({ data }) => (
             />
             <Line
               yAxisId="hours"
-              type="monotone"
+              type="linear"
               dataKey="avg_tta_hours"
               name="Avg TTA (hours)"
               stroke="hsl(var(--chart-2))"

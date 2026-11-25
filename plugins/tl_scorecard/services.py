@@ -990,7 +990,9 @@ def build_scorecard(
         year_metrics = {}
     if month.year not in year_metrics:
         year_metrics[month.year] = {
-            'review_deliveries_ytd': review_delivery_count(user, month.year),
+            'review_dates': list(ReviewDelivery.objects.filter(
+                leader=user, delivered_on__year=month.year,
+            ).order_by('delivered_on').values_list('delivered_on', flat=True)),
             'promotion': promotion_ratio(team_member_ids, month.year),
             'tl_sync_dates': list(Meeting.objects.filter(
                 organizer=user, meeting_type='tl_sync',
@@ -998,6 +1000,7 @@ def build_scorecard(
             ).order_by('occurred_on').values_list('occurred_on', flat=True)),
         }
     year_part = copy.deepcopy(year_metrics[month.year])  # points are masked in place later
+    review_dates = year_part.pop('review_dates')
     tl_sync_dates = year_part.pop('tl_sync_dates')
     month_part = snapshot_blocks(user, month, snapshots)
     frozen = month_part is not None
@@ -1005,13 +1008,15 @@ def build_scorecard(
         month_part = month_blocks(user, month, team_member_ids, window)
     # Live, never frozen: the year-to-date pace and the targets change without a month closing.
     targets = scorecard_targets(user)
+    month_end = _month_bounds(month)[1]
     return {
         'month': month.isoformat(),
         **month_part,
         'frozen': frozen,
         **year_part,
         **current_state,
-        'tl_sync_ytd': bisect_left(tl_sync_dates, _month_bounds(month)[1]),
+        'review_deliveries_ytd': bisect_left(review_dates, month_end),
+        'tl_sync_ytd': bisect_left(tl_sync_dates, month_end),
         'tl_sync_expected_ytd': math.ceil(targets['tl_sync_per_year'] * month.month / 12),
         'targets': targets,
     }

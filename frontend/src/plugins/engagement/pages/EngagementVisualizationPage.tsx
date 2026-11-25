@@ -9,6 +9,7 @@ import {
   CartesianGrid,
   ComposedChart,
   Line,
+  ReferenceLine,
   XAxis,
   YAxis,
 } from "recharts";
@@ -240,6 +241,7 @@ export const EngagementVisualizationPage: React.FC = () => {
                 </p>
                 <div className="mt-2 flex items-baseline justify-center gap-2 sm:justify-start">
                   <span
+                    data-pdf-solid-text="true"
                     className="bg-linear-to-br from-[hsl(var(--chart-1))] to-[hsl(var(--chart-2))] bg-clip-text font-mono text-6xl font-black tracking-tight text-transparent tabular-nums sm:text-7xl"
                     style={{ filter: `drop-shadow(0 0 24px ${ringGlow})` }}
                   >
@@ -344,9 +346,33 @@ export const EngagementVisualizationPage: React.FC = () => {
                 content={<ChartTooltipContent labelFormatter={(v) => formatMonthTick(String(v))} />}
               />
               <ChartLegend content={<ChartLegendContent />} />
+              <ReferenceLine
+                yAxisId="score"
+                y={80}
+                stroke="hsl(var(--tone-success-text))"
+                strokeDasharray="4 4"
+                label={{
+                  value: "Healthy 80",
+                  position: "insideTopLeft",
+                  fontSize: 10,
+                  fill: "hsl(var(--tone-success-text))",
+                }}
+              />
+              <ReferenceLine
+                yAxisId="score"
+                y={50}
+                stroke="hsl(var(--tone-warning-text))"
+                strokeDasharray="4 4"
+                label={{
+                  value: "Watch 50",
+                  position: "insideTopLeft",
+                  fontSize: 10,
+                  fill: "hsl(var(--tone-warning-text))",
+                }}
+              />
               <Area
                 yAxisId="score"
-                type="monotone"
+                type="linear"
                 dataKey="engagement_score"
                 name="Engagement Score"
                 stroke="var(--color-engagement_score)"
@@ -356,7 +382,7 @@ export const EngagementVisualizationPage: React.FC = () => {
               />
               <Line
                 yAxisId="hours"
-                type="monotone"
+                type="linear"
                 dataKey="avg_tta_hours"
                 name="Avg TTA (hours)"
                 stroke="var(--color-avg_tta_hours)"
@@ -378,23 +404,10 @@ export const EngagementVisualizationPage: React.FC = () => {
           id="viz-aging"
           title="Approval Aging"
           description="Decided requests by time-to-approve, by request type"
+          pdfSpan="half"
         >
           <ChartContainer config={agingConfig} className="aspect-auto h-[320px] w-full">
             <BarChart data={agingData} barGap={4} barCategoryGap="24%">
-              <defs>
-                <linearGradient id="vizAgingLeave" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={1} />
-                  <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0.5} />
-                </linearGradient>
-                <linearGradient id="vizAgingOvertime" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={1} />
-                  <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0.5} />
-                </linearGradient>
-                <linearGradient id="vizAgingStandby" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--chart-3))" stopOpacity={1} />
-                  <stop offset="100%" stopColor="hsl(var(--chart-3))" stopOpacity={0.5} />
-                </linearGradient>
-              </defs>
               <CartesianGrid vertical={false} strokeDasharray="3 6" opacity={0.4} />
               <XAxis dataKey="bucket" tickLine={false} axisLine={false} />
               <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
@@ -402,19 +415,19 @@ export const EngagementVisualizationPage: React.FC = () => {
               <ChartLegend content={<ChartLegendContent />} />
               <Bar
                 dataKey="leave"
-                fill="url(#vizAgingLeave)"
+                fill="var(--color-leave)"
                 radius={[8, 8, 2, 2]}
                 maxBarSize={48}
               />
               <Bar
                 dataKey="overtime"
-                fill="url(#vizAgingOvertime)"
+                fill="var(--color-overtime)"
                 radius={[8, 8, 2, 2]}
                 maxBarSize={48}
               />
               <Bar
                 dataKey="standby"
-                fill="url(#vizAgingStandby)"
+                fill="var(--color-standby)"
                 radius={[8, 8, 2, 2]}
                 maxBarSize={48}
               />
@@ -426,6 +439,7 @@ export const EngagementVisualizationPage: React.FC = () => {
           id="viz-score-composition"
           title="Score Composition Trend"
           description="Which component is driving the score, and since when"
+          pdfSpan="half"
         >
           <ScoreCompositionTrendChart data={trend} />
         </ChartSection>
@@ -434,6 +448,7 @@ export const EngagementVisualizationPage: React.FC = () => {
           id="viz-volume"
           title="Request Volume"
           description="Approved, rejected, and pending, by request type"
+          pdfSpan={teamBreakdown.length > 1 ? "half" : "full"}
         >
           <RequestVolumeChart rows={teamBreakdown} />
         </ChartSection>
@@ -443,6 +458,7 @@ export const EngagementVisualizationPage: React.FC = () => {
             id="viz-team-comparison"
             title="Team Comparison"
             description="Engagement score by team"
+            pdfSpan="half"
           >
             <TeamComparisonChart rows={teamBreakdown} />
           </ChartSection>

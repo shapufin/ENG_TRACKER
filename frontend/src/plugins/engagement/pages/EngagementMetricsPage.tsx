@@ -87,6 +87,7 @@ export const EngagementMetricsPage: React.FC = () => {
       { replace: true }
     );
   const [teamFilter, setTeamFilter] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -134,6 +135,7 @@ export const EngagementMetricsPage: React.FC = () => {
   }, [teamBreakdown, teamFilter]);
 
   const handleExport = async (scope: "month" | "year", fileFormat: "xlsx" | "pdf") => {
+    setExportOpen(false);
     const targetMonth = month ?? summary?.month;
     if (!targetMonth) return;
     setIsExporting(true);
@@ -249,7 +251,7 @@ export const EngagementMetricsPage: React.FC = () => {
               Visualize
             </Link>
           </Button>
-          <Popover>
+          <Popover open={exportOpen} onOpenChange={setExportOpen}>
             <PopoverTrigger asChild>
               <Button type="button" size="control-sm" disabled={isExporting}>
                 <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
