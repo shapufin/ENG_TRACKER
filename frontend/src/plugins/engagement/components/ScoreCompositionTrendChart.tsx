@@ -1,5 +1,5 @@
 import React from "react";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LineChart as LineChartIcon } from "lucide-react";
 import {
@@ -55,15 +55,26 @@ export const ScoreCompositionTrendChart: React.FC<ScoreCompositionTrendChartProp
           content={<ChartTooltipContent labelFormatter={(v) => formatMonthTick(String(v))} />}
         />
         <ChartLegend content={<ChartLegendContent />} />
+        <ReferenceLine
+          y={80}
+          stroke="hsl(var(--tone-success-text))"
+          strokeDasharray="4 4"
+          label={{
+            value: "Target 80",
+            position: "insideTopLeft",
+            fontSize: 10,
+            fill: "hsl(var(--tone-success-text))",
+          }}
+        />
         {Object.entries(config).map(([key, { label }]) => (
           <Line
             key={key}
-            type="monotone"
+            type="linear"
             dataKey={key}
             name={label as string}
             stroke={`var(--color-${key})`}
             strokeWidth={2}
-            dot={{ r: 2 }}
+            dot={{ r: 2.5 }}
             connectNulls
           />
         ))}

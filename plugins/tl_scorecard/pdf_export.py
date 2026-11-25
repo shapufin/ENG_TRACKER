@@ -67,34 +67,51 @@ def _meetings_section(story, trend, include_restricted=True):
     pdf.section_title(story, 'Meetings & reviews')
     pdf.bar_chart(
         story, categories=months,
+        title='Monthly Meeting Cadence',
         series={
+            'Team meetings held': [p['meetings'].get('team_meetings_held', 0) for p in trend],
             'Manager syncs': [p['meetings']['tl_sync_count'] for p in trend],
             'Team meetings with HRBP': [p['meetings']['team_meetings_with_hrbp'] for p in trend],
         },
+        integer_y=True, show_values=True,
     )
     one_on_one = [p['meetings']['one_on_one_compliance_pct'] for p in trend]
     compliance_series = {'1:1 compliance': one_on_one}
+    has_onboarding = False
     if include_restricted:
-        compliance_series['Onboarding 1-on-1s'] = [p['meetings'].get('onboarding_pct') for p in trend]
+        onb_series = [p['meetings'].get('onboarding_pct') for p in trend]
+        if any(v is not None for v in onb_series):
+            compliance_series['Onboarding 1-on-1s'] = onb_series
+            has_onboarding = True
     if any(any(v is not None for v in s) for s in compliance_series.values()):
+        compliance_title = (
+            '1:1 & Onboarding Compliance (%)' if has_onboarding else '1:1 Compliance (%)'
+        )
         pdf.line_chart(
             story, categories=months, series=compliance_series,
-            y_max=100, y_suffix='%',
+            title=compliance_title,
+            y_max=100, y_suffix='%', fill_area=True, show_values=True,
+            thresholds=[(100, 'Target 100%', 'success'), (80, 'Watch 80%', 'warning')],
         )
     pdf.line_chart(
         story, categories=months,
+        title='Management Reviews (YTD) vs Pro-rata Target',
         series={
             'Management reviews (YTD)': [p['review_deliveries_ytd'] for p in trend],
             'Pro-rata target': [reviews_target(p['month'], p.get('targets')) for p in trend],
         },
+        integer_y=True, fill_area=True, show_values=True,
     )
-    headers = ['Month', 'Manager syncs', 'Team meetings with HRBP', 'Reviews (YTD)', '1:1 compliance']
+    headers = [
+        'Month', 'Team meetings', 'Manager syncs', 'With HRBP', 'Reviews (YTD)', '1:1 compliance',
+    ]
     if include_restricted:
         headers.append('Onboarding 1-on-1s')
     table_rows = []
     for p in trend:
         row = [
             _month_label(p['month']),
+            p['meetings'].get('team_meetings_held', 0),
             p['meetings']['tl_sync_count'],
             p['meetings']['team_meetings_with_hrbp'],
             p['review_deliveries_ytd'],
@@ -105,7 +122,7 @@ def _meetings_section(story, trend, include_restricted=True):
             onb = p['meetings'].get('onboarding_pct')
             row.append(_dash(None if onb is None else f"{onb}%"))
         table_rows.append(row)
-    numeric_cols = (1, 2, 3, 4, 5) if include_restricted else (1, 2, 3, 4)
+    numeric_cols = (1, 2, 3, 4, 5, 6) if include_restricted else (1, 2, 3, 4, 5)
     pdf.data_table(
         story,
         headers,
@@ -120,8 +137,11 @@ def _epr_section(story, scorecard, epr):
     pdf.section_title(story, f'EPR progress {year}')
     pdf.bar_chart(
         story, horizontal=True, y_max=100, y_suffix='%',
+        title=f'EPR On-Time Completion ({year})',
         categories=[EPR_STAGE_LABELS[stage] for stage in stages],
         series={'On time': [stages[stage]['pct_on_time'] for stage in stages]},
+        show_values=True,
+        thresholds=[(100, 'Target 100%', 'success')],
     )
     pdf.data_table(
         story, ['Stage', 'Due date', 'Completed on time', 'Team size', 'On time'],
@@ -149,14 +169,25 @@ def _risks_section(story, scorecard):
     ]
     pdf.bar_chart(
         story, horizontal=True,
+        title='Current Team Risk Counts (Target: 0 breaches / escalations)',
         categories=[label for label, _count in risks],
         series={'Count': [count for _label, count in risks]},
+        integer_y=True, show_values=True,
+        bar_colors=['accent', 'accent', 'danger', 'warning', 'danger'],
     )
     seniority = scorecard['seniority']
-    pdf.donut_chart(story, parts={
-        'Junior': seniority['junior'], 'Mid': seniority['mid'],
-        'Senior': seniority['senior'], 'Not set': seniority['unset'],
-    })
+    pdf.donut_chart(
+        story,
+        title='Seniority Mix',
+        parts={
+            'Junior': seniority['junior'], 'Mid': seniority['mid'],
+            'Senior': seniority['senior'], 'Not set': seniority['unset'],
+        },
+        colors_map={
+            'Junior': '#2a78d6', 'Mid': '#1baf7a',
+            'Senior': '#eb6834', 'Not set': '#94A3B8',
+        },
+    )
 
 
 def _stage_with_hbpr(row, stage):
@@ -193,9 +224,8 @@ def _governance_section(story, governance):
           for r in governance.get('epr_stage_evidence', [])]),
     ]
     for title, headers, rows in tables:
-        pdf.paragraph(story, title)
-        pdf.data_table(story, headers, rows or [['None open'] + [''] * (len(headers) - 1)],
-                       numeric_cols=(len(headers) - 1,) if title == 'EPR cycles' else ())
+        pdf.sub_section(story, title)
+        pdf.data_table(story, headers, rows or [['None open'] + [''] * (len(headers) - 1)])
 
 
 def _partnership_section(story, hbpr_evidence):

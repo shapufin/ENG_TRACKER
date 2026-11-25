@@ -10,6 +10,7 @@ import {
   Cell,
   ComposedChart,
   CartesianGrid,
+  LabelList,
   Line,
   LineChart,
   Pie,
@@ -68,8 +69,8 @@ const oneOnOneConfig: ChartConfig = {
 };
 
 const notesConfig: ChartConfig = {
-  team_meetings_held: { label: "Team meetings held", color: "hsl(var(--chart-1))" },
   notes_within_24h: { label: "Notes within 24h", color: "hsl(var(--chart-2))" },
+  notes_late_or_missing: { label: "Late / missing notes", color: "hsl(var(--muted-foreground))" },
 };
 
 const reviewsConfig: ChartConfig = {
@@ -194,8 +195,11 @@ const TLScorecardVisualization: React.FC = () => {
   const hasOneOnOne = oneOnOneData.some((d) => d.one_on_one !== null || d.onboarding !== null);
   const notesData = trend.map((p) => ({
     month: p.month,
-    team_meetings_held: p.meetings.team_meetings_held,
     notes_within_24h: p.meetings.team_meeting_notes_within_24h,
+    notes_late_or_missing: Math.max(
+      0,
+      p.meetings.team_meetings_held - p.meetings.team_meeting_notes_within_24h
+    ),
   }));
   const reviewsData = trend.map((p) => ({
     month: p.month,
@@ -351,13 +355,14 @@ const TLScorecardVisualization: React.FC = () => {
           <ChartSection
             id="viz-one-on-one"
             title="1:1 compliance (individual meetings)"
-            description="Share of planned employee one-on-ones held, with the 100% target"
+            description="Share of planned employee one-on-ones held, with 80% watch and 100% target lines"
+            pdfSpan="half"
           >
             <ChartContainer config={oneOnOneConfig} className={CHART_CLASS}>
               <ComposedChart data={oneOnOneData} margin={CHART_MARGIN}>
                 <defs>
                   <linearGradient id="vizOneOnOneFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.4} />
+                    <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.35} />
                     <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
@@ -373,19 +378,25 @@ const TLScorecardVisualization: React.FC = () => {
                 <ChartLegend content={<ChartLegendContent />} />
                 <ReferenceLine
                   y={100}
-                  stroke="hsl(var(--muted-foreground))"
+                  stroke="hsl(var(--tone-success-text))"
+                  strokeDasharray="4 4"
+                />
+                <ReferenceLine
+                  y={80}
+                  stroke="hsl(var(--tone-warning-text))"
                   strokeDasharray="4 4"
                 />
                 <Area
-                  type="monotone"
+                  type="linear"
                   dataKey="one_on_one"
                   stroke="var(--color-one_on_one)"
                   fill="url(#vizOneOnOneFill)"
-                  strokeWidth={3}
+                  strokeWidth={2.5}
+                  dot={{ r: 3 }}
                   connectNulls
                 />
                 <Line
-                  type="monotone"
+                  type="linear"
                   dataKey="onboarding"
                   stroke="var(--color-onboarding)"
                   strokeWidth={2.5}
@@ -400,10 +411,11 @@ const TLScorecardVisualization: React.FC = () => {
         <ChartSection
           id="viz-notes-24h"
           title="Meeting notes within 24h"
-          description="Team meetings held (bars) against notes recorded within 24 hours (line)"
+          description="Team meetings with notes recorded within 24 hours vs late or missing"
+          pdfSpan={hasOneOnOne ? "half" : "full"}
         >
           <ChartContainer config={notesConfig} className={CHART_CLASS}>
-            <ComposedChart data={notesData} margin={CHART_MARGIN}>
+            <BarChart data={notesData} margin={CHART_MARGIN}>
               <CartesianGrid vertical={false} strokeDasharray="3 6" opacity={0.4} />
               <XAxis
                 dataKey="month"
@@ -415,18 +427,18 @@ const TLScorecardVisualization: React.FC = () => {
               {monthTooltip}
               <ChartLegend content={<ChartLegendContent />} />
               <Bar
-                dataKey="team_meetings_held"
-                fill="var(--color-team_meetings_held)"
+                dataKey="notes_within_24h"
+                stackId="notes"
+                fill="var(--color-notes_within_24h)"
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="notes_late_or_missing"
+                stackId="notes"
+                fill="var(--color-notes_late_or_missing)"
                 radius={[4, 4, 0, 0]}
               />
-              <Line
-                type="monotone"
-                dataKey="notes_within_24h"
-                stroke="var(--color-notes_within_24h)"
-                strokeWidth={2.5}
-                connectNulls
-              />
-            </ComposedChart>
+            </BarChart>
           </ChartContainer>
         </ChartSection>
 
@@ -434,6 +446,7 @@ const TLScorecardVisualization: React.FC = () => {
           id="viz-reviews"
           title="Review deliveries vs target"
           description="Cumulative reviews delivered this year against the pro-rata target"
+          pdfSpan={eprStages || eprQuery.isError ? "half" : "full"}
         >
           <ChartContainer config={reviewsConfig} className={CHART_CLASS}>
             <LineChart data={reviewsData} margin={CHART_MARGIN}>
@@ -448,14 +461,14 @@ const TLScorecardVisualization: React.FC = () => {
               {monthTooltip}
               <ChartLegend content={<ChartLegendContent />} />
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="review_deliveries_ytd"
                 stroke="var(--color-review_deliveries_ytd)"
                 strokeWidth={3}
                 dot={{ r: 3 }}
               />
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="review_target"
                 stroke="var(--color-review_target)"
                 strokeDasharray="4 4"
@@ -471,6 +484,7 @@ const TLScorecardVisualization: React.FC = () => {
             id="viz-epr"
             title={`EPR stage progress (${year})`}
             description="Share of team EPR stages completed by their due date"
+            pdfSpan="half"
           >
             <ErrorCard
               title="Couldn't load EPR progress"
@@ -485,6 +499,7 @@ const TLScorecardVisualization: React.FC = () => {
             id="viz-epr"
             title={`EPR stage progress (${year})`}
             description="Share of team EPR stages completed by their due date"
+            pdfSpan="half"
           >
             <ChartContainer config={eprConfig} className={CHART_CLASS}>
               <BarChart data={eprStages} layout="vertical" margin={CHART_MARGIN}>
@@ -513,9 +528,10 @@ const TLScorecardVisualization: React.FC = () => {
           title="Team risk snapshot (now)"
           description="Current state, not a trend"
           action={<ShieldAlert className="text-muted-foreground h-4 w-4" aria-hidden="true" />}
+          pdfSpan="half"
         >
           <ChartContainer config={riskConfig} className={CHART_CLASS}>
-            <BarChart data={riskData} layout="vertical" margin={CHART_MARGIN}>
+            <BarChart data={riskData} layout="vertical" margin={{ ...CHART_MARGIN, right: 28 }}>
               <CartesianGrid horizontal={false} strokeDasharray="3 6" opacity={0.4} />
               <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} />
               <YAxis
@@ -533,6 +549,11 @@ const TLScorecardVisualization: React.FC = () => {
                     fill={row.tone === "danger" ? "hsl(var(--destructive))" : "hsl(var(--chart-1))"}
                   />
                 ))}
+                <LabelList
+                  dataKey="value"
+                  position="right"
+                  className="fill-foreground font-mono text-xs"
+                />
               </Bar>
             </BarChart>
           </ChartContainer>
@@ -542,6 +563,7 @@ const TLScorecardVisualization: React.FC = () => {
           id="viz-seniority"
           title="Seniority mix"
           description="Team members by seniority level, current state"
+          pdfSpan="half"
         >
           <div className="relative">
             <ChartContainer config={seniorityConfig} className={CHART_CLASS}>

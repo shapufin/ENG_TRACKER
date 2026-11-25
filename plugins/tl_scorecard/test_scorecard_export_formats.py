@@ -135,10 +135,13 @@ class SummaryExportFormatTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         wb = load_workbook(io.BytesIO(resp.content))
         ws = wb['Trend']
-        header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+        rows = list(ws.iter_rows(values_only=True))
+        header_idx, header_row = next(
+            (i, r) for i, r in enumerate(rows) if r and r[0] == 'Month'
+        )
         self.assertIn('Onboarding 1-on-1s', header_row)
         col_idx = header_row.index('Onboarding 1-on-1s')
-        data_rows = [row for row in ws.iter_rows(min_row=2, values_only=True) if row[0] is not None]
+        data_rows = [row for row in rows[header_idx + 1:] if row[0] is not None]
         self.assertTrue(len(data_rows) > 0)
         for row in data_rows:
             self.assertEqual(row[col_idx], '—')
@@ -269,15 +272,22 @@ class HbprExportFormatTests(HbprScorecardBase):
         self.assertEqual(_find_row(wb['Summary'], '1:1 compliance')[2].value, '—')
 
         trend = wb['Trend']
-        header = next(row for row in trend.iter_rows(values_only=True) if '1:1 compliance' in row)
+        rows = list(trend.iter_rows(values_only=True))
+        header_idx, header = next(
+            (i, r) for i, r in enumerate(rows) if r and '1:1 compliance' in r
+        )
         column = header.index('1:1 compliance')
-        data_rows = [
-            row for row in trend.iter_rows(min_row=2, values_only=True)
-            if row[0] is not None
-        ]
+        data_rows = [row for row in rows[header_idx + 1:] if row[0] is not None]
         self.assertEqual(len(data_rows), 6)
         for row in data_rows:
             self.assertEqual(row[column], '—')
+        # H2 guard: masked 1:1 compliance (col B) must never be plotted as a 0% series.
+        refs = [
+            getattr(getattr(s.val, 'numRef', None), 'f', '')
+            for c in trend._charts
+            for s in c.series
+        ]
+        self.assertFalse(any('!$B$' in f for f in refs), f'Masked col B plotted: {refs}')
 
     def test_pdf_never_contains_the_leaders_one_to_one_percentage(self):
         resp = self._export('pdf')
@@ -457,3 +467,23 @@ class PipSharedNotesAndPdfEvidenceTests(HbprScorecardBase):
         text = _pdf_text(self._export(self.hbpr, 'pdf').content)
         self.assertNotIn('Agreed review summary text', text)
         self.assertNotIn('Private PIP evidence', text)
+
+    def test_xlsx_export_includes_epr_summary_and_two_trend_charts(self):
+        wb = load_workbook(io.BytesIO(self._export(self.tl, 'xlsx').content))
+        self.assertEqual(wb.sheetnames, ['Summary', 'Trend', 'Governance', 'HBPR partnership log'])
+        summary_text = ' '.join(
+            str(c) for row in wb['Summary'].iter_rows(values_only=True) for c in row if c
+        )
+        self.assertIn('EPR progress', summary_text)
+        self.assertIn('Goal setting', summary_text)
+        trend_ws = wb['Trend']
+        self.assertEqual(len(trend_ws._charts), 2)
+        headers = [cell.value for cell in trend_ws[4]]
+        self.assertIn('Team meetings held', headers)
+        self.assertIn('Pro-rata target', headers)
+
+    def test_pdf_export_contains_redesigned_chart_titles(self):
+        text = ' '.join(_pdf_text(self._export(self.tl, 'pdf').content).split())
+        self.assertIn('Monthly Meeting Cadence', text)
+        self.assertIn('Management Reviews (YTD) vs Pro-rata Target', text)
+        self.assertIn('Seniority Mix', text)

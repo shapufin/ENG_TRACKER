@@ -13,6 +13,8 @@ interface ChartSectionProps {
   action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  /** Layout hint for exported PDF multi-column packing. */
+  pdfSpan?: "full" | "half";
 }
 
 /** Capture anchor + card chrome for one chart in a visualization gallery.
@@ -27,8 +29,15 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   action,
   children,
   className,
+  pdfSpan,
 }) => (
-  <motion.div id={id} data-chart-section={id} variants={staggerItem} className={className}>
+  <motion.div
+    id={id}
+    data-chart-section={id}
+    data-pdf-span={pdfSpan}
+    variants={staggerItem}
+    className={className}
+  >
     <GlassCard animateOnMount={false} className={cn("relative overflow-hidden p-5")}>
       {(title || description || action) && (
         <div className="flex items-center justify-between gap-3">

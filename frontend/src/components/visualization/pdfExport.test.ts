@@ -295,6 +295,30 @@ describe("applyPrintStyles", () => {
     expect(editBtn.style.display).toBe("none");
     expect(keepBtn.style.display).not.toBe("none");
   });
+
+  it("strips dark mode without overriding light chart tokens and renders solid hero text", () => {
+    document.documentElement.classList.add("dark");
+    try {
+      const container = document.createElement("div");
+      const hero = document.createElement("span");
+      hero.setAttribute("data-pdf-solid-text", "true");
+      hero.className = "bg-clip-text text-transparent";
+      hero.textContent = "93";
+      container.appendChild(hero);
+
+      applyPrintStyles(container);
+
+      expect(document.documentElement.classList.contains("dark")).toBe(false);
+      expect(document.documentElement.style.getPropertyValue("--chart-2")).toBe("");
+      expect(container.style.getPropertyValue("--chart-2")).toBe("");
+      expect(container.style.backgroundColor).toMatch(/rgb\(255, 255, 255\)|#ffffff/);
+      expect(hero.style.backgroundImage).toBe("none");
+      expect(hero.style.color).toMatch(/rgb\(15, 23, 42\)|#0f172a/);
+    } finally {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.style.colorScheme = "";
+    }
+  });
 });
 
 const scrollingCard = () => {

@@ -152,3 +152,11 @@ class TrendWindowedMetricsTests(TestCase):
         # and the Manager-sync dates for the year are read once (YTD pace, every point shares them).
         # 24 -> 26 on purpose (2026-11-21): hire dates and onboarding meetings are read once for the whole window.
         self.assertLessEqual(len(ctx), 26, [q['sql'][:80] for q in ctx.captured_queries])
+
+    def test_review_deliveries_ytd_is_cumulative_by_month(self):
+        for delivery_date in (date(2026, 2, 10), date(2026, 5, 14), date(2026, 7, 20)):
+            ReviewDelivery.objects.create(
+                leader=self.leader, delivered_on=delivery_date, recorded_by=self.leader,
+            )
+        trend = scorecard_trend(self.leader, 6, date(2026, 7, 1))
+        self.assertEqual([p['review_deliveries_ytd'] for p in trend], [1, 1, 1, 2, 2, 3])

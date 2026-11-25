@@ -70,16 +70,31 @@ def _metric_sum(rows, type_key, field):
     return sum(row.metrics.get(type_key, {}).get(field, 0) for row in rows)
 
 
-def _cover(story, scope, leader_name, period_label, rows):
+def _trend_delta_label(trend_rows, target_month, target_score):
+    """MoM delta badge when the target month itself is scored cleanly."""
+    if target_score is None or target_month is None:
+        return None
+    scored = [p for p in monthly_rollup(trend_rows) if p['engagement_score'] is not None]
+    if len(scored) < 2 or scored[-1]['month'] != target_month:
+        return None
+    diff = round(scored[-1]['engagement_score'] - scored[-2]['engagement_score'], 1)
+    sign = '+' if diff >= 0 else ''
+    prev_label = scored[-2]['month'].strftime('%b')
+    return f'{sign}{diff:.1f} pts vs {prev_label}'
+
+
+def _cover(story, scope, leader_name, period_label, rows, trend_rows):
     agg = aggregate_rows(rows) or {}
     on_time_pct = agg.get('on_time_pct')
     score = agg.get('engagement_score')
+    target_month = max((r.month for r in rows), default=None) if scope == 'month' else None
+    delta_label = _trend_delta_label(trend_rows, target_month, score)
     pdf.cover_block(
         story,
         title=leader_name,
         subtitle=f"{'Full year' if scope == 'year' else 'Month'} · {period_label}",
         kpis=[
-            ('Engagement score', _score_text(score), _score_tone(score)),
+            ('Engagement score', _score_text(score), _score_tone(score), delta_label),
             ('Approval rate', _pct_text(agg.get('approval_rate_pct')), 'ink'),
             ('Average time-to-approve', _hours_text(agg.get('avg_tta_hours')), 'ink'),
             ('On time (of judged requests)', _pct_text(on_time_pct), 'ink'),
@@ -108,14 +123,27 @@ def _trend_section(story, scope, rows):
     def column(source, key):
         return [source[month][key] if month in source else None for month in months]
 
-    pdf.line_chart(story, categories=labels,
-                   series={'Engagement score': column(points, 'engagement_score')}, y_max=100)
-    pdf.line_chart(story, categories=labels, y_max=100,
-                   series={label: column(rollup, key) for _, label, key in SUB_SCORES})
+    pdf.combo_chart(
+        story,
+        categories=labels,
+        area_series=('Engagement score', column(points, 'engagement_score')),
+        line_series=('Avg TTA (hours)', column(points, 'avg_tta_hours')),
+        y_max=100,
+        y2_suffix='h',
+        thresholds=[(80, 'Healthy 80', 'success'), (50, 'Watch 50', 'warning')],
+        title='Engagement Score & Approval Speed (Avg TTA)',
+        subtitle='Composite score (0-100, left axis) against average time-to-approve (hours, right axis).',
+    )
     weights = ', '.join(f'{label} {round(COMPONENT_WEIGHTS[name] * 100)}%' for name, label, _ in SUB_SCORES)
-    pdf.paragraph(story, f'Engagement score is the weighted blend: {weights}. Sub-scores are 0-100.')
-    pdf.bar_chart(story, categories=labels, series={'Avg time-to-approve (h)': column(points, 'avg_tta_hours')},
-                  y_suffix='h')
+    pdf.line_chart(
+        story,
+        categories=labels,
+        y_max=100,
+        series={label: column(rollup, key) for _, label, key in SUB_SCORES},
+        thresholds=[(80, '80', 'success')],
+        title='Score Component Drivers (0-100)',
+        subtitle=f'Weighted blend: {weights}.',
+    )
 
 
 def _volume_section(story, scope, rows):
@@ -124,54 +152,103 @@ def _volume_section(story, scope, rows):
         return
     labels = [month.strftime('%b' if scope == 'year' else '%b %y') for month in months]
     present = _by_month(rows)
-    pdf.section_title(story, 'Volume')
-    for type_key in REQUEST_TYPES:
-        def monthly(field):
-            return [_metric_sum(present[month], type_key, field) if month in present else None for month in months]
+    pdf.section_title(story, 'Request volume & decision status')
 
-        pdf.paragraph(story, f'{TYPE_LABELS[type_key]}: requests submitted and decided per month.')
-        pdf.bar_chart(story, categories=labels,
-                      series={'Submitted': monthly('submitted'), 'Decided': monthly('decided')}, height_mm=45)
+    submitted, approved, rejected, pending = [], [], [], []
+    summary_rows = []
+    for month in months:
+        m_rows = present.get(month, [])
+        sub = sum(_metric_sum(m_rows, tk, 'submitted') for tk in REQUEST_TYPES)
+        dec = sum(_metric_sum(m_rows, tk, 'decided') for tk in REQUEST_TYPES)
+        app = sum(_metric_sum(m_rows, tk, 'approved') for tk in REQUEST_TYPES)
+        rej = sum(_metric_sum(m_rows, tk, 'rejected') for tk in REQUEST_TYPES)
+        pen = max(0, sub - dec)
+        submitted.append(sub if m_rows else None)
+        approved.append(app if m_rows else 0)
+        rejected.append(rej if m_rows else 0)
+        pending.append(pen if m_rows else 0)
+        if m_rows:
+            agg = aggregate_rows(m_rows) or {}
+            summary_rows.append([
+                month.strftime('%b %Y'),
+                sub,
+                dec,
+                app,
+                rej,
+                pen,
+                _pct_text(agg.get('on_time_pct')),
+                _hours_text(agg.get('avg_tta_hours')),
+                _score_text(agg.get('engagement_score')),
+            ])
 
-
-def _type_table(story, type_key, rows):
-    def total(field):
-        return _metric_sum(rows, type_key, field)
-
-    avg_tta = weighted_mean(
-        (row.metrics[type_key].get('avg_tta_hours'), row.metrics[type_key].get('decided', 0))
-        for row in rows
+    pdf.stacked_bar_chart(
+        story,
+        categories=labels,
+        series={'Approved': approved, 'Rejected': rejected, 'Undecided': pending},
+        colors_override=['success', 'danger', 'warning'],
+        overlay_line=('Submitted', submitted),
+        integer_y=True,
+        title='Monthly Requests by Outcome vs Submitted Total',
+        subtitle='Decided vs undecided (pending or cancelled) across Leave, Overtime, and Standby.',
     )
-    single = rows[0].metrics[type_key] if len(rows) == 1 else {}
+    if summary_rows:
+        pdf.data_table(
+            story,
+            ['Month', 'Subm', 'Dec', 'Appr', 'Rej', 'Undec', 'On time', 'Avg TTA', 'Score'],
+            summary_rows,
+            col_widths=[26, 15, 15, 15, 15, 15, 25, 26, 26],
+            numeric_cols=(1, 2, 3, 4, 5, 6, 7, 8),
+        )
+
+
+def _unified_type_table(story, rows):
+    """Single full-width 4-column comparison table (Metric | Leave | Overtime | Standby)."""
+    def total(tk, field):
+        return _metric_sum(rows, tk, field)
+
+    def avg_tta(tk):
+        return _hours_text(weighted_mean(
+            (row.metrics.get(tk, {}).get('avg_tta_hours'), row.metrics.get(tk, {}).get('decided', 0))
+            for row in rows
+        ))
+
+    def single_pct(tk, field):
+        if len(rows) != 1:
+            return None
+        return _hours_text(rows[0].metrics.get(tk, {}).get(field))
+
+    table_rows = [
+        ['Submitted'] + [total(tk, 'submitted') for tk in REQUEST_TYPES],
+        ['Decided'] + [total(tk, 'decided') for tk in REQUEST_TYPES],
+        ['Approved'] + [total(tk, 'approved') for tk in REQUEST_TYPES],
+        ['Rejected'] + [total(tk, 'rejected') for tk in REQUEST_TYPES],
+        ['On time'] + [total(tk, 'on_time') for tk in REQUEST_TYPES],
+        ['Breaches'] + [total(tk, 'breaches') for tk in REQUEST_TYPES],
+        ['Pending past deadline'] + [total(tk, 'pending_past_deadline') for tk in REQUEST_TYPES],
+        ['Avg time-to-approve'] + [avg_tta(tk) for tk in REQUEST_TYPES],
+        ['P50 time-to-approve'] + [single_pct(tk, 'p50_tta_hours') for tk in REQUEST_TYPES],
+        ['P90 time-to-approve'] + [single_pct(tk, 'p90_tta_hours') for tk in REQUEST_TYPES],
+    ]
     pdf.data_table(
         story,
-        [TYPE_LABELS[type_key], 'Value'],
-        [
-            ['Submitted', total('submitted')],
-            ['Decided', total('decided')],
-            ['Approved', total('approved')],
-            ['Rejected', total('rejected')],
-            ['On time', total('on_time')],
-            ['Breaches', total('breaches')],
-            ['Pending past deadline', total('pending_past_deadline')],
-            ['Avg time-to-approve', _hours_text(avg_tta)],
-            ['P50 time-to-approve', _hours_text(single.get('p50_tta_hours'))],
-            ['P90 time-to-approve', _hours_text(single.get('p90_tta_hours'))],
-        ],
-        col_widths=[80, 40], numeric_cols=(1,),
+        ['Metric', 'Leave', 'Overtime', 'Standby'],
+        table_rows,
+        col_widths=[70, 36, 36, 36],
+        numeric_cols=(1, 2, 3),
     )
 
 
-def _month_block(story, label, rows):
+def _month_block(story, label, rows, *, section_header=None):
     block = []
-    pdf.section_title(block, label)
+    if section_header:
+        pdf.section_title(block, section_header)
+    pdf.sub_section(block, label)
     if len(rows) > 1:
         pdf.paragraph(block, 'Several teams: percentiles are shown only for single-team months.')
-    for type_key in REQUEST_TYPES:
-        _type_table(block, type_key, rows)
-    pdf.paragraph(block, 'Decided requests by time to approve.')
+    _unified_type_table(block, rows)
     pdf.bar_chart(
-        block, categories=list(AGING_BUCKETS),
+        block,
+        categories=list(AGING_BUCKETS),
         series={
             TYPE_LABELS[type_key]: [
                 sum(row.metrics.get(type_key, {}).get('aging', {}).get(bucket, 0) for row in rows)
@@ -179,27 +256,36 @@ def _month_block(story, label, rows):
             ]
             for type_key in REQUEST_TYPES
         },
-        height_mm=45,
+        height_mm=44,
+        integer_y=True,
+        show_values=True,
+        title=f'{label} — Decided requests by time to approve',
     )
     pdf.keep_together(story, block)
 
 
 def _detail_section(story, scope, rows, period_label):
-    pdf.section_title(story, 'Monthly detail')
     if not rows:
+        pdf.section_title(story, 'Monthly detail')
         pdf.paragraph(story, f'No data recorded for {period_label}.')
         return
     if scope == 'month':
-        _month_block(story, period_label, rows)
+        _month_block(story, period_label, rows, section_header='Monthly detail')
         return
     by_month = _by_month(rows)
+    empty_months = []
+    first = True
     for month in _months_in_scope(scope, rows):
         if month in by_month:
-            _month_block(story, month.strftime('%B %Y'), by_month[month])
+            _month_block(
+                story, month.strftime('%B %Y'), by_month[month],
+                section_header='Monthly detail' if first else None,
+            )
+            first = False
         else:
-            pdf.paragraph(story, f"No data recorded for {month.strftime('%B')}.")
-        if month.month % 2 == 0 and month.month < 12:
-            pdf.page_break(story)
+            empty_months.append(month.strftime('%B'))
+    if empty_months:
+        pdf.paragraph(story, f"Months with no recorded snapshots: {', '.join(empty_months)}.")
 
 
 def build_report_pdf(target_rows, trend_rows, scope, period_label, leader_name, generated_by) -> bytes:
@@ -213,7 +299,7 @@ def build_report_pdf(target_rows, trend_rows, scope, period_label, leader_name, 
         generated_by=generated_by,
         period_label=period_label,
     )
-    _cover(story, scope, leader_name, period_label, target_rows)
+    _cover(story, scope, leader_name, period_label, target_rows, trend_rows)
     _trend_section(story, scope, trend_rows)
     _volume_section(story, scope, trend_rows)
     _detail_section(story, scope, target_rows, period_label)

@@ -62,7 +62,7 @@ export const AgingBucketChart: React.FC<AgingBucketChartProps> = ({ rows }) => {
       description="Decided requests by time-to-approve"
       action={
         dominant ? (
-          <span className="rounded-full bg-tone-success-surface px-2.5 py-0.5 text-xs font-semibold text-tone-success-text">
+          <span className="bg-tone-success-surface text-tone-success-text rounded-full px-2.5 py-0.5 text-xs font-semibold">
             {dominant.pct}% in {dominant.bucket}
           </span>
         ) : undefined
@@ -78,21 +78,12 @@ export const AgingBucketChart: React.FC<AgingBucketChartProps> = ({ rows }) => {
         <div className="h-[280px] sm:h-[350px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} barGap={4} barCategoryGap="28%">
-              <defs>
-                <linearGradient id="agingLeaveFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={1} />
-                  <stop offset="100%" stopColor="hsl(var(--chart-1))" stopOpacity={0.55} />
-                </linearGradient>
-                <linearGradient id="agingOvertimeFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={1} />
-                  <stop offset="100%" stopColor="hsl(var(--chart-2))" stopOpacity={0.55} />
-                </linearGradient>
-                <linearGradient id="agingStandbyFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--chart-3))" stopOpacity={1} />
-                  <stop offset="100%" stopColor="hsl(var(--chart-3))" stopOpacity={0.55} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid vertical={false} strokeDasharray="0" stroke="hsl(var(--border))" opacity={0.5} />
+              <CartesianGrid
+                vertical={false}
+                strokeDasharray="0"
+                stroke="hsl(var(--border))"
+                opacity={0.5}
+              />
               <XAxis
                 dataKey="bucket"
                 tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
@@ -115,18 +106,24 @@ export const AgingBucketChart: React.FC<AgingBucketChartProps> = ({ rows }) => {
                 }}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="leave" name="Leave" fill="url(#agingLeaveFill)" radius={[6, 6, 1, 1]} maxBarSize={40} />
+              <Bar
+                dataKey="leave"
+                name="Leave"
+                fill="hsl(var(--chart-1))"
+                radius={[6, 6, 1, 1]}
+                maxBarSize={40}
+              />
               <Bar
                 dataKey="overtime"
                 name="Overtime"
-                fill="url(#agingOvertimeFill)"
+                fill="hsl(var(--chart-2))"
                 radius={[6, 6, 1, 1]}
                 maxBarSize={40}
               />
               <Bar
                 dataKey="standby"
                 name="Standby"
-                fill="url(#agingStandbyFill)"
+                fill="hsl(var(--chart-3))"
                 radius={[6, 6, 1, 1]}
                 maxBarSize={40}
               />

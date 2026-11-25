@@ -46,12 +46,32 @@ export function expandScrollRegions(section: HTMLElement): void {
 }
 
 /**
- * Applies clean, high-contrast print styling during DOM cloning. Enforces solid white
- * backgrounds for cards, crisp borders, and removes interactive-only web controls.
+ * Applies clean, high-contrast print styling during DOM cloning. Strips `.dark` from the
+ * cloned root so `src/index.css` `:root` light tokens apply verbatim without palette drift,
+ * makes gradient-clipped hero text solid ink for html2canvas, and hides web-only buttons.
  */
 export function applyPrintStyles(cloned: HTMLElement): void {
+  const docEl = cloned.ownerDocument?.documentElement;
+  if (docEl) {
+    docEl.classList.remove("dark");
+    docEl.style.colorScheme = "light";
+  }
+  cloned.classList?.remove?.("dark");
   cloned.style.backgroundColor = "#ffffff";
   cloned.style.color = "#0f172a";
+
+  // html2canvas does not render `bg-clip-text text-transparent` gradients reliably.
+  const solidTargets = cloned.querySelectorAll<HTMLElement>(
+    "[data-pdf-solid-text], .bg-clip-text.text-transparent"
+  );
+  for (const el of solidTargets) {
+    el.style.backgroundImage = "none";
+    el.style.backgroundClip = "border-box";
+    el.style.webkitBackgroundClip = "border-box";
+    el.style.webkitTextFillColor = "#0f172a";
+    el.style.color = "#0f172a";
+    el.style.filter = "none";
+  }
 
   const actionButtons = cloned.querySelectorAll<HTMLElement>(
     "button, [role='menu'], [aria-haspopup='menu'], .no-pdf"
