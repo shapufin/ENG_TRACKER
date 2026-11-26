@@ -419,10 +419,17 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
 
     @action(detail=False, methods=['get'], throttle_scope='export')
     def export(self, request):
-        """Download the summary: ?file_format=xlsx (default) or pdf. ?month=YYYY-MM-DD."""
+        """Download the summary: ?file_format=xlsx (default) or pdf. ?month=YYYY-MM-DD.
+
+        ?scope=month (default) trends the last 6 months; ?scope=year trends
+        January through the selected month.
+        """
         file_format = request.query_params.get('file_format', 'xlsx')
         if file_format not in ('xlsx', 'pdf'):
             return Response({'error': 'file_format must be xlsx or pdf'}, status=status.HTTP_400_BAD_REQUEST)
+        scope = request.query_params.get('scope', 'month')
+        if scope not in ('month', 'year'):
+            return Response({'error': 'scope must be "month" or "year"'}, status=status.HTTP_400_BAD_REQUEST)
         try:
             month = _parse_month(request.query_params.get('month'))
         except ValueError as exc:
@@ -436,7 +443,7 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
         month = month or business_today()
         # The newest trend point is the requested month's scorecard; building it
         # again would repeat every query of the trend's last month.
-        trend = scorecard_trend(leader, 6, month)
+        trend = scorecard_trend(leader, month.month if scope == 'year' else 6, month)
         scorecard = trend[-1]
         self._mask_one_on_one(request, leader, *trend)
         # The builders read the leave/overtime blocks themselves (and skip them
@@ -505,7 +512,10 @@ class TLScorecardViewSet(PluginPermissionMixin, viewsets.ViewSet):
             content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             extension = 'xlsx'
 
-        filename = f'tl_scorecard_{leader.username}_{scorecard["month"][:7]}.{extension}'
+        if scope == 'year':
+            filename = f'tl_scorecard_year_{leader.username}_{month.year}.{extension}'
+        else:
+            filename = f'tl_scorecard_{leader.username}_{scorecard["month"][:7]}.{extension}'
         response = HttpResponse(body, content_type=content_type)
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response

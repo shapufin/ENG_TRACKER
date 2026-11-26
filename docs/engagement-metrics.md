@@ -72,7 +72,7 @@ is recomputed on the next read.
 | Within deadline (`score_speed`) | 40% | on time / judgeable across leave, overtime and standby |
 | Approval rate (`score_approval_rate`) | 20% | approved / decided |
 | Responsiveness (`score_responsiveness`) | 20% | Median share of the deadline window used to decide. Full credit within the first 25% of the window, falling linearly to 0 at the deadline. Weighted by decided count per type. |
-| Consistency (`score_consistency`) | 20% | 1 - (stdev / mean) of the window fractions, so leave and overtime are comparable |
+| Consistency (`score_consistency`) | 20% | 1 - (stdev / mean) of the window fractions, computed within each request type (types with at least 2 decisions) and weighted by decided count. Pooling the types was wrong: their windows differ (same day, 2 and 5 working days), so uniform 2-hour decisions scored about 17% (fixed 2026-11-26). |
 
 Components without data are dropped and the rest renormalised.
 

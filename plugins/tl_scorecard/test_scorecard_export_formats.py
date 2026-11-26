@@ -206,6 +206,43 @@ class SummaryExportFormatTests(TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.data, {'error': 'file_format must be xlsx or pdf'})
 
+    def _trend_months(self, params):
+        from .viewsets import scorecard as scorecard_views
+
+        with mock.patch.object(
+            scorecard_views, 'scorecard_trend', wraps=scorecard_views.scorecard_trend
+        ) as trend:
+            resp = self._get(params)
+        self.assertEqual(resp.status_code, 200)
+        return resp, trend.call_args.args[1]
+
+    def test_month_scope_is_the_default_and_keeps_six_trend_months(self):
+        for params in ({'month': '2026-09-15'}, {'month': '2026-09-15', 'scope': 'month'}):
+            with self.subTest(params=params):
+                resp, months = self._trend_months(params)
+                self.assertEqual(months, 6)
+                self.assertIn('tl_scorecard_leader_formats_2026-09.xlsx', resp['Content-Disposition'])
+
+    def test_year_scope_covers_january_through_the_selected_month(self):
+        for file_format in ('xlsx', 'pdf'):
+            with self.subTest(file_format=file_format):
+                resp, months = self._trend_months(
+                    {'month': '2026-09-15', 'scope': 'year', 'file_format': file_format}
+                )
+                self.assertEqual(months, 9)
+                self.assertIn(
+                    f'tl_scorecard_year_leader_formats_2026.{file_format}', resp['Content-Disposition']
+                )
+
+        wb = load_workbook(io.BytesIO(self._get({'month': '2026-09-15', 'scope': 'year'}).content))
+        months = [row[0] for row in wb['Trend'].iter_rows(min_row=5, values_only=True) if row[0]]
+        self.assertEqual(len(months), 9)
+
+    def test_unknown_scope_is_rejected(self):
+        resp = self._get({'scope': 'quarter'})
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.data, {'error': 'scope must be "month" or "year"'})
+
 
 class WorkbookFormulaSafetyTests(TestCase):
     """User-controlled text is stored as a literal, never a formula or link."""

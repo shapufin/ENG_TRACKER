@@ -4,7 +4,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { downloadBlobResponse, parseFilenameFromDisposition } from "@/lib/download";
-import { tlScorecardService, type SummaryFileFormat } from "../services/tlScorecardService";
+import {
+  tlScorecardService,
+  type SummaryFileFormat,
+  type SummaryScope,
+} from "../services/tlScorecardService";
 
 interface ExportButtonProps {
   leaderId?: number;
@@ -16,9 +20,12 @@ interface ExportButtonProps {
   label?: string;
 }
 
-const FORMAT_OPTIONS: { format: SummaryFileFormat; label: string }[] = [
-  { format: "xlsx", label: "Excel workbook (.xlsx)" },
-  { format: "pdf", label: "PDF report" },
+// Same wording as the Engagement "Export Report" menu.
+const EXPORT_OPTIONS: { format: SummaryFileFormat; scope: SummaryScope; label: string }[] = [
+  { format: "xlsx", scope: "month", label: "Excel — this month" },
+  { format: "xlsx", scope: "year", label: "Excel — full year" },
+  { format: "pdf", scope: "month", label: "PDF report — this month" },
+  { format: "pdf", scope: "year", label: "PDF report — full year" },
 ];
 
 export const ExportButton: React.FC<ExportButtonProps> = ({
@@ -31,13 +38,17 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleExport = async (fileFormat: SummaryFileFormat) => {
+  const handleExport = async (fileFormat: SummaryFileFormat, scope: SummaryScope) => {
     setIsOpen(false);
     setIsExporting(true);
     setError(null);
     try {
-      const response = await tlScorecardService.exportSummary(month, leaderId, fileFormat);
-      const fallback = `tl-scorecard-${(month ?? new Date().toISOString()).slice(0, 7)}.${fileFormat}`;
+      const response = await tlScorecardService.exportSummary(month, leaderId, fileFormat, scope);
+      const period = (month ?? new Date().toISOString()).slice(0, 7);
+      const fallback =
+        scope === "year"
+          ? `tl-scorecard-year-${period.slice(0, 4)}.${fileFormat}`
+          : `tl-scorecard-${period}.${fileFormat}`;
       downloadBlobResponse(
         response.data,
         parseFilenameFromDisposition(response.headers?.["content-disposition"], fallback)
@@ -76,11 +87,11 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>{trigger}</PopoverTrigger>
         <PopoverContent align="end" className="w-56 p-1.5">
-          {FORMAT_OPTIONS.map((option) => (
+          {EXPORT_OPTIONS.map((option) => (
             <button
-              key={option.format}
+              key={`${option.format}-${option.scope}`}
               type="button"
-              onClick={() => handleExport(option.format)}
+              onClick={() => handleExport(option.format, option.scope)}
               className="hover:bg-muted block w-full rounded-lg px-3 py-2 text-left text-sm"
             >
               {option.label}
