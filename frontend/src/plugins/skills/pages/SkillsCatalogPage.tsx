@@ -86,8 +86,12 @@ export const SkillsCatalogPage: React.FC = () => {
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     if (deleteTarget.kind === "category") {
-      deleteCat.mutate(deleteTarget.ids[0], {
+      const deletedId = deleteTarget.ids[0];
+      deleteCat.mutate(deletedId, {
         onSuccess: () => {
+          if (categories.find((c) => c.id === deletedId)?.code === selectedCategory) {
+            setSelectedCategory("all");
+          }
           toast.success("Category deleted");
           setDeleteTarget(null);
         },
@@ -347,22 +351,38 @@ export const SkillsCatalogPage: React.FC = () => {
         errorMessage={categoryFormError}
         onSubmit={(data) => {
           setCategoryFormError(undefined);
-          const options = {
-            onSuccess: () => {
-              toast.success(editingCat ? "Category updated" : "Category created");
-              setCatDialogOpen(false);
-            },
-            onError: (error: unknown) => {
-              const message = extractApiErrorMessage(
-                error,
-                `Failed to ${editingCat ? "update" : "create"} category`
-              );
-              setCategoryFormError(message);
-              toast.error(message);
-            },
+          const onError = (error: unknown) => {
+            const message = extractApiErrorMessage(
+              error,
+              `Failed to ${editingCat ? "update" : "create"} category`
+            );
+            setCategoryFormError(message);
+            toast.error(message);
           };
-          if (editingCat) updateCat.mutate({ id: editingCat.id, data }, options);
-          else createCat.mutate(data, options);
+          if (editingCat) {
+            const prevCode = editingCat.code;
+            updateCat.mutate(
+              { id: editingCat.id, data },
+              {
+                onSuccess: (updated) => {
+                  if (selectedCategory === prevCode && updated?.code) {
+                    setSelectedCategory(updated.code);
+                  }
+                  toast.success("Category updated");
+                  setCatDialogOpen(false);
+                },
+                onError,
+              }
+            );
+          } else {
+            createCat.mutate(data, {
+              onSuccess: () => {
+                toast.success("Category created");
+                setCatDialogOpen(false);
+              },
+              onError,
+            });
+          }
         }}
       />
 

@@ -4,6 +4,7 @@ import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { toneFillClass, toneSurfaceClass, toneTextClass } from "@/components/ui/tone";
 import { Plane, Check, Calendar } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { deriveVacationBalanceFromBalances } from "@/lib/vacation-balance";
 import type { LeaveBalance } from "@/types";
 
 interface LeaveStatsCardsProps {
@@ -68,14 +69,19 @@ export const LeaveStatsCards: React.FC<LeaveStatsCardsProps> = ({
   isLoading,
   isTeamLeader,
 }) => {
+  const vacationBreakdown = deriveVacationBalanceFromBalances(balances);
   const vacationBalance = (balances ?? []).find(
     (b) => b.leave_type === "vacation" && !b.is_carry_over
   );
   const totalUsedDays = (balances ?? [])
     .filter((b) => b.leave_type === "vacation")
     .reduce((sum, b) => sum + (Number(b.used_days) || 0), 0);
-  const balanceValue =
-    vacationBalance?.effective_available_days ?? vacationBalance?.available_days ?? 0;
+  const hasLiveAccrual =
+    vacationBreakdown?.current?.liveAccruedBalance !== undefined ||
+    vacationBreakdown?.current?.monthlyAccruedDays !== undefined;
+  const balanceValue = hasLiveAccrual
+    ? (vacationBreakdown?.liveAccruedBalance ?? 0)
+    : (vacationBreakdown?.remainingDays ?? 0);
   const totalAllowanceDays = vacationBalance?.total_days ?? 0;
 
   const requestTotal = pendingCount + approvedCount;
@@ -84,7 +90,9 @@ export const LeaveStatsCards: React.FC<LeaveStatsCardsProps> = ({
   const approvedPercent =
     isTeamLeader && requestTotal > 0 ? (approvedCount / requestTotal) * 100 : undefined;
   const balancePercent =
-    isTeamLeader && totalAllowanceDays > 0 ? (balanceValue / totalAllowanceDays) * 100 : undefined;
+    isTeamLeader && totalAllowanceDays > 0
+      ? Math.max(0, Math.min(100, (balanceValue / totalAllowanceDays) * 100))
+      : undefined;
   const usedPercent =
     isTeamLeader && totalAllowanceDays > 0 ? (totalUsedDays / totalAllowanceDays) * 100 : undefined;
 
