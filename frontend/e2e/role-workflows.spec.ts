@@ -111,7 +111,11 @@ const targetYear = () => {
   return d.getFullYear();
 };
 
-/** A Mon+Tue pair in a random week of `targetYear()` at least 14 days out. */
+/**
+ * A Mon+Tue or Wed+Thu pair in a random week of `targetYear()` at least 14 days out.
+ * Two non-overlapping pairs per week: from late November only one week is left before
+ * 24 December, and employee C needs two requests that do not overlap.
+ */
 function businessDayPair(): { start_date: string; end_date: string } {
   const earliest = new Date();
   earliest.setDate(earliest.getDate() + 14);
@@ -122,6 +126,7 @@ function businessDayPair(): { start_date: string; end_date: string } {
   const date = new Date(earliest);
   date.setDate(date.getDate() + Math.floor(Math.random() * weeksLeft) * 7);
   while (date.getDay() !== 1) date.setDate(date.getDate() + 1);
+  if (Math.random() < 0.5) date.setDate(date.getDate() + 2);
   const end = new Date(date);
   end.setDate(end.getDate() + 1);
   return { start_date: iso(date), end_date: iso(end) };
