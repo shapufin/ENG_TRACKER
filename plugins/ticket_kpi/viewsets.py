@@ -389,14 +389,19 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
             best_profile = None
             best_score = 0
             hints = []
-            for profile in profiles:
-                if not profile.keep_columns:
-                    continue
+            # Two formats can read the same download, so the one reading more of it
+            # is tried first (Geocall Standard before Backup).
+            team_formats = sorted(
+                (p for p in profiles if p.keep_columns),
+                key=lambda p: len(p.keep_columns), reverse=True,
+            )
+            for profile in team_formats:
                 try:
                     df = read_export(file_bytes, file_obj.name, profile.keep_columns)
                 except ExportFormatError as exc:
                     # Kept so the user is told why a format did not fit, not just "no match".
-                    hints.append({'profile': profile.name, 'reason': str(exc.detail)})
+                    hints.append({'profile': profile.name, 'reason': str(exc.detail),
+                                  'missing': exc.missing})
                     continue
                 best_profile, best_score = profile, len(profile.keep_columns)
                 mapper = ColumnMapper(profile=profile)
@@ -452,7 +457,11 @@ class TicketUploadViewSet(HrOnlyBlockedMixin, PluginPermissionMixin, viewsets.Ge
                     'match_score': best_score,
                 }
             elif hints:
-                response_data['profile_hints'] = hints
+                # The page shows the first hint: the format the file came closest to.
+                hints.sort(key=lambda h: h['missing'])
+                response_data['profile_hints'] = [
+                    {'profile': h['profile'], 'reason': h['reason']} for h in hints
+                ]
 
             return Response(response_data, status=status.HTTP_200_OK)
 

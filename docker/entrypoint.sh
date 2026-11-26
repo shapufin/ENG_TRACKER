@@ -83,6 +83,8 @@ if [ "${RUN_MIGRATIONS:-1}" = "1" ]; then
     # to it) is never touched. `seed_backup_profile` without the flag is the repair.
     echo "[entrypoint] Ensuring the Backup team import profile..."
     python manage.py seed_backup_profile --if-missing || echo "[entrypoint] Backup profile seed skipped (non-fatal)"
+    echo "[entrypoint] Ensuring the Geocall Standard import profile..."
+    python manage.py seed_geocall_profile --if-missing || echo "[entrypoint] Geocall profile seed skipped (non-fatal)"
 
     # PERF-06 retention: read notifications older than 180 days are deleted (unread are
     # kept). Also a daily scheduler job (notifications.housekeeping), so no host cron is needed.
