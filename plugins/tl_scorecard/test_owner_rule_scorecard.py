@@ -35,7 +35,7 @@ class ScorecardOwnerRuleTests(TestCase):
         self.member.profile.save()
 
     def _turnaround(self, leader):
-        blocks = month_blocks(leader, self.month_start, scoreable_member_ids(leader))
+        blocks = month_blocks(leader, self.month_start.date(), scoreable_member_ids(leader))  # callers pass a date
         return blocks['overtime']['decided_count']
 
     def test_decided_turnaround_stays_with_the_approver_after_a_move(self):

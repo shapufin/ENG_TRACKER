@@ -94,10 +94,47 @@ class PromotionRatioServiceTests(TestCase):
             employee=members[0], nominated_by=leader, nominated_on=date.today(),
             status='promoted', decided_on=date.today(),
         )
-        result = promotion_ratio({m.id for m in members}, date.today().year)
+        result = promotion_ratio({m.id for m in members}, date.today().year, leader)
         self.assertEqual(result['promoted_count'], 1)
         self.assertEqual(result['team_size'], 4)
         self.assertEqual(result['promoted_pct'], 25.0)
+
+    def test_a_promoted_nominee_who_left_the_team_still_counts_once(self):
+        # Owner ruling 2026-11-26: the leader nominated a member, the member was promoted and
+        # moved out (a team split); the promotion stays the nominating leader's, and the person
+        # is part of the team the rate is measured against.
+        leader = _make_user('leader_split')
+        members = [_make_user(f'member_split_{i}') for i in range(7)]
+        promoted_away = _make_user('promoted_away')
+        PromotionFlag.objects.create(
+            employee=promoted_away, nominated_by=leader, nominated_on=date.today(),
+            status='promoted', decided_on=date.today(),
+        )
+        result = promotion_ratio({m.id for m in members}, date.today().year, leader)
+        self.assertEqual(result['promoted_count'], 1)
+        self.assertEqual(result['team_size'], 8)
+        self.assertEqual(result['promoted_pct'], 12.5)
+
+    def test_nominated_member_still_in_the_team_is_not_counted_twice(self):
+        leader = _make_user('leader_once')
+        members = [_make_user(f'member_once_{i}') for i in range(4)]
+        PromotionFlag.objects.create(
+            employee=members[0], nominated_by=leader, nominated_on=date.today(),
+            status='promoted', decided_on=date.today(),
+        )
+        result = promotion_ratio({m.id for m in members}, date.today().year, leader)
+        self.assertEqual((result['promoted_count'], result['team_size']), (1, 4))
+
+    def test_another_leaders_nomination_outside_the_team_does_not_count(self):
+        leader = _make_user('leader_mine')
+        other = _make_user('leader_other')
+        members = [_make_user(f'member_mine_{i}') for i in range(4)]
+        PromotionFlag.objects.create(
+            employee=_make_user('their_person'), nominated_by=other, nominated_on=date.today(),
+            status='promoted', decided_on=date.today(),
+        )
+        result = promotion_ratio({m.id for m in members}, date.today().year, leader)
+        self.assertEqual((result['promoted_count'], result['team_size']), (0, 4))
 
 
 class EPRServiceTests(TestCase):

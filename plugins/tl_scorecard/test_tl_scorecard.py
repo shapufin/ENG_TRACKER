@@ -148,7 +148,7 @@ class TLScorecardServiceTests(TestCase):
             )
 
     def test_build_scorecard_exposes_the_targets_it_is_measured_against(self):
-        data = build_scorecard(self.leader, self.month_start)
+        data = build_scorecard(self.leader, self.month_start.date())  # callers pass a date
         self.assertEqual(data['targets'], {
             'tl_sync_per_year': 26, 'tl_sync_full_year': 45, 'reviews_per_year': 12,
             'one_on_one_pct': 100.0, 'promotion_pct': 3.0,
@@ -225,7 +225,7 @@ class TLScorecardServiceTests(TestCase):
         self.assertIsNone(result['pct_within_sla'])
 
     def test_build_scorecard_resolves_team_size_from_profile(self):
-        data = build_scorecard(self.leader, self.month_start)
+        data = build_scorecard(self.leader, self.month_start.date())  # callers pass a date
         self.assertEqual(data['team_size'], 1)
         self.assertIn('leave', data)
         self.assertIn('overtime', data)
@@ -413,12 +413,23 @@ class TLScorecardServiceTests(TestCase):
         from . import services
         joiner = _make_user('joiner_old')
         joiner.profile.italian_tl = self.leader
-        joiner.profile.hire_date = date(2026, 11, 15)
+        joiner.profile.hire_date = date(2025, 12, 20)
         joiner.profile.save()
-        # Default ONBOARDING_TRACKING_START is date(2026, 12, 1). Hire in Nov is pre-cutover.
-        res = services.onboarding_metrics(self.leader, date(2026, 11, 1))
+        # Owner ruling 2026-11-26: tracking starts 2026-01-01. A Dec 2025 hire is due in Jan 2026
+        # but started before the cut-over, so it is not counted.
+        res = services.onboarding_metrics(self.leader, date(2026, 1, 1))
         self.assertEqual(res['onboarding_due'], 0)
         self.assertIsNone(res['onboarding_pct'])
+
+    def test_onboarding_counts_2026_joiners_from_january(self):
+        from . import services
+        self.assertEqual(services.ONBOARDING_TRACKING_START, date(2026, 1, 1))
+        joiner = _make_user('joiner_march')
+        joiner.profile.italian_tl = self.leader
+        joiner.profile.hire_date = date(2026, 3, 10)
+        joiner.profile.save()
+        res = services.onboarding_metrics(self.leader, date(2026, 3, 1))  # due 2026-03-24
+        self.assertEqual(res['onboarding_due'], 1)
 
     def test_onboarding_null_hire_date_falls_back_to_date_joined(self):
         from . import services
