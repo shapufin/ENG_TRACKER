@@ -14,6 +14,7 @@ import math
 from bisect import bisect_left
 from datetime import date, datetime, time, timedelta
 
+from django.db.models import Q
 from django.utils import timezone
 
 from core.utils.timezone_local import business_tz
@@ -42,7 +43,9 @@ from .models import (
 from core.utils.metrics_freeze import is_frozen, is_past_freeze
 
 ONBOARDING_WINDOW_DAYS = 14
-ONBOARDING_TRACKING_START = date(2026, 12, 1)
+# Owner ruling 2026-11-26: 2026 joiners count (one Line Manager until the November split).
+# Assumes real hire dates: a profile backfilled with hire_date = date_joined in 2026 counts too.
+ONBOARDING_TRACKING_START = date(2026, 1, 1)
 
 def reporting_period(month: date | None) -> date:
     """Normalize any date within a month to that month's first day — the
@@ -422,13 +425,22 @@ def pip_metrics(leader) -> dict:
     return {'active_count': pips.filter(status='active').count(), 'pending_approval_count': pending.count()}
 
 
-def promotion_ratio(team_member_ids, year: int) -> dict:
+def promotion_ratio(team_member_ids, year: int, leader) -> dict:
     """3%/year high-potential target (gap-audit finding). Nomination is
-    manual; this ratio is fully automatic."""
-    team_size = len(team_member_ids)
-    promoted = PromotionFlag.objects.filter(
-        employee_id__in=team_member_ids, status='promoted', decided_on__year=year,
-    ).count()
+    manual; this ratio is fully automatic.
+
+    A member the leader nominated who was promoted and then left the team (owner
+    ruling 2026-11-26: the November team split) still counts for that leader, once,
+    and is part of the team size the rate is measured against.
+    """
+    promoted_ids = set(
+        PromotionFlag.objects.filter(
+            Q(employee_id__in=team_member_ids) | Q(nominated_by=leader),
+            status='promoted', decided_on__year=year,
+        ).values_list('employee_id', flat=True)
+    )
+    team_size = len(set(team_member_ids) | promoted_ids)
+    promoted = len(promoted_ids)
     pct = round((promoted / team_size) * 100, 1) if team_size else None
     return {'promoted_count': promoted, 'team_size': team_size, 'promoted_pct': pct, 'target_pct': PROMOTION_TARGET_PCT}
 
@@ -993,7 +1005,7 @@ def build_scorecard(
             'review_dates': list(ReviewDelivery.objects.filter(
                 leader=user, delivered_on__year=month.year,
             ).order_by('delivered_on').values_list('delivered_on', flat=True)),
-            'promotion': promotion_ratio(team_member_ids, month.year),
+            'promotion': promotion_ratio(team_member_ids, month.year, user),
             'tl_sync_dates': list(Meeting.objects.filter(
                 organizer=user, meeting_type='tl_sync',
                 occurred_on__gte=date(month.year, 1, 1), occurred_on__lt=date(month.year + 1, 1, 1),
