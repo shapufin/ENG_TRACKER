@@ -61,6 +61,19 @@ describe("buildMetricBars", () => {
     } as any);
     expect(result[0].progress).toBe(0);
   });
+
+  it("prefers liveAccruedBalance over remainingDays when available", () => {
+    const result = buildMetricBars({
+      remainingDays: 8,
+      liveAccruedBalance: 6,
+      usedDays: 12,
+      pendingDays: 0,
+      totalDays: 20,
+      year: 2024,
+    } as any);
+    expect(result[0].value).toBe("6d of 20d");
+    expect(result[0].progress).toBe(30);
+  });
 });
 
 describe("computeCarryOverAndBalance", () => {

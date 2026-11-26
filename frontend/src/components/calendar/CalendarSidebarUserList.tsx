@@ -28,7 +28,6 @@ const UserRow: React.FC<{
   const name = userDisplayName(user);
   const team = teamLabel(user);
   const hasRemaining = remainingDaysByUser?.has(user.id);
-  const remaining = remainingDaysByUser?.get(user.id);
 
   return (
     <div
@@ -69,14 +68,6 @@ const UserRow: React.FC<{
       </button>
 
       <div className="flex shrink-0 items-center gap-1">
-        {hasRemaining && (
-          <span
-            className="text-tone-success-text font-mono text-xs font-semibold"
-            title={`${remaining} days remaining`}
-          >
-            {remaining}d remaining
-          </span>
-        )}
         {onShowUserModal && hasRemaining && (
           <button
             type="button"

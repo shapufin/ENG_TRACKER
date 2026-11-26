@@ -216,7 +216,12 @@ export const useCalendarPageData = (
   const memberRemainingDays = useMemo(() => {
     const map = new Map<number, number>();
     teamBalances.forEach((b) => {
-      if (!map.has(b.user)) map.set(b.user, b.vacation_balance?.remainingDays ?? 0);
+      if (!map.has(b.user)) {
+        map.set(
+          b.user,
+          b.vacation_balance?.liveAccruedBalance ?? b.vacation_balance?.remainingDays ?? 0
+        );
+      }
     });
     return map;
   }, [teamBalances]);

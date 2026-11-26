@@ -54,4 +54,12 @@ describe("calcVacationDaysLeft", () => {
     ];
     expect(calcVacationDaysLeft(negativeBalances, members, "all")).toBe(0);
   });
+
+  it("prefers live_accrued_balance over available_days when present", () => {
+    const liveBalances = [
+      { user: 1, leave_type: "vacation", year: 2026, available_days: 8, live_accrued_balance: 6 },
+      { user: 2, leave_type: "vacation", year: 2026, available_days: 5, live_accrued_balance: 3 },
+    ];
+    expect(calcVacationDaysLeft(liveBalances, members, "all")).toBe(9);
+  });
 });

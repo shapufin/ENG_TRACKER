@@ -32,7 +32,7 @@ export interface DayConflictEntry {
   users: DayConflictUser[];
 }
 
-/** Coverage at or below this share of a roster is a conflict. */
+/** Coverage strictly below this share of a roster is a conflict. */
 const CONFLICT_COVERAGE = 0.5;
 const MAX_SPAN_DAYS = 400;
 
@@ -44,7 +44,7 @@ type LeaveLike = Pick<
 const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6;
 
 /**
- * Days where approved vacation/sick leave leaves a roster at or below 50% coverage.
+ * Days where approved vacation/sick leave leaves a roster strictly below 50% coverage.
  *
  * Only approved leave counts (a pending request is not yet a commitment), weekends and
  * public holidays are skipped, and rosters of one person are ignored: they would read 0%
@@ -95,7 +95,7 @@ export const buildDayConflicts = ({
     for (const [index, members] of byRoster) {
       const total = rosters[index].ids.size;
       const coverage = (total - members.size) / total;
-      if (coverage > CONFLICT_COVERAGE) continue;
+      if (coverage >= CONFLICT_COVERAGE) continue;
       if (!worst || coverage < worst.coverage) worst = { coverage, away: members.size, total };
       for (const leave of members.values()) {
         if (users.has(leave.user)) continue;

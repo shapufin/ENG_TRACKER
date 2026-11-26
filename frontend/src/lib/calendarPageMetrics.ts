@@ -11,7 +11,7 @@ export const buildMetricBars = (
   vacationSummary: ReturnType<typeof deriveVacationBalanceFromBalances> | null
 ) => {
   const totalVacationDays = vacationSummary?.totalDays ?? 0;
-  const remainingDays = vacationSummary?.remainingDays ?? 0;
+  const remainingDays = vacationSummary?.liveAccruedBalance ?? vacationSummary?.remainingDays ?? 0;
   const usedDays = vacationSummary?.usedDays ?? 0;
   const pendingDays = vacationSummary?.pendingDays ?? 0;
   return [

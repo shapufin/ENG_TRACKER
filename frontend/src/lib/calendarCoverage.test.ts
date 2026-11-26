@@ -2,13 +2,12 @@ import { describe, expect, it } from "vitest";
 import { buildDayConflicts, conflictEntriesForMonth } from "./calendarCoverage";
 
 const user = (id: number, name = `User ${id}`) => ({ id, full_name: name }) as never;
-const group = (ids: number[]) => ({ workspaceId: 1, workspaceName: "Alpha", users: ids.map((i) => user(i)) });
-const leave = (
-  userId: number,
-  start: string,
-  end: string,
-  over: Record<string, unknown> = {}
-) => ({
+const group = (ids: number[]) => ({
+  workspaceId: 1,
+  workspaceName: "Alpha",
+  users: ids.map((i) => user(i)),
+});
+const leave = (userId: number, start: string, end: string, over: Record<string, unknown> = {}) => ({
   user: userId,
   user_name: `User ${userId}`,
   start_date: start,
@@ -19,19 +18,23 @@ const leave = (
 });
 
 describe("buildDayConflicts", () => {
-  it("flags a day when coverage drops to 50% or below", () => {
+  it("flags a day when coverage drops strictly below 50%", () => {
     const map = buildDayConflicts({
-      leaves: [leave(1, "2026-11-04", "2026-11-04"), leave(2, "2026-11-04", "2026-11-04")] as never,
+      leaves: [
+        leave(1, "2026-11-04", "2026-11-04"),
+        leave(2, "2026-11-04", "2026-11-04"),
+        leave(3, "2026-11-04", "2026-11-04"),
+      ] as never,
       groups: [group([1, 2, 3, 4])],
     });
     const day = map.get("2026-11-04");
-    expect(day).toMatchObject({ away: 2, total: 4, coveragePct: 50 });
-    expect(day?.users.map((u) => u.id)).toEqual([1, 2]);
+    expect(day).toMatchObject({ away: 3, total: 4, coveragePct: 25 });
+    expect(day?.users.map((u) => u.id)).toEqual([1, 2, 3]);
   });
 
-  it("does not flag a day above 50% coverage", () => {
+  it("does not flag a day at or above 50% coverage", () => {
     const map = buildDayConflicts({
-      leaves: [leave(1, "2026-11-04", "2026-11-04")] as never,
+      leaves: [leave(1, "2026-11-04", "2026-11-04"), leave(2, "2026-11-04", "2026-11-04")] as never,
       groups: [group([1, 2, 3, 4])],
     });
     expect(map.size).toBe(0);
@@ -51,7 +54,11 @@ describe("buildDayConflicts", () => {
 
   it("skips weekends and public holidays inside a span", () => {
     const map = buildDayConflicts({
-      leaves: [leave(1, "2026-11-06", "2026-11-10"), leave(2, "2026-11-06", "2026-11-10")] as never,
+      leaves: [
+        leave(1, "2026-11-06", "2026-11-10"),
+        leave(2, "2026-11-06", "2026-11-10"),
+        leave(3, "2026-11-06", "2026-11-10"),
+      ] as never,
       groups: [group([1, 2, 3, 4])],
       holidayDates: new Set(["2026-11-09"]),
     });
@@ -69,19 +76,26 @@ describe("buildDayConflicts", () => {
 
   it("measures each workspace on its own and reports the worst one", () => {
     const map = buildDayConflicts({
-      leaves: [leave(1, "2026-11-04", "2026-11-04"), leave(5, "2026-11-04", "2026-11-04")] as never,
-      groups: [group([1, 2, 3, 4]), { workspaceId: 2, workspaceName: "Beta", users: [user(5), user(6)] }],
+      leaves: [
+        leave(1, "2026-11-04", "2026-11-04"),
+        leave(5, "2026-11-04", "2026-11-04"),
+        leave(6, "2026-11-04", "2026-11-04"),
+      ] as never,
+      groups: [
+        group([1, 2, 3, 4]),
+        { workspaceId: 2, workspaceName: "Beta", users: [user(5), user(6), user(7)] },
+      ],
     });
-    // Alpha is 75% (fine), Beta is 50% (conflict).
-    expect(map.get("2026-11-04")).toMatchObject({ away: 1, total: 2, coveragePct: 50 });
+    // Alpha is 75% (fine), Beta is 33% (conflict).
+    expect(map.get("2026-11-04")).toMatchObject({ away: 2, total: 3, coveragePct: 33 });
   });
 
   it("counts a member once even when listed in two workspaces", () => {
     const map = buildDayConflicts({
-      leaves: [leave(1, "2026-11-04", "2026-11-04")] as never,
+      leaves: [leave(1, "2026-11-04", "2026-11-04"), leave(2, "2026-11-04", "2026-11-04")] as never,
       groups: [group([1, 2]), group([1, 2])],
     });
-    expect(map.get("2026-11-04")?.users).toHaveLength(1);
+    expect(map.get("2026-11-04")?.users).toHaveLength(2);
   });
 });
 

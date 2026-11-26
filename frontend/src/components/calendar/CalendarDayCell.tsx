@@ -29,7 +29,7 @@ interface CalendarDayCellProps {
   onRangeDragEnter?: (date: Date) => void;
   onRangeDragEnd?: (date: Date) => void;
   isRangeSelecting?: boolean;
-  /** Staffing conflict for this day (coverage at or below 50%). */
+  /** Staffing conflict for this day (coverage below 50%). */
   conflict?: DayConflict;
 }
 

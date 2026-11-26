@@ -84,14 +84,8 @@ describe("CalendarSidebar", () => {
     fireEvent.click(screen.getByText("Expand"));
   });
 
-  it("shows per-member remaining days when the balance map has the user", () => {
+  it("does not bloat sidebar member rows with inline remaining days text", () => {
     render(<CalendarSidebar {...baseProps} remainingDaysByUser={new Map([[1, 14]])} />);
-    expect(screen.getByText("14d remaining")).toBeInTheDocument();
-    expect(screen.queryByText("18d remaining")).not.toBeInTheDocument();
-  });
-
-  it("hides per-member remaining days without the balance map", () => {
-    render(<CalendarSidebar {...baseProps} />);
     expect(screen.queryByText(/d remaining/)).not.toBeInTheDocument();
   });
 

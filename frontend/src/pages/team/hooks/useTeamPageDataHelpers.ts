@@ -22,5 +22,8 @@ export const calcVacationDaysLeft = (
   const vacationBalances = teamBalances.filter(
     (b) => b.leave_type === "vacation" && b.year === targetYear && targetUserIds.has(b.user)
   );
-  return vacationBalances.reduce((acc, b) => acc + Math.max(0, Number(b.available_days ?? 0)), 0);
+  return vacationBalances.reduce(
+    (acc, b) => acc + Math.max(0, Number(b.live_accrued_balance ?? b.available_days ?? 0)),
+    0
+  );
 };
