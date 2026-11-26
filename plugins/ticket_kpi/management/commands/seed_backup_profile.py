@@ -45,6 +45,9 @@ BACKUP_PROFILE = {
 
 class Command(BaseCommand):
     help = 'Create or repair the Backup team import profile.'
+    # Another team format subclasses this command and overrides the two below.
+    profile_name = PROFILE_NAME
+    profile_values = BACKUP_PROFILE
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -55,11 +58,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if options.get('if_missing'):
             profile, created = ExportProfile.objects.get_or_create(
-                name=PROFILE_NAME, defaults=BACKUP_PROFILE
+                name=self.profile_name, defaults=self.profile_values
             )
         else:
             profile, created = ExportProfile.objects.update_or_create(
-                name=PROFILE_NAME, defaults=BACKUP_PROFILE
+                name=self.profile_name, defaults=self.profile_values
             )
         if options.get('verbosity', 1):
             self.stdout.write(f"{'Created' if created else 'Updated'} profile '{profile.name}' (id {profile.id}).")

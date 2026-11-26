@@ -104,24 +104,30 @@ async function apiAs(creds: { username: string; password: string }): Promise<API
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
-/** Year that leave requests in this spec target: the year two weeks from today. */
-const targetYear = () => {
-  const d = new Date();
-  d.setDate(d.getDate() + 14);
-  return d.getFullYear();
-};
+/** The Mondays from `from` up to 24 December of its year. */
+function mondaysUntilChristmas(from: Date): Date[] {
+  const date = new Date(from);
+  // Noon, because iso() reads the UTC date and just after local midnight that is the day before.
+  date.setHours(12, 0, 0, 0);
+  while (date.getDay() !== 1) date.setDate(date.getDate() + 1);
+  const mondays: Date[] = [];
+  while (date < new Date(from.getFullYear(), 11, 24)) {
+    mondays.push(new Date(date));
+    date.setDate(date.getDate() + 7);
+  }
+  return mondays;
+}
 
-/** A Mon+Tue pair in a random week of `targetYear()` at least 14 days out. */
+/**
+ * A Mon+Tue pair in a random week at least 14 days out. One employee here needs two
+ * separate weeks, so late in the year the pair comes from next year (from mid-January).
+ */
 function businessDayPair(): { start_date: string; end_date: string } {
   const earliest = new Date();
   earliest.setDate(earliest.getDate() + 14);
-  const weeksLeft = Math.max(
-    1,
-    Math.floor((new Date(targetYear(), 11, 24).getTime() - earliest.getTime()) / (7 * 86_400_000))
-  );
-  const date = new Date(earliest);
-  date.setDate(date.getDate() + Math.floor(Math.random() * weeksLeft) * 7);
-  while (date.getDay() !== 1) date.setDate(date.getDate() + 1);
+  let mondays = mondaysUntilChristmas(earliest);
+  if (mondays.length < 8) mondays = mondaysUntilChristmas(new Date(new Date().getFullYear() + 1, 0, 11));
+  const date = mondays[Math.floor(Math.random() * mondays.length)];
   const end = new Date(date);
   end.setDate(end.getDate() + 1);
   return { start_date: iso(date), end_date: iso(end) };

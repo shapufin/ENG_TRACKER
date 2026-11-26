@@ -35,20 +35,22 @@ export const CollapsedCalendarSidebar: React.FC<CollapsedCalendarSidebarProps> =
     >
       <ChevronRight className="h-4 w-4" />
     </Button>
-    {snapshotSummary && (
-      <button
-        type="button"
-        onClick={onShowSnapshotModal}
-        className="border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 flex h-9 w-9 flex-col items-center justify-center rounded-xl border transition-colors"
-        title={`My Vacation: ${snapshotSummary.remainingDays}d remaining`}
-        aria-label="View vacation balance"
-      >
-        <Plane className="h-3.5 w-3.5" />
-        <span className="font-mono text-xs font-bold">
-          {Math.round(snapshotSummary.remainingDays)}d
-        </span>
-      </button>
-    )}
+    {snapshotSummary &&
+      (() => {
+        const leftDays = snapshotSummary.liveAccruedBalance ?? snapshotSummary.remainingDays;
+        return (
+          <button
+            type="button"
+            onClick={onShowSnapshotModal}
+            className="border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 flex h-9 w-9 flex-col items-center justify-center rounded-xl border transition-colors"
+            title={`My Vacation: ${leftDays}d remaining`}
+            aria-label="View vacation balance"
+          >
+            <Plane className="h-3.5 w-3.5" />
+            <span className="font-mono text-xs font-bold">{Math.round(leftDays)}d</span>
+          </button>
+        );
+      })()}
     <div className="flex w-full flex-1 flex-col items-center gap-2 overflow-auto pb-4">
       {users.map((user) => {
         const name = userDisplayName(user);

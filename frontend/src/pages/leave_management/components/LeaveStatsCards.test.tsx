@@ -93,4 +93,31 @@ describe("LeaveStatsCards", () => {
     expect((fills[2] as HTMLElement).style.width).toBe("73%"); // available / total_days
     expect((fills[3] as HTMLElement).style.width).toBe("23%"); // used / total_days
   });
+
+  it("displays live accrued balance (plus carry-over) instead of full-year entitlement when available", () => {
+    const balances: LeaveBalance[] = [
+      {
+        leave_type: "vacation",
+        used_days: 12,
+        total_days: 20,
+        effective_available_days: 8,
+        accrued_days: 18,
+        live_accrued_balance: 6,
+        is_carry_over: false,
+      },
+      {
+        leave_type: "vacation",
+        used_days: 0,
+        total_days: 2,
+        effective_available_days: 2,
+        is_carry_over: true,
+      },
+    ] as LeaveBalance[];
+
+    render(
+      <LeaveStatsCards pendingCount={0} approvedCount={3} balances={balances} isLoading={false} />
+    );
+    expect(screen.getByText("8d")).toBeInTheDocument();
+    expect(screen.getByText("12d")).toBeInTheDocument();
+  });
 });

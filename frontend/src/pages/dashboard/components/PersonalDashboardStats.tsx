@@ -51,7 +51,13 @@ export const PersonalDashboardStats: React.FC<PersonalDashboardStatsProps> = ({
     />
     <StatCard
       label="Vacation Days Remaining"
-      value={<AnimatedNumber value={vacationBalanceDays} suffix="d" />}
+      value={
+        <AnimatedNumber
+          value={vacationBalanceDays}
+          suffix="d"
+          decimals={Number.isInteger(vacationBalanceDays) ? 0 : 1}
+        />
+      }
       icon={Plane}
       glow="warning"
       iconColorClass="text-warning"

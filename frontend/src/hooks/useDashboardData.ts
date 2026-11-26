@@ -5,6 +5,7 @@ import { overtimeService } from "@/services/overtimeService";
 import { standbyService } from "@/services/standbyService";
 import { leaveService } from "@/services/leaveService";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
+import { deriveVacationBalanceFromSummary } from "@/lib/vacation-balance";
 import { useDashboardCalculations } from "./useDashboardCalculations";
 import type { DashboardType } from "@/context/permission-context-base";
 import type { Tone } from "@/components/ui/tone";
@@ -232,6 +233,10 @@ export const useDashboardData = ({
     [hrOverview]
   );
 
+  const vacationBreakdown = deriveVacationBalanceFromSummary(leaveBalanceSummary?.vacation);
+  const liveVacationDays =
+    vacationBreakdown?.liveAccruedBalance ?? leaveBalanceSummary?.vacation?.total_available;
+
   return {
     // The HR tile shows this month's average, so it overrides the lifetime `avg_overtime_hours`.
     hrStats:
@@ -261,10 +266,9 @@ export const useDashboardData = ({
     refetchHrOverview,
     personalOvertimeHours: overtimeSummary?.total_hours ?? calculations.personalOvertimeHours,
     personalStandbyHours: standbySummary?.total_hours ?? calculations.personalStandbyHours,
-    vacationBalanceDays:
-      leaveBalanceSummary?.vacation?.total_available ?? calculations.approvedLeaveDays,
+    vacationBalanceDays: liveVacationDays ?? calculations.approvedLeaveDays,
     leaveUsedDays: leaveBalanceSummary?.vacation?.total_used ?? 0,
-    leaveAvailableDays: leaveBalanceSummary?.vacation?.total_available ?? 0,
+    leaveAvailableDays: liveVacationDays ?? 0,
     weekOvertimeLogs: weeklyOvertimeData?.results ?? [],
     weekStandbyLogs: weeklyStandbyData?.results ?? [],
     /** ISO end date of the selected rolling window; the chart buckets from it. */

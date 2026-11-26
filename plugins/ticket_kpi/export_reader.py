@@ -24,8 +24,9 @@ class ExportFormatError(UploadValidationError):
     400 that carries the message.
     """
 
-    def __init__(self, detail: str):
+    def __init__(self, detail: str, missing: float = float('inf')):
         super().__init__(detail, code='export_format')
+        self.missing = missing  # expected columns not found; inf when nothing was readable
 
 
 def _norm(value: Any) -> str:
@@ -99,7 +100,8 @@ def read_export(file_bytes: bytes, filename: str, expected: Sequence[str]) -> pd
 
     missing = [c for c in expected if _norm(c) not in position]
     if missing:
-        raise ExportFormatError('The export is missing these columns: ' + ', '.join(missing) + '.')
+        raise ExportFormatError('The export is missing these columns: ' + ', '.join(missing) + '.',
+                                missing=len(missing))
 
     indexes = [position[_norm(c)] for c in expected]
     rows = []

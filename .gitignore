@@ -8,6 +8,7 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 ENV/
 build/
 develop-eggs/
@@ -36,8 +37,6 @@ db.sqlite3
 db.sqlite3-journal
 db.e2e.sqlite3
 db.e2e.sqlite3-journal
-db.e2e.sqlite3
-db.e2e.sqlite3-journal
 media/
 staticfiles/
 
@@ -47,8 +46,8 @@ ticket_imports/
 
 # Environment variables
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # IDE
 .vscode/
@@ -73,8 +72,6 @@ health.json
 urls_inventory.json
 frontend/fallow_full.json
 *.fallow.json
-.fallow/cache.bin
-.fallow/graph-cache.bin
 
 # Design audit (local dev only — designlang output)
 design-audit/
@@ -89,7 +86,6 @@ design-fingerprints/
 node_modules/
 frontend/dist/
 frontend/build/
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -117,6 +113,9 @@ opencode.json
 .fallow/
 .ruff_cache/
 .trace-mcp/
+.superpowers/
+.mcheck/
+.scratch-review/
 
 # PII / export data (real employee data — never push)
 *.csv
