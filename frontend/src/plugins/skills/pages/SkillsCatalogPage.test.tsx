@@ -228,4 +228,58 @@ describe("SkillsCatalogPage", () => {
     expect(screen.getByText("Failed to load skills")).toBeInTheDocument();
     expect(screen.queryByText("No skills here yet")).not.toBeInTheDocument();
   });
+
+  it("keeps the renamed category selected when its code changes", () => {
+    const updatedCategories: SkillCategory[] = [
+      { ...categories[0], name: "PLATFORM", code: "PLATFORM" },
+    ];
+    const updatedSkills: Skill[] = skills.map((s) => ({
+      ...s,
+      category_name: "PLATFORM",
+      category_code: "PLATFORM",
+    }));
+
+    const updateMutate = vi.fn((_vars, opts) => {
+      mocks.useSkillCategories.mockReturnValue({
+        data: updatedCategories,
+        isLoading: false,
+        refetch: vi.fn(),
+      });
+      mocks.useSkills.mockReturnValue({
+        data: updatedSkills,
+        isLoading: false,
+        refetch: vi.fn(),
+      });
+      opts?.onSuccess?.(updatedCategories[0]);
+    });
+    mocks.updateCategory.mockReturnValue({
+      mutate: updateMutate,
+      mutateAsync: vi.fn(),
+      isPending: false,
+    });
+
+    const { rerender } = renderPage();
+    fireEvent.click(screen.getByRole("button", { name: /Infrastructure/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit category Infrastructure" }));
+
+    const input = screen.getByLabelText("Name");
+    fireEvent.change(input, { target: { value: "PLATFORM" } });
+    fireEvent.click(screen.getByRole("button", { name: "Update" }));
+
+    const client = new QueryClient();
+    rerender(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <SkillsCatalogPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    expect(screen.getByRole("heading", { name: "PLATFORM" })).toBeInTheDocument();
+    const categoryGroup = within(screen.getByRole("group", { name: "Category" }));
+    expect(categoryGroup.getByRole("button", { name: /^PLATFORM/i })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+  });
 });

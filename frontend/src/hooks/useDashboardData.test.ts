@@ -140,6 +140,87 @@ describe("useDashboardData", () => {
     await waitFor(() => expect(result.current.vacationBalanceDays).toBe(17));
   });
 
+  it("vacationBalanceDays and leaveAvailableDays use live_accrued_balance plus carry-over when current_year is present", async () => {
+    vi.mocked(overtimeService.getLogs).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    } as never);
+    vi.mocked(overtimeService.getSummary).mockResolvedValue({
+      total_hours: 0,
+      total_entries: 0,
+      approved_hours: 0,
+      pending_hours: 0,
+      rejected_hours: 0,
+    });
+    vi.mocked(standbyService.getLogs).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    } as never);
+    vi.mocked(standbyService.getSummary).mockResolvedValue({
+      total_hours: 0,
+      total_entries: 0,
+      approved_hours: 0,
+      pending_hours: 0,
+      rejected_hours: 0,
+    });
+    vi.mocked(leaveService.getRequests).mockResolvedValue({
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    } as never);
+    vi.mocked(leaveService.getUserBalanceSummary).mockResolvedValue({
+      user_id: 1,
+      username: "u",
+      full_name: "U",
+      year: 2026,
+      vacation: {
+        carry_over: {
+          id: 1,
+          total_days: 2,
+          used_days: 0,
+          pending_days: 0,
+          available_days: 2,
+          effective_available_days: 2,
+        },
+        current_year: {
+          id: 2,
+          total_days: 20,
+          used_days: 12,
+          pending_days: 0,
+          available_days: 8,
+          effective_available_days: 8,
+          monthly_accrued_days: 18,
+          yearly_entitlement: 20,
+          live_accrued_balance: 6,
+        },
+        total_available: 10,
+        total_used: 12,
+        total_pending: 0,
+      },
+    } as never);
+    vi.mocked(dashboardService.getHRStats).mockResolvedValue({} as never);
+
+    const queryClient = new QueryClient();
+    const { result } = renderHook(
+      () =>
+        useDashboardData({
+          userId: 1,
+          isAdmin: false,
+          isHR: false,
+          selectedDashboard: "employee",
+        }),
+      { wrapper: createWrapper(queryClient) }
+    );
+
+    await waitFor(() => expect(result.current.vacationBalanceDays).toBe(8));
+    expect(result.current.leaveAvailableDays).toBe(8);
+  });
+
   it("weekOvertimeLogs/weekStandbyLogs come from a dedicated date-ranged query, not the page_size-capped recent list", async () => {
     // The "recent activity" list is capped at page_size 5 and would silently
     // undercount a week with more logs than that. The weekly hours chart
@@ -395,9 +476,7 @@ describe("useDashboardData", () => {
       stats: { pending_overtime: 9, pending_standby: 3, pending_leaves: 2, avg_overtime_hours: 99 },
       month_avg_overtime_hours: 1.5,
       status_counts: { pending: 14, approved: 40, rejected: 1 },
-      monthly_hours: [
-        { month: "2026-10", label: "Oct", overtime: 12, standby: 4 },
-      ],
+      monthly_hours: [{ month: "2026-10", label: "Oct", overtime: 12, standby: 4 }],
       recent_overtime: [
         { id: 1, user_name: "Al", hours: 2, date: "2026-10-01", status: "approved" },
       ],
@@ -441,7 +520,12 @@ describe("useDashboardData", () => {
     // month until someone logged something new.
     for (const fn of [overtimeService.getLogs, standbyService.getLogs]) {
       vi.mocked(fn).mockClear();
-      vi.mocked(fn).mockResolvedValue({ count: 0, next: null, previous: null, results: [] } as never);
+      vi.mocked(fn).mockResolvedValue({
+        count: 0,
+        next: null,
+        previous: null,
+        results: [],
+      } as never);
     }
     vi.mocked(leaveService.getRequests).mockResolvedValue({
       count: 0,

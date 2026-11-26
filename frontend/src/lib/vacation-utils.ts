@@ -1,4 +1,4 @@
-import type { LeaveBalance, LeaveBalanceDetail } from "@/types";
+import type { LeaveBalance, LeaveBalanceDetail, LeaveBalanceSummary } from "@/types";
 import type { VacationBalanceBreakdown, BalanceDetail } from "./vacation-types";
 
 const toNum = (v: string | number | undefined | null): number => {
@@ -106,4 +106,13 @@ export const deriveVacationBalanceFromBalances = (
     current ? toBalanceDetailFromBalance(current) : undefined,
     carry ? toBalanceDetailFromBalance(carry) : undefined
   );
+};
+
+export const deriveVacationBalanceFromSummary = (
+  summary?: LeaveBalanceSummary["vacation"] | null
+): VacationBalanceBreakdown | null => {
+  if (!summary) return null;
+  const current = toBalanceDetailFromSummary(summary.current_year ?? null, { isCarryOver: false });
+  const carryOver = toBalanceDetailFromSummary(summary.carry_over ?? null, { isCarryOver: true });
+  return buildBreakdown(current, carryOver);
 };
