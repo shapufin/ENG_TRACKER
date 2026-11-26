@@ -71,6 +71,8 @@ interface HbprRecordsQuery {
 
 /** Summary export formats the backend `export` action accepts. */
 export type SummaryFileFormat = "xlsx" | "pdf";
+/** month: last 6 months of trend; year: January through the selected month. */
+export type SummaryScope = "month" | "year";
 
 const leaderParams = (leaderId?: number): Record<string, number> =>
   leaderId ? { leader_id: leaderId } : {};
@@ -294,11 +296,13 @@ export const tlScorecardService = {
   exportSummary: (
     month: string | undefined,
     leaderId: number | undefined,
-    fileFormat: SummaryFileFormat
+    fileFormat: SummaryFileFormat,
+    scope: SummaryScope
   ) => {
     const params: Record<string, string | number> = {
       ...leaderParams(leaderId),
       file_format: fileFormat,
+      scope,
     };
     if (month) params.month = month;
     return api.get<Blob>(`${BASE}/export/`, { params, responseType: "blob" });

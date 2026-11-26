@@ -93,12 +93,52 @@ class EngagementServiceTests(TestCase):
             'overtime': {'decided': 2, 'approved': 1, 'judgeable': 2, 'on_time': 1, 'median_fraction': 0.8},
             'standby': {'decided': 0, 'approved': 0, 'judgeable': 0, 'on_time': 0, 'median_fraction': None},
         }
-        score, sub = compute_engagement_score(type_metrics, [0.1, 0.1, 0.8, 0.8])
+        score, sub = compute_engagement_score(
+            type_metrics, {'leave': [0.1, 0.1], 'overtime': [0.8, 0.8], 'standby': []}
+        )
         self.assertEqual(sub['score_speed'], 75.0)  # 3 on time / 4 judgeable
         self.assertEqual(sub['score_approval_rate'], 75.0)  # 3 approved / 4 decided
         self.assertAlmostEqual(sub['score_responsiveness'], 63.34, places=1)
-        self.assertAlmostEqual(sub['score_consistency'], 22.22, places=1)
-        self.assertAlmostEqual(score, 62.11, delta=0.1)
+        self.assertEqual(sub['score_consistency'], 100.0)  # each type is uniform on its own
+        self.assertAlmostEqual(score, 77.67, delta=0.1)
+
+    def test_consistency_is_not_collapsed_by_different_sla_windows(self):
+        # Every request decided in about 2 hours: leave uses ~14% of its same-day
+        # window, standby ~1.3% of its 5-working-day window. Pooling both put a
+        # 10x spread into one list and scored this uniform behaviour at ~17%.
+        from plugins.engagement.services import compute_engagement_score
+
+        type_metrics = {
+            'leave': {'decided': 3, 'approved': 3, 'judgeable': 3, 'on_time': 3, 'median_fraction': 0.14},
+            'overtime': {'decided': 0, 'approved': 0, 'judgeable': 0, 'on_time': 0, 'median_fraction': None},
+            'standby': {'decided': 3, 'approved': 3, 'judgeable': 3, 'on_time': 3, 'median_fraction': 0.013},
+        }
+        _, sub = compute_engagement_score(
+            type_metrics, {'leave': [0.14, 0.14, 0.14], 'overtime': [], 'standby': [0.013, 0.013, 0.013]}
+        )
+        self.assertEqual(sub['score_consistency'], 100.0)
+
+    def test_consistency_weights_types_by_decided_count(self):
+        from plugins.engagement.services import compute_engagement_score
+
+        empty = {'decided': 0, 'approved': 0, 'judgeable': 0, 'on_time': 0, 'median_fraction': None}
+        _, sub = compute_engagement_score(
+            {'leave': empty, 'overtime': empty, 'standby': empty},
+            # leave: 1 - stdev/mean = 1 - 0.35/0.45 = 22.22 over 2 rows; overtime: 100 over 6 rows.
+            {'leave': [0.1, 0.8], 'overtime': [0.5] * 6, 'standby': [0.9]},
+        )
+        # standby has one decided row: no spread to judge, so it is left out.
+        self.assertAlmostEqual(sub['score_consistency'], (22.22 * 2 + 100 * 6) / 8, places=1)
+
+    def test_consistency_is_empty_without_two_decisions_of_one_type(self):
+        from plugins.engagement.services import compute_engagement_score
+
+        empty = {'decided': 0, 'approved': 0, 'judgeable': 0, 'on_time': 0, 'median_fraction': None}
+        _, sub = compute_engagement_score(
+            {'leave': empty, 'overtime': empty, 'standby': empty},
+            {'leave': [0.1], 'overtime': [0.9], 'standby': []},
+        )
+        self.assertIsNone(sub['score_consistency'])
 
     def test_weighted_mean_zero_weight_row_does_not_inflate_result(self):
         # A team_size=0 row alongside a team_size=10 row must not skew the

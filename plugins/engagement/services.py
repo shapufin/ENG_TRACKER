@@ -430,10 +430,24 @@ def compute_type_metrics(type_key, scope, month_start, month_end, holidays, now)
     return metrics, fractions, next_deadline, submitters
 
 
-def compute_engagement_score(type_metrics, all_fractions):
+def _consistency(fractions):
+    """1 - stdev/mean of one request type's deadline fractions, 0-100; None under two decisions."""
+    if len(fractions) < 2:
+        return None
+    mean = sum(fractions) / len(fractions)
+    if mean <= 0:
+        return 100.0
+    variance = sum((x - mean) ** 2 for x in fractions) / len(fractions)
+    return round(max(0.0, 1 - (variance ** 0.5) / mean) * 100, 2)
+
+
+def compute_engagement_score(type_metrics, fractions_by_type):
     """0-100 composite: within-SLA 40% + approval rate 20% + responsiveness 20% + consistency 20%.
 
-    Weights of components with no data are dropped and the rest renormalised.
+    Consistency is judged within each request type and weighted by decided count:
+    the deadline windows differ per type (same day, 2 and 5 working days), so a
+    pooled spread would punish uniform decision speed. Weights of components with
+    no data are dropped and the rest renormalised.
     """
     judgeable = sum(m['judgeable'] for m in type_metrics.values())
     on_time = sum(m['on_time'] for m in type_metrics.values())
@@ -448,14 +462,9 @@ def compute_engagement_score(type_metrics, all_fractions):
         if m['median_fraction'] is not None
     )
 
-    consistency = None
-    if len(all_fractions) >= 2:
-        mean = sum(all_fractions) / len(all_fractions)
-        if mean > 0:
-            variance = sum((x - mean) ** 2 for x in all_fractions) / len(all_fractions)
-            consistency = round(max(0.0, 1 - (variance ** 0.5) / mean) * 100, 2)
-        else:
-            consistency = 100.0
+    consistency = weighted_mean(
+        (_consistency(fractions), len(fractions)) for fractions in fractions_by_type.values()
+    )
 
     components = {'speed': speed, 'approval': approval, 'responsiveness': responsiveness, 'consistency': consistency}
     known = [(value, COMPONENT_WEIGHTS[key]) for key, value in components.items() if value is not None]
@@ -629,7 +638,7 @@ def compute_tl_metric(leader, team, month, scope=None, owned=None):
     )
 
     metrics = {}
-    all_fractions = []
+    fractions_by_type = {}
     submitter_ids = set()
     next_deadline = None
     for type_key in REQUEST_TYPES:
@@ -637,7 +646,7 @@ def compute_tl_metric(leader, team, month, scope=None, owned=None):
             type_key, scopes[type_key], month_start, month_end, holidays, now
         )
         metrics[type_key] = type_metrics
-        all_fractions.extend(fractions)
+        fractions_by_type[type_key] = fractions
         submitter_ids |= submitters
         if type_next and (next_deadline is None or type_next < next_deadline):
             next_deadline = type_next
@@ -646,7 +655,7 @@ def compute_tl_metric(leader, team, month, scope=None, owned=None):
     total_approved = sum(m['approved'] for m in metrics.values())
     approval_rate_pct = round((total_approved / total_decided) * 100, 2) if total_decided else None
 
-    engagement_score, sub_scores = compute_engagement_score(metrics, all_fractions)
+    engagement_score, sub_scores = compute_engagement_score(metrics, fractions_by_type)
     closure_on_time, late_closure_penalty = closure_outcome(member_ids, month_start.date(), now)
     if late_closure_penalty and engagement_score is not None:
         engagement_score = round(max(0.0, engagement_score - late_closure_penalty), 2)

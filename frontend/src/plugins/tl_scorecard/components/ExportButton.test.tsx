@@ -22,9 +22,9 @@ describe("ExportButton", () => {
     exportSummary.mockResolvedValue({ data: new Blob() } as never);
     render(<ExportButton month="2026-10-01" />);
     fireEvent.click(screen.getByRole("button", { name: "Export Summary" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Excel workbook (.xlsx)" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Excel — this month" }));
     await waitFor(() =>
-      expect(exportSummary).toHaveBeenCalledWith("2026-10-01", undefined, "xlsx")
+      expect(exportSummary).toHaveBeenCalledWith("2026-10-01", undefined, "xlsx", "month")
     );
     expect(downloadBlobResponse).toHaveBeenCalled();
   });
@@ -33,8 +33,28 @@ describe("ExportButton", () => {
     exportSummary.mockResolvedValue({ data: new Blob() } as never);
     render(<ExportButton month="2026-10-01" leaderId={7} />);
     fireEvent.click(screen.getByRole("button", { name: "Export Summary" }));
-    fireEvent.click(await screen.findByRole("button", { name: "PDF report" }));
-    await waitFor(() => expect(exportSummary).toHaveBeenCalledWith("2026-10-01", 7, "pdf"));
+    fireEvent.click(await screen.findByRole("button", { name: "PDF report — this month" }));
+    await waitFor(() =>
+      expect(exportSummary).toHaveBeenCalledWith("2026-10-01", 7, "pdf", "month")
+    );
+  });
+
+  it.each([
+    ["Excel — full year", "xlsx"],
+    ["PDF report — full year", "pdf"],
+  ])("exports %s from January through the viewed month", async (label, format) => {
+    exportSummary.mockResolvedValue({ data: new Blob() } as never);
+    render(<ExportButton month="2026-10-01" leaderId={7} />);
+    fireEvent.click(screen.getByRole("button", { name: "Export Summary" }));
+    fireEvent.click(await screen.findByRole("button", { name: label }));
+    await waitFor(() =>
+      expect(exportSummary).toHaveBeenCalledWith("2026-10-01", 7, format, "year")
+    );
+    // Without a readable Content-Disposition the fallback names the year, not the month.
+    expect(downloadBlobResponse).toHaveBeenCalledWith(
+      expect.anything(),
+      `tl-scorecard-year-2026.${format}`
+    );
   });
 
   it("renders an icon-only toolbar button that opens the same menu", async () => {
@@ -43,8 +63,10 @@ describe("ExportButton", () => {
     const button = screen.getByRole("button", { name: "Export summary" });
     expect(button).toHaveAttribute("title", "Export summary");
     fireEvent.click(button);
-    fireEvent.click(await screen.findByRole("button", { name: "PDF report" }));
-    await waitFor(() => expect(exportSummary).toHaveBeenCalledWith("2026-10-01", undefined, "pdf"));
+    fireEvent.click(await screen.findByRole("button", { name: "PDF report — this month" }));
+    await waitFor(() =>
+      expect(exportSummary).toHaveBeenCalledWith("2026-10-01", undefined, "pdf", "month")
+    );
   });
 
   it("names the download after the server's Content-Disposition filename", async () => {
@@ -54,7 +76,7 @@ describe("ExportButton", () => {
     } as never);
     render(<ExportButton month="2026-10-01" />);
     fireEvent.click(screen.getByRole("button", { name: "Export Summary" }));
-    fireEvent.click(await screen.findByRole("button", { name: "PDF report" }));
+    fireEvent.click(await screen.findByRole("button", { name: "PDF report — this month" }));
     await waitFor(() =>
       expect(downloadBlobResponse).toHaveBeenCalledWith(
         expect.anything(),

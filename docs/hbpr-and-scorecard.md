@@ -241,8 +241,10 @@ assignment, never a global fan-out; generic copy; one-on-ones never notify):
 
 ## Exports, visualize and EPR progress
 
-- **Scorecard export:** `GET /api/plugins/tl_scorecard/export/?leader_id=&month=YYYY-MM-DD&file_format=xlsx|pdf`.
-  `xlsx` is the default; any other value is a 400 (`throttle_scope='export'`). The
+- **Scorecard export:** `GET /api/plugins/tl_scorecard/export/?leader_id=&month=YYYY-MM-DD&file_format=xlsx|pdf&scope=month|year`.
+  `xlsx` is the default; any other value is a 400 (`throttle_scope='export'`). `scope=month`
+  (default) trends the last 6 months; `scope=year` (2026-11-26) trends January through the
+  selected month and names the file `tl_scorecard_year_<user>_<year>`; any other scope is a 400. The
   workbook has the sheets Summary, Trend, Governance and HBPR partnership log. The PDF has
   Summary, Meetings & reviews, EPR progress, Team risks & seniority, Governance records,
   and Partnership log (only when the leader has partnership records). Both formats are

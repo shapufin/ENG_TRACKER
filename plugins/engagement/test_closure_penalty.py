@@ -90,5 +90,5 @@ class ClosurePenaltyTests(TestCase):
             self.assertTrue(is_stale(snap))
 
     def test_a_score_without_data_stays_empty(self):
-        score, _parts = compute_engagement_score({}, [])
+        score, _parts = compute_engagement_score({}, {})
         self.assertIsNone(score)
