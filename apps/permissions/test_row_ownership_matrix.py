@@ -23,7 +23,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import Resolver404, URLResolver, clear_url_caches, get_resolver, path, resolve
 from rest_framework import serializers, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -310,7 +310,9 @@ def owner_hits(url, payload, text, usernames):
     for username, user_id in usernames.items():
         if re.search(r'\b' + re.escape(username) + r'\b', text):
             hits.setdefault(user_id, []).append(('body text', None))
-    if re.search(r'Matrix B|MXB', text):
+    # The code is matched as a whole token ("MXB", "MXB_CAL"), never inside random
+    # base64url text such as a per-run VAPID public key.
+    if re.search(r'Matrix B|(?<![\w-])MXB(?![A-Za-z0-9-])', text):
         hits.setdefault(FOREIGN_TEAM, []).append(('body text names team B', None))
     if url in ID_IS_USER_ROUTES:
         for index, row in enumerate(rows_of(payload)):
@@ -760,3 +762,22 @@ class RowOwnershipMatrixTests(TestCase):
                         self.assertIn(code, (403, 404), f'{role} read {owner} row {detail}')
         self.assertGreater(checked[self.b1.id], 5)
         self.assertGreater(checked[self.tl_a.id], 2)
+
+
+class TeamBMarkerScanTests(SimpleTestCase):
+    """The team-B body scan matches the fixture's name and codes, never random text."""
+
+    def _names_team_b(self, text):
+        return FOREIGN_TEAM in owner_hits('/api/x/', {}, text, {})
+
+    def test_team_b_name_and_codes_are_found(self):
+        for text in ('{"name": "Matrix B"}', '{"code": "MXB"}', '{"code": "MXB_CAL"}'):
+            with self.subTest(text=text):
+                self.assertTrue(self._names_team_b(text))
+
+    def test_marker_inside_a_random_token_is_not_team_b(self):
+        # A VAPID public key is fresh base64url per CI run; one that contained
+        # "MXB" failed this matrix for every role at vapid-public-key/.
+        for text in ('{"public_key": "BKz9MXBq_4-r"}', '{"public_key": "a-MXB-b"}', '{"k": "xMXB_1"}'):
+            with self.subTest(text=text):
+                self.assertFalse(self._names_team_b(text))
