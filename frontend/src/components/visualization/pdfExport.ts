@@ -1,5 +1,26 @@
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas-pro";
+// Adds `jsPDF.svg()`, which draws an <svg> as vector paths and real text.
+import "svg2pdf.js";
+
+/** html2canvas capture scale: canvas pixels per CSS pixel. */
+const CAPTURE_SCALE = 2;
+/** The plot surface Recharts renders; legends and tooltips are HTML around it. */
+const CHART_SVG = ".recharts-wrapper > svg.recharts-surface";
+/** Paint read from the computed style: Recharts writes `hsl(var(--token))`, which svg2pdf cannot resolve. */
+const PAINT_PROPERTIES = [
+  "fill",
+  "fill-opacity",
+  "stroke",
+  "stroke-width",
+  "stroke-dasharray",
+  "stroke-opacity",
+  "opacity",
+  "stop-color",
+  "stop-opacity",
+  "font-size",
+  "font-weight",
+];
 
 interface CaptureToPdfOptions {
   title: string;
@@ -109,9 +130,158 @@ export function isSectionFullWidth(section: HTMLElement, container: HTMLElement)
   return true;
 }
 
+/** One chart of a section: self-contained SVG markup and its box, in CSS px from the section's corner. */
+export interface ChartVector {
+  markup: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * svg2pdf averages `stop-opacity` into one opacity for the whole gradient, so a fading area fill
+ * prints flat. Charts print on white, so each stop is blended onto white and made opaque instead.
+ */
+function blendStopOnWhite(stop: Element): void {
+  const rgb = (stop.getAttribute("stop-color") ?? "").match(/^rgba?\(([^)]+)\)$/);
+  if (!rgb) return;
+  const [r, g, b, colourAlpha = 1] = rgb[1].split(",").map(Number);
+  const alpha = colourAlpha * Number(stop.getAttribute("stop-opacity") ?? 1);
+  const mix = (channel: number) => Math.round(255 + (channel - 255) * alpha);
+  stop.setAttribute("stop-color", `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`);
+  stop.setAttribute("stop-opacity", "1");
+}
+
+let chartCopies = 0;
+
+/**
+ * svg2pdf resolves `url(#id)` and `href="#id"` in the document, where the live chart carries the
+ * same ids and comes first (its gradients still use `var(--token)`). The copy gets its own ids.
+ */
+function renameIds(copy: SVGSVGElement): void {
+  const prefix = `pdf-chart-${++chartCopies}-`;
+  const ids = new Set(Array.from(copy.querySelectorAll("[id]"), (el) => el.id));
+  if (ids.size === 0) return;
+  const rename = (id: string, whole: string) =>
+    ids.has(id) ? whole.replace(id, prefix + id) : whole;
+  for (const el of [copy, ...Array.from(copy.querySelectorAll("*"))]) {
+    if (ids.has(el.id)) el.id = prefix + el.id;
+    for (const attr of Array.from(el.attributes)) {
+      const value = attr.value
+        .replace(/url\(#([^)]+)\)/g, (whole, id: string) => rename(id, whole))
+        .replace(/^#(.+)$/, (whole, id: string) => rename(id, whole));
+      if (value !== attr.value) el.setAttributeNS(attr.namespaceURI, attr.name, value);
+    }
+  }
+}
+
+/**
+ * Copies every Recharts chart of `section` with its computed paint written as attributes, so
+ * the copy draws the same outside the page, then hides the chart: the section image keeps its
+ * space and any HTML laid over it (legends) without the plot. Run it on the print clone only
+ * (light theme applied). A chart inside `aria-hidden="true"` is decoration behind other content
+ * (the engagement score card's faded wave, faded by its wrapper): it stays in the section image.
+ */
+export function extractChartVectors(section: HTMLElement): ChartVector[] {
+  const view = section.ownerDocument.defaultView ?? window;
+  const box = section.getBoundingClientRect();
+  // Only aria-hidden inside the section counts: an open dialog marks the whole app shell hidden.
+  const charts = Array.from(section.querySelectorAll<SVGSVGElement>(CHART_SVG)).filter((chart) => {
+    const hidden = chart.closest('[aria-hidden="true"]');
+    return hidden === null || !section.contains(hidden);
+  });
+  return charts.map((chart) => {
+    const where = chart.getBoundingClientRect();
+    const copy = chart.cloneNode(true) as SVGSVGElement;
+    const sources = [chart, ...Array.from(chart.querySelectorAll("*"))];
+    const targets = [copy, ...Array.from(copy.querySelectorAll("*"))];
+    // html2canvas inlines the live page's computed style (dark mode included) on these nodes;
+    // without it the print theme cascades. The root keeps its own: it sizes the hidden chart.
+    for (const node of sources.slice(1)) node.removeAttribute("style");
+    sources.forEach((source, i) => {
+      const style = view.getComputedStyle(source);
+      // html2canvas's clone inlines every computed property; svg2pdf lets inline style win over
+      // the attributes below, which brought back the absolute url() fills and stop opacity.
+      targets[i].removeAttribute("style");
+      for (const property of PAINT_PROPERTIES) {
+        const value = style.getPropertyValue(property);
+        // Keep paint servers as written (`url(#id)`): the computed form is an absolute URL.
+        const own = targets[i].getAttribute(property) ?? "";
+        if (value && !value.startsWith("url(") && !own.startsWith("url(")) {
+          targets[i].setAttribute(property, value);
+        }
+      }
+      const tag = source.tagName.toLowerCase();
+      // The app font is not embedded in jsPDF; Helvetica is one of its built-in fonts.
+      if (tag === "text" || tag === "tspan") targets[i].setAttribute("font-family", "helvetica");
+      if (tag === "stop") blendStopOnWhite(targets[i]);
+    });
+    renameIds(copy);
+    chart.style.visibility = "hidden";
+    return {
+      markup: new XMLSerializer().serializeToString(copy),
+      x: where.left - box.left,
+      y: where.top - box.top,
+      width: where.width,
+      height: where.height,
+    };
+  });
+}
+
 interface CapturedItem {
   canvas: HTMLCanvasElement;
   isFullWidth: boolean;
+  vectors: ChartVector[];
+}
+
+/** The chart copy rendered to a PNG at the capture scale (used when svg2pdf cannot draw it). */
+async function rasterizeChart(chart: ChartVector): Promise<string> {
+  const image = new Image();
+  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(chart.markup)}`;
+  await image.decode();
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(chart.width * CAPTURE_SCALE);
+  canvas.height = Math.round(chart.height * CAPTURE_SCALE);
+  canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/png");
+}
+
+/**
+ * Draws the charts of a placed section as vectors into the space its image left for them.
+ * A chart svg2pdf cannot draw is placed as an image of the same copy, so it is never missing.
+ */
+async function drawChartVectors(
+  pdf: jsPDF,
+  item: CapturedItem,
+  x: number,
+  y: number,
+  drawWidth: number
+): Promise<void> {
+  const k = (drawWidth * CAPTURE_SCALE) / item.canvas.width; // PDF points per CSS pixel
+  for (const chart of item.vectors) {
+    const place = {
+      x: x + chart.x * k,
+      y: y + chart.y * k,
+      width: chart.width * k,
+      height: chart.height * k,
+    };
+    // svg2pdf measures text, so the SVG has to be in a rendered document.
+    const host = document.createElement("div");
+    host.setAttribute("data-pdf-vector-host", "");
+    host.style.cssText = "position:fixed;left:-10000px;top:0;pointer-events:none;";
+    host.innerHTML = chart.markup;
+    document.body.appendChild(host);
+    try {
+      await pdf.svg(host.firstElementChild as Element, place);
+    } catch (error) {
+      console.warn("PDF export: chart drawn as an image, svg2pdf could not draw it", error);
+      const png = await rasterizeChart(chart);
+      pdf.addImage(png, "PNG", place.x, place.y, place.width, place.height, undefined, "FAST");
+    } finally {
+      host.remove();
+    }
+  }
 }
 
 /**
@@ -153,12 +323,14 @@ export async function captureChartsToPdf(
   for (let i = 0; i < sections.length; i++) {
     const extra = hiddenScrollExtent(sections[i]);
     const isFull = isSectionFullWidth(sections[i], container);
+    let vectors: ChartVector[] = [];
     const canvas = await html2canvas(sections[i], {
-      scale: 2,
+      scale: CAPTURE_SCALE,
       backgroundColor: "#ffffff",
       onclone: (_doc, cloned) => {
         expandScrollRegions(cloned);
         applyPrintStyles(cloned);
+        vectors = extractChartVectors(cloned);
       },
       ...(extra > 0 && {
         height: Math.ceil(sections[i].getBoundingClientRect().height + extra),
@@ -166,7 +338,7 @@ export async function captureChartsToPdf(
     });
 
     if (canvas.width === 0 || canvas.height === 0) continue;
-    captured.push({ canvas, isFullWidth: isFull });
+    captured.push({ canvas, isFullWidth: isFull, vectors });
   }
 
   if (captured.length === 0) return;
@@ -231,6 +403,8 @@ export async function captureChartsToPdf(
         undefined,
         "FAST"
       );
+      await drawChartVectors(pdf, current, margin, currentY, leftDrawWidth);
+      await drawChartVectors(pdf, next, margin + colWidth + GAP, currentY, rightDrawWidth);
 
       currentY += rowHeight + GAP;
       rendered += 2;
@@ -265,6 +439,7 @@ export async function captureChartsToPdf(
         undefined,
         "FAST"
       );
+      await drawChartVectors(pdf, current, x, currentY, drawWidth);
 
       currentY += drawHeight + GAP;
       rendered += 1;

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import html2canvas from "html2canvas-pro";
 import {
   captureChartsToPdf,
@@ -6,6 +6,7 @@ import {
   hiddenScrollExtent,
   isSectionFullWidth,
   applyPrintStyles,
+  extractChartVectors,
 } from "./pdfExport";
 
 const addImage = vi.fn();
@@ -21,7 +22,11 @@ const roundedRect = vi.fn();
 const line = vi.fn();
 const setPage = vi.fn();
 const save = vi.fn();
+const svg = vi.fn();
 let pageCount = 1;
+
+// svg2pdf.js needs a real browser DOM (it does not run under JSDOM); `pdf.svg` is mocked below.
+vi.mock("svg2pdf.js", () => ({}));
 
 vi.mock("jspdf", () => ({
   jsPDF: class {
@@ -43,6 +48,7 @@ vi.mock("jspdf", () => ({
     setPage = setPage;
     getNumberOfPages = vi.fn().mockImplementation(() => pageCount);
     save = save;
+    svg = svg;
   },
 }));
 
@@ -370,5 +376,257 @@ describe("scrolling card bodies in the capture", () => {
     expect(options.height).toBe(650);
     options.onclone(document, section);
     expect(section.style.height).toBe("auto");
+  });
+});
+
+const domRect = (x: number, y: number, width: number, height: number) =>
+  ({ x, y, left: x, top: y, width, height, right: x + width, bottom: y + height }) as DOMRect;
+
+/** A section with one Recharts chart drawn at (10, 20), 300 x 200 CSS px inside it. */
+const makeChartSection = () => {
+  const section = document.createElement("div");
+  section.setAttribute("data-chart-section", "chart");
+  const wrapper = document.createElement("div");
+  wrapper.className = "recharts-wrapper";
+  wrapper.innerHTML =
+    '<svg class="recharts-surface" width="300" height="200" viewBox="0 0 300 200">' +
+    '<line stroke="hsl(var(--border))" x1="0" y1="0" x2="10" y2="0"></line>' +
+    '<path fill="url(#trendFill)" d="M0 0L10 10"></path>' +
+    '<text fill="hsl(var(--muted-foreground))">Jun</text></svg>';
+  section.appendChild(wrapper);
+  // A lucide icon is an <svg> too, but not a chart.
+  section.insertAdjacentHTML("beforeend", '<svg class="lucide" width="16" height="16"></svg>');
+  document.body.appendChild(section);
+  vi.spyOn(section, "getBoundingClientRect").mockReturnValue(domRect(100, 50, 600, 400));
+  const chart = section.querySelector<SVGSVGElement>("svg.recharts-surface")!;
+  vi.spyOn(chart, "getBoundingClientRect").mockReturnValue(domRect(110, 70, 300, 200));
+  return { section, chart };
+};
+
+describe("vector charts", () => {
+  // Spies on window/prototype methods must not stack across tests.
+  afterEach(() => vi.restoreAllMocks());
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    svg.mockReset();
+    addImage.mockClear();
+    rect.mockClear();
+  });
+
+  it("finds only Recharts chart SVGs and measures them against their section", () => {
+    const { section } = makeChartSection();
+    const vectors = extractChartVectors(section);
+    expect(vectors).toHaveLength(1);
+    expect(vectors[0]).toMatchObject({ x: 10, y: 20, width: 300, height: 200 });
+  });
+
+  it("leaves a decorative chart (inside aria-hidden) in the section image", () => {
+    // The engagement score card draws a faded wave behind its number: covering it with a
+    // white box would erase the number, and its opacity lives on the aria-hidden wrapper.
+    const { section } = makeChartSection();
+    const backdrop = document.createElement("div");
+    backdrop.setAttribute("aria-hidden", "true");
+    backdrop.appendChild(section.querySelector(".recharts-wrapper")!);
+    section.appendChild(backdrop);
+    expect(extractChartVectors(section)).toEqual([]);
+  });
+
+  it("still finds the charts while a modal hides the app shell (aria-hidden outside the section)", () => {
+    // An open Radix dialog (the two-factor prompt) marks the rest of the app aria-hidden.
+    const { section } = makeChartSection();
+    const shell = document.createElement("div");
+    shell.setAttribute("aria-hidden", "true");
+    document.body.appendChild(shell);
+    shell.appendChild(section);
+    expect(extractChartVectors(section)).toHaveLength(1);
+  });
+
+  it("writes the resolved print colours onto a copy, leaving the live chart alone", () => {
+    const { section, chart } = makeChartSection();
+    const real = window.getComputedStyle.bind(window);
+    vi.spyOn(window, "getComputedStyle").mockImplementation((el: Element) => {
+      const style = real(el);
+      if (el.tagName.toLowerCase() === "line") {
+        return {
+          ...style,
+          getPropertyValue: (p: string) => (p === "stroke" ? "rgb(203, 213, 225)" : ""),
+        } as CSSStyleDeclaration;
+      }
+      if (el.tagName.toLowerCase() === "text") {
+        return {
+          ...style,
+          getPropertyValue: (p: string) => (p === "fill" ? "rgb(83, 89, 101)" : ""),
+        } as CSSStyleDeclaration;
+      }
+      if (el.tagName.toLowerCase() === "path") {
+        // A computed gradient reference is an absolute URL svg2pdf cannot follow.
+        return {
+          ...style,
+          getPropertyValue: (p: string) => (p === "fill" ? 'url("http://x/page#trendFill")' : ""),
+        } as CSSStyleDeclaration;
+      }
+      return style;
+    });
+
+    const [vector] = extractChartVectors(section);
+    expect(vector.markup).toContain('stroke="rgb(203, 213, 225)"');
+    expect(vector.markup).toContain('fill="rgb(83, 89, 101)"');
+    expect(vector.markup).not.toContain("var(--");
+    // Text is drawn with a font jsPDF ships with.
+    expect(vector.markup).toContain('font-family="helvetica"');
+    expect(vector.markup).toContain('fill="url(#trendFill)"');
+    expect(chart.querySelector("line")!.getAttribute("stroke")).toBe("hsl(var(--border))");
+    // Hidden in the print clone, so the section image keeps the space and the legend but not the plot.
+    expect(chart.style.visibility).toBe("hidden");
+  });
+
+  it("blends each gradient stop onto white, since svg2pdf averages stop opacity over the gradient", () => {
+    const { section } = makeChartSection();
+    section
+      .querySelector("svg.recharts-surface")!
+      .insertAdjacentHTML(
+        "afterbegin",
+        '<defs><linearGradient id="g"><stop offset="0%"></stop><stop offset="100%"></stop></linearGradient></defs>'
+      );
+    const stops = section.querySelectorAll("stop");
+    const real = window.getComputedStyle.bind(window);
+    vi.spyOn(window, "getComputedStyle").mockImplementation((el: Element) => {
+      const values: Record<string, string> =
+        el === stops[0]
+          ? { "stop-color": "rgb(59, 130, 246)", "stop-opacity": "0.5" }
+          : el === stops[1]
+            ? { "stop-color": "rgba(59, 130, 246, 0.5)", "stop-opacity": "0" }
+            : {};
+      return {
+        ...real(el),
+        getPropertyValue: (p: string) => values[p] ?? "",
+      } as CSSStyleDeclaration;
+    });
+
+    const copy = new DOMParser().parseFromString(
+      extractChartVectors(section)[0].markup,
+      "image/svg+xml"
+    );
+    const [first, last] = Array.from(copy.querySelectorAll("stop"));
+    // 59 + (255 - 59) * 0.5 = 157, 130 -> 192.5 -> 193, 246 -> 250.5 -> 251
+    expect(first.getAttribute("stop-color")).toBe("rgb(157, 193, 251)");
+    expect(first.getAttribute("stop-opacity")).toBe("1");
+    // Colour alpha multiplies stop-opacity: fully transparent is plain white.
+    expect(last.getAttribute("stop-color")).toBe("rgb(255, 255, 255)");
+    expect(last.getAttribute("stop-opacity")).toBe("1");
+  });
+
+  it("gives the copy its own ids, so url(#id) never resolves to the live chart's gradient", () => {
+    // svg2pdf looks ids up in the document, where the live chart (same ids) comes first.
+    const { section } = makeChartSection();
+    section
+      .querySelector("svg.recharts-surface")!
+      .insertAdjacentHTML(
+        "afterbegin",
+        '<defs><linearGradient id="fade"></linearGradient><clipPath id="plot"><rect></rect></clipPath></defs>' +
+          '<path fill="url(#fade)" clip-path="url(#plot)"></path><use href="#plot"></use>'
+      );
+
+    const copy = new DOMParser().parseFromString(
+      extractChartVectors(section)[0].markup,
+      "image/svg+xml"
+    );
+    const gradientId = copy.querySelector("linearGradient")!.id;
+    const clipId = copy.querySelector("clipPath")!.id;
+    expect(gradientId).not.toBe("fade");
+    expect(clipId).not.toBe("plot");
+    const path = copy.querySelector("path[clip-path]")!;
+    expect(path.getAttribute("fill")).toBe(`url(#${gradientId})`);
+    expect(path.getAttribute("clip-path")).toBe(`url(#${clipId})`);
+    expect(copy.querySelector("use")!.getAttribute("href")).toBe(`#${clipId}`);
+    // Two exports never share ids either.
+    const again = new DOMParser().parseFromString(
+      extractChartVectors(section)[0].markup,
+      "image/svg+xml"
+    );
+    expect(again.querySelector("linearGradient")!.id).not.toBe(gradientId);
+  });
+
+  it("drops inline styles from the copy, so html2canvas's inlined computed style cannot override the paint", () => {
+    // The html2canvas clone inlines every computed property; svg2pdf lets inline style win,
+    // which brought back the fading stop opacity and the absolute url() fill.
+    const { section } = makeChartSection();
+    section
+      .querySelector("line")!
+      .setAttribute("style", "stroke: url(http://x/#a); stop-opacity: 0.45");
+    const copy = new DOMParser().parseFromString(
+      extractChartVectors(section)[0].markup,
+      "image/svg+xml"
+    );
+    expect(copy.querySelectorAll("[style]")).toHaveLength(0);
+  });
+
+  it("reads paint after dropping inline styles, so a dark-mode export prints the light theme", () => {
+    // html2canvas inlines the live page's computed style (dark mode) on the clone's SVG nodes;
+    // the print theme only cascades once those inline values are gone.
+    const { section } = makeChartSection();
+    section.querySelector("line")!.setAttribute("style", "stroke: rgb(1, 2, 3)");
+    const [vector] = extractChartVectors(section);
+    expect(vector.markup).not.toContain("rgb(1, 2, 3)");
+  });
+
+  const captureWithChart = () =>
+    vi.mocked(html2canvas).mockImplementation(async (_el, options) => {
+      const { section } = makeChartSection();
+      options?.onclone?.(document, section);
+      return {
+        width: 1200, // 600 CSS px at scale 2
+        height: 800,
+        toDataURL: () => "data:image/png;base64,fake",
+      } as unknown as HTMLCanvasElement;
+    });
+
+  it("draws each chart as a vector into its place, at the section's scale", async () => {
+    captureWithChart();
+    svg.mockResolvedValue(undefined);
+
+    await captureChartsToPdf(makeContainer(1), { title: "t", filename: "f.pdf" });
+
+    const [, , sx, sy, drawWidth] = addImage.mock.calls[0];
+    const k = drawWidth / 600; // PDF points per CSS pixel
+    expect(svg).toHaveBeenCalledTimes(1);
+    const [element, place] = svg.mock.calls[0];
+    expect(element.tagName.toLowerCase()).toBe("svg");
+    expect(place.x).toBeCloseTo(sx + 10 * k, 3);
+    expect(place.y).toBeCloseTo(sy + 20 * k, 3);
+    expect(place.width).toBeCloseTo(300 * k, 3);
+    expect(place.height).toBeCloseTo(200 * k, 3);
+    // No backing box: it would cover an HTML legend laid over the chart area.
+    expect(rect).not.toHaveBeenCalledWith(place.x, place.y, place.width, place.height, "F");
+    // The temporary host is removed again.
+    expect(document.querySelectorAll("[data-pdf-vector-host]")).toHaveLength(0);
+  });
+
+  it("draws the chart as an image instead, with a warning, when svg2pdf cannot draw it", async () => {
+    captureWithChart();
+    svg.mockRejectedValue(new Error("unsupported element"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    // JSDOM has no image decoding: the SVG copy "loads" at once.
+    Object.defineProperty(HTMLImageElement.prototype, "decode", {
+      configurable: true,
+      value: () => Promise.resolve(),
+    });
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+      drawImage: vi.fn(),
+    } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockReturnValue(
+      "data:image/png;base64,crop"
+    );
+
+    await captureChartsToPdf(makeContainer(1), { title: "t", filename: "f.pdf" });
+
+    expect(addImage).toHaveBeenCalledTimes(2); // the section, then the chart as an image
+    const [data, , x, y, w, h] = addImage.mock.calls[1];
+    const [place] = svg.mock.calls[0].slice(1);
+    expect(data).toBe("data:image/png;base64,crop");
+    expect([x, y, w, h]).toEqual([place.x, place.y, place.width, place.height]);
+    expect(warn).toHaveBeenCalled();
+    expect(save).toHaveBeenCalled();
   });
 });
