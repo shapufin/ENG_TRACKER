@@ -27,7 +27,8 @@ from core.utils.cache import (
     set_cached_response_data,
 )
 from apps.core.cache_constants import CacheKey, CacheTTL
-from django.db.models import Q, Count
+from django.db.models import Q, Count, F
+from django.db.models.functions import Coalesce, TruncDate
 from .models import DashboardWidget, UserDashboardPreference, SiteBranding
 from .models.calendar import CalendarWorkspace, UserCalendarPreference, PublicHoliday
 from .serializers import (
@@ -41,7 +42,7 @@ from .serializers import (
     MaintenanceUpdateSerializer,
     WorkspaceUserSerializer,
 )
-from core.utils.timezone_local import business_today
+from core.utils.timezone_local import business_today, business_tz
 
 User = get_user_model()
 
@@ -149,12 +150,41 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
                     UserProfile.objects.filter(teams=team).values_list('user_id', flat=True)
                 )
 
-        # Always include the current user so TL can see their own data alongside team members
-        team_member_ids.add(user.id)
+        # The viewer is never part of their own roster (item 93): their leave cannot be
+        # self-approved and their own requests live on their own pages.
+        team_member_ids.discard(user.id)
 
         logger.debug(f"[TL Dashboard] final_member_ids={team_member_ids}")
 
         return team, list(team_member_ids), None
+
+    def _queue_rows(self, user, member_ids):
+        """Overtime, standby and leave rows behind every Line Manager figure (item 93).
+
+        A leader's overtime and standby follow the owner rule (item 82), so each
+        figure counts the same rows as the queue; staff and pure HR see the whole team.
+        """
+        from apps.overtime.models import OvertimeLog
+        from apps.standby.models import StandbyLog
+        from apps.leave_management.models import LeaveRequest
+
+        ot_rows = OvertimeLog.objects.filter(user_id__in=member_ids)
+        sb_rows = StandbyLog.objects.filter(user_id__in=member_ids)
+        if not self._is_company_scope(user):
+            from apps.users.services.leader_ownership import owned_by_leader_q
+            ot_rows = ot_rows.filter(owned_by_leader_q(user.id))
+            sb_rows = sb_rows.filter(owned_by_leader_q(user.id))
+        return ot_rows, sb_rows, LeaveRequest.objects.filter(user_id__in=member_ids)
+
+    @staticmethod
+    def _by_submission_day(rows):
+        """Annotate ``day``: the business-timezone date a request was submitted."""
+        # Legacy leave rows have no submitted_at.
+        submitted = (
+            Coalesce('submitted_at', 'created_at') if rows.model._meta.model_name == 'leaverequest'
+            else F('submitted_at')
+        )
+        return rows.annotate(day=TruncDate(submitted, tzinfo=business_tz()))
 
     @staticmethod
     def _is_company_scope(user):
@@ -238,7 +268,6 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         Query param: team_id (optional)
         Returns: pending_team_overtime, pending_team_standby, pending_team_leaves, team_size, approved_count, rejected_count, total_count
         """
-        from apps.overtime.models import OvertimeLog
         from apps.standby.models import StandbyLog
         from apps.leave_management.models import LeaveRequest
 
@@ -259,15 +288,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({'error': 'Team not found'}, status=status.HTTP_404_NOT_FOUND)
 
         # 3 aggregate queries instead of 9 sequential COUNT queries
-        # A leader's overtime/standby counts follow the owner rule (item 82), so the badge
-        # matches their queue; staff and HR see the whole team.
-        ot_rows = OvertimeLog.objects.filter(user_id__in=team_member_ids)
-        sb_rows = StandbyLog.objects.filter(user_id__in=team_member_ids)
-        user = request.user
-        if not self._is_company_scope(user):
-            from apps.users.services.leader_ownership import owned_by_leader_q
-            ot_rows = ot_rows.filter(owned_by_leader_q(user.id))
-            sb_rows = sb_rows.filter(owned_by_leader_q(user.id))
+        ot_rows, sb_rows, lv_rows = self._queue_rows(request.user, team_member_ids)
         ot_stats = ot_rows.aggregate(
             pending=Count('id', filter=Q(status='pending')),
             approved=Count('id', filter=Q(status='approved')),
@@ -278,7 +299,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
             approved=Count('id', filter=Q(status='approved')),
             rejected=Count('id', filter=Q(status='rejected')),
         )
-        lv_stats = LeaveRequest.objects.filter(user_id__in=team_member_ids).aggregate(
+        lv_stats = lv_rows.aggregate(
             pending=Count('id', filter=Q(status='pending')),
             approved=Count('id', filter=Q(status='approved')),
             rejected=Count('id', filter=Q(status='rejected')),
@@ -321,14 +342,13 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'])
     def pending_trend(self, request):
         """
-        Get pending trend for last 14 days.
+        The open queue by submission date over the last 14 days.
         Query param: team_id (optional)
-        Returns: Array of {date, count} for each day
+        Returns: Array of {date, count}; the points add up to the pending total.
+        Requests submitted before the window fold into the first point
+        (``includes_earlier``).
         """
-        from datetime import timedelta, date as date_type
-        from apps.overtime.models import OvertimeLog
-        from apps.standby.models import StandbyLog
-        from apps.leave_management.models import LeaveRequest
+        from datetime import timedelta
 
         team, team_member_ids, error = self._get_team_and_members(request)
 
@@ -339,60 +359,27 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
 
         today = business_today()
         window_start = today - timedelta(days=13)
+        counts = {window_start + timedelta(days=i): 0 for i in range(14)}
+        earlier = 0
+        for rows in self._queue_rows(request.user, team_member_ids):
+            pending = self._by_submission_day(rows.filter(status='pending'))
+            for row in pending.values('day').annotate(cnt=Count('id')).order_by():
+                if row['day'] < window_start:
+                    earlier += row['cnt']
+                # A submission stamped after today (clock skew) stays on today.
+                counts[min(max(row['day'], window_start), today)] += row['cnt']
 
-        # 3 bulk queries instead of 42 (14 days Ã— 3 models)
-        ot_by_date = {
-            row['date']: row['cnt']
-            for row in OvertimeLog.objects.filter(
-                user_id__in=team_member_ids,
-                status='pending',
-                date__gte=window_start,
-                date__lte=today,
-            ).values('date').annotate(cnt=Count('id'))
-        }
-        sb_by_date = {
-            row['date']: row['cnt']
-            for row in StandbyLog.objects.filter(
-                user_id__in=team_member_ids,
-                status='pending',
-                date__gte=window_start,
-                date__lte=today,
-            ).values('date').annotate(cnt=Count('id'))
-        }
-        # Leave requests span multiple days; expand each request across the window
-        leave_by_date: dict[date_type, int] = {}
-        for lr in LeaveRequest.objects.filter(
-            user_id__in=team_member_ids,
-            status='pending',
-            start_date__lte=today,
-            end_date__gte=window_start,
-        ).values('start_date', 'end_date'):
-            cur = max(lr['start_date'], window_start)
-            end = min(lr['end_date'], today)
-            while cur <= end:
-                leave_by_date[cur] = leave_by_date.get(cur, 0) + 1
-                cur += timedelta(days=1)
-
-        trend_data = []
-        for i in range(13, -1, -1):
-            day = today - timedelta(days=i)
-            trend_data.append({
-                'date': day.isoformat(),
-                'count': ot_by_date.get(day, 0) + sb_by_date.get(day, 0) + leave_by_date.get(day, 0),
-            })
-
+        trend_data = [{'date': day.isoformat(), 'count': count} for day, count in counts.items()]
+        trend_data[0]['includes_earlier'] = earlier
         return Response(trend_data)
 
     @action(detail=False, methods=['get'])
     def monthly_comparison(self, request):
         """
-        Get month-over-month comparison data for pending approvals.
-        Returns current month and previous month totals with percentage change.
+        Requests received (any status) this month or week against the previous one,
+        by submission date. Each leave request counts once.
         """
         from datetime import date as date_cls, timedelta
-        from apps.overtime.models import OvertimeLog
-        from apps.standby.models import StandbyLog
-        from apps.leave_management.models import LeaveRequest
         from calendar import monthrange
 
         team, team_member_ids, error = self._get_team_and_members(request)
@@ -405,29 +392,13 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         granularity = request.query_params.get('granularity', 'month')
         today = business_today()
 
-        # Helper to get counts for an arbitrary inclusive date range
-        def get_counts_for_range(start, end, member_ids):
-            overtime_count = OvertimeLog.objects.filter(
-                user_id__in=member_ids,
-                status='pending',
-                date__gte=start,
-                date__lte=end,
-            ).count()
+        received = [self._by_submission_day(rows)
+                    for rows in self._queue_rows(request.user, team_member_ids)] if team_member_ids else []
 
-            standby_count = StandbyLog.objects.filter(
-                user_id__in=member_ids,
-                status='pending',
-                date__gte=start,
-                date__lte=end,
-            ).count()
-
-            leave_count = LeaveRequest.objects.filter(
-                user_id__in=member_ids,
-                status='pending',
-                start_date__lte=end,
-                end_date__gte=start,
-            ).count()
-
+        def get_counts_for_range(start, end):
+            overtime_count, standby_count, leave_count = (
+                rows.filter(day__gte=start, day__lte=end).count() for rows in received
+            ) if received else (0, 0, 0)
             return {
                 'overtime': overtime_count,
                 'standby': standby_count,
@@ -471,8 +442,8 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
             current_period = {'month': current_month, 'year': current_year}
             prev_period = {'month': prev_month, 'year': prev_year}
 
-        current_data = get_counts_for_range(current_start, current_end, team_member_ids)
-        prev_data = get_counts_for_range(prev_start, prev_end, team_member_ids)
+        current_data = get_counts_for_range(current_start, current_end)
+        prev_data = get_counts_for_range(prev_start, prev_end)
 
         # Calculate percentage change
         if prev_data['total'] > 0:
@@ -512,11 +483,6 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         Query param: team_id (optional), limit (default: 5)
         Returns: Array of {user_id, user_name, pending_count}
         """
-        from django.db.models import Count
-        from apps.overtime.models import OvertimeLog
-        from apps.standby.models import StandbyLog
-        from apps.leave_management.models import LeaveRequest
-
         team, team_member_ids, error = self._get_team_and_members(request)
         limit = self._parse_limit(request, 5)
 
@@ -528,11 +494,8 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         # Count pending items per user across all three types
         user_pending_counts = {}
 
-        for model in [OvertimeLog, StandbyLog, LeaveRequest]:
-            counts = model.objects.filter(
-                user_id__in=team_member_ids,
-                status='pending'
-            ).values('user_id').annotate(count=Count('id'))
+        for rows in self._queue_rows(request.user, team_member_ids):
+            counts = rows.filter(status='pending').values('user_id').annotate(count=Count('id')).order_by()
 
             for item in counts:
                 user_pending_counts[item['user_id']] = user_pending_counts.get(item['user_id'], 0) + item['count']
@@ -564,10 +527,6 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         Query param: team_id (optional), limit (default: 4)
         Returns: Array of pending items with user details
         """
-        from apps.overtime.models import OvertimeLog
-        from apps.standby.models import StandbyLog
-        from apps.leave_management.models import LeaveRequest
-
         team, team_member_ids, error = self._get_team_and_members(request)
         limit = self._parse_limit(request, 4)
         scope = request.query_params.get('scope') or 'all'
@@ -581,15 +540,9 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
         # to avoid N+1 queries when accessing user details
         highlights = []
 
-        # Overtime and standby follow the owner rule (item 82) for leaders, as in team_stats.
-        ot_rows = OvertimeLog.objects.select_related('user').filter(
-            user_id__in=team_member_ids, status='pending')
-        sb_rows = StandbyLog.objects.select_related('user').filter(
-            user_id__in=team_member_ids, status='pending')
-        if not self._is_company_scope(request.user):
-            from apps.users.services.leader_ownership import owned_by_leader_q
-            ot_rows = ot_rows.filter(owned_by_leader_q(request.user.id))
-            sb_rows = sb_rows.filter(owned_by_leader_q(request.user.id))
+        ot_rows, sb_rows, lv_rows = self._queue_rows(request.user, team_member_ids)
+        ot_rows = ot_rows.select_related('user').filter(status='pending')
+        sb_rows = sb_rows.select_related('user').filter(status='pending')
 
         # Overtime
         if scope in ('all', 'overtime'):
@@ -623,8 +576,7 @@ class DashboardWidgetViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Leave
         if scope in ('all', 'leave'):
-            for item in LeaveRequest.objects.select_related('user').filter(
-                user_id__in=team_member_ids,
+            for item in lv_rows.select_related('user').filter(
                 status='pending'
             ).order_by('-start_date')[:limit]:
                 highlights.append({

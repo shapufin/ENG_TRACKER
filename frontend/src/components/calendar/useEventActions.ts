@@ -16,6 +16,7 @@ export const useEventActions = (event: CalendarEvent | null, onClose: () => void
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["vacations", "calendar"] });
     queryClient.invalidateQueries({ queryKey: ["standby", "calendar"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   };
 
   const withSubmitting = async (fn: () => Promise<void>) => {

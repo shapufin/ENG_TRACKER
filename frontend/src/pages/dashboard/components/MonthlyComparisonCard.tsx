@@ -48,8 +48,10 @@ export const MonthlyComparisonCard: React.FC<MonthlyComparisonCardProps> = ({
   <GlassCard>
     <div className="flex items-start justify-between gap-3 p-6 pb-0">
       <div>
-        <h3 className="text-xl font-semibold">Monthly Comparison</h3>
-        <p className="text-muted-foreground">Current vs previous month pending approvals</p>
+        <h3 className="text-xl font-semibold">Requests received</h3>
+        <p className="text-muted-foreground">
+          This vs previous {granularity === "week" ? "week" : "month"}, any status
+        </p>
       </div>
       {onGranularityChange && (
         <div className="border-border/60 flex shrink-0 items-center gap-1 rounded-full border p-1">

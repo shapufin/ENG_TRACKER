@@ -21,14 +21,15 @@ export const PendingTrendCard: React.FC<PendingTrendCardProps> = ({ data = [] })
     date: point.date,
     label: format(parseISO(point.date), "d MMM"),
     count: point.count,
+    includesEarlier: point.includes_earlier ?? 0,
   }));
   const hasData = chartData.some((point) => point.count > 0);
 
   return (
     <GlassCard>
       <div className="p-6 pb-0">
-        <h3 className="text-xl font-semibold">Pending Trend</h3>
-        <p className="text-muted-foreground">Team pending requests over the last 14 days</p>
+        <h3 className="text-xl font-semibold">Open queue by submission date</h3>
+        <p className="text-muted-foreground">Pending requests, by the day they were submitted</p>
       </div>
       {hasData ? (
         <div className="h-[220px] p-6">
@@ -58,6 +59,10 @@ export const PendingTrendCard: React.FC<PendingTrendCardProps> = ({ data = [] })
                 allowDecimals={false}
               />
               <Tooltip
+                labelFormatter={(label, items) => {
+                  const earlier = items?.[0]?.payload?.includesEarlier;
+                  return earlier ? `${label} (includes ${earlier} submitted earlier)` : label;
+                }}
                 contentStyle={{
                   backgroundColor: "hsl(var(--card))",
                   border: "1px solid hsl(var(--border))",
@@ -77,8 +82,8 @@ export const PendingTrendCard: React.FC<PendingTrendCardProps> = ({ data = [] })
           </ResponsiveContainer>
         </div>
       ) : (
-        <p className="p-6 pt-4 text-sm text-muted-foreground">
-          No pending trend data for the last 14 days.
+        <p className="text-muted-foreground p-6 pt-4 text-sm">
+          No requests are waiting for a decision.
         </p>
       )}
     </GlassCard>

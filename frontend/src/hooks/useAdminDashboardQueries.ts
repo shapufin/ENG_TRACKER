@@ -1,3 +1,4 @@
+import { FRESH_MS } from "@/lib/queryFreshness";
 import { useQuery } from "@tanstack/react-query";
 import { dashboardService } from "@/services/dashboardService";
 import { auditLogService } from "@/services/auditLogService";
@@ -9,7 +10,6 @@ import { computeAdminDashboardSummary } from "./adminDashboardSummary";
  * open admin tab never sees. Unlike the app-wide `refetchOnWindowFocus: false` default,
  * these refetch on refocus once a minute old.
  */
-const FRESH_MS = 60 * 1000;
 
 /** One request feeds every overview widget; it only fires while one is enabled. */
 export const useAdminOverview = (enabled: boolean) =>

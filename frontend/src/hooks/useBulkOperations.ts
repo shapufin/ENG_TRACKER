@@ -36,6 +36,7 @@ export const useBulkOperations = ({
 
   const handleSuccess = (message: string, res: unknown) => {
     qc.refetchQueries({ queryKey });
+    qc.invalidateQueries({ queryKey: ["dashboard"] });
     toast.success(message);
     if (onSuccess) onSuccess(res);
   };
@@ -57,6 +58,7 @@ export const useBulkOperations = ({
       deleteFn ? deleteFn(ids) : Promise.reject(new Error("deleteFn not configured")),
     onSuccess: (res: BulkDeleteResult) => {
       qc.refetchQueries({ queryKey });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
 
       if (res.failed_users && res.failed_users.length > 0) {
         const failedCount = res.failed_users.length;

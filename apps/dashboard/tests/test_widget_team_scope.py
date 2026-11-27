@@ -84,8 +84,8 @@ class DashboardWidgetTeamScopeTests(APITestCase):
     def test_shared_team_without_tl_link_exposes_no_peer_data(self):
         resp = self._get(self.tl, 'team_stats', team_id=self.own_team.id)
         self.assertEqual(resp.status_code, 200)
-        # Only linked employee + TL themselves, never shared-team peer.
-        self.assertEqual(resp.data['team_size'], 2)
+        # Only the linked employee: never the shared-team peer, never the viewer.
+        self.assertEqual(resp.data['team_size'], 1)
         self.assertEqual(resp.data['pending_team_overtime'], 1)
 
     def test_staff_and_hr_can_query_any_team(self):
@@ -93,7 +93,7 @@ class DashboardWidgetTeamScopeTests(APITestCase):
             with self.subTest(user=user.username):
                 resp = self._get(user, 'team_stats', team_id=self.foreign_team.id)
                 self.assertEqual(resp.status_code, 200)
-                self.assertEqual(resp.data['team_size'], 2)  # victim + the caller
+                self.assertEqual(resp.data['team_size'], 1)  # the victim, not the caller
 
     def test_non_numeric_team_id_is_not_a_server_error(self):
         resp = self._get(self.tl, 'team_stats', team_id='abc')
@@ -154,7 +154,22 @@ class LeaderWithHrRoleOwnerScopeTests(APITestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.data['pending_team_standby'], 1)
         self.assertEqual(resp.data['pending_team_overtime'], 1)
-        self.assertEqual(resp.data['team_size'], 2)  # Mina + the viewer
+        self.assertEqual(resp.data['team_size'], 1)  # Mina, not the viewer
+
+    def test_comparison_skips_a_row_decided_by_a_previous_leader(self):
+        # Linked to the viewer now, but approved by another leader: it is theirs (item 82).
+        row = OvertimeLog.objects.get(user=self.mine)
+        OvertimeLog.objects.filter(pk=row.pk).update(status='approved', approved_by=self.other_lm)
+        current = self.client.get(WIDGET_URL.format('monthly_comparison')).data['current_month']['data']
+        self.assertEqual(current['overtime'], 0)
+
+    def test_trend_comparison_and_top_users_count_only_owned_rows(self):
+        trend = self.client.get(WIDGET_URL.format('pending_trend')).data
+        self.assertEqual(sum(p['count'] for p in trend), 2)  # Mina's overtime + standby
+        current = self.client.get(WIDGET_URL.format('monthly_comparison')).data['current_month']['data']
+        self.assertEqual((current['overtime'], current['standby']), (1, 1))
+        top = self.client.get(WIDGET_URL.format('top_pending_users')).data
+        self.assertEqual([(u['user_name'], u['pending_count']) for u in top], [('Mina Mine', 2)])
 
 
 class LedTeamOnlyLeaderTests(APITestCase):

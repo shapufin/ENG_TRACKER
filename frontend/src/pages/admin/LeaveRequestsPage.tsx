@@ -113,6 +113,7 @@ const LeaveRequestsContent: React.FC = () => {
       qc.invalidateQueries({ queryKey: ["admin", "leaves", "requests"] });
       qc.invalidateQueries({ queryKey: ["admin", "leaves", "user-modal-requests"] });
       qc.invalidateQueries({ queryKey: ["vacations", "calendar"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
       onRowRemoved();
       toast.success("Approved");
     },
@@ -134,6 +135,7 @@ const LeaveRequestsContent: React.FC = () => {
       qc.invalidateQueries({ queryKey: ["admin", "leaves", "requests"] });
       qc.invalidateQueries({ queryKey: ["admin", "leaves", "user-modal-requests"] });
       qc.invalidateQueries({ queryKey: ["vacations", "calendar"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
       onRowRemoved();
       toast.success("Leave request deleted and balance restored");
     },
@@ -165,6 +167,7 @@ const LeaveRequestsContent: React.FC = () => {
     rejectFn: leaveService.bulkReject,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["vacations", "calendar"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
       void invalidateAdminDashboard(qc);
     },
   });

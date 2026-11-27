@@ -33,6 +33,7 @@ export const useApprovalMutations = ({
     onSuccess: (_, { type }) => {
       toast.success("Approved successfully");
       refetchMap[type]();
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
       // Invalidate pending-months so card counts update in real-time
       qc.invalidateQueries({ queryKey: ["team", type, "pending-months"] });
       if (type === "leave") {
@@ -51,6 +52,7 @@ export const useApprovalMutations = ({
     onSuccess: (_, { type }) => {
       toast.success("Rejected successfully");
       refetchMap[type]();
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
       // Invalidate pending-months so card counts update in real-time
       qc.invalidateQueries({ queryKey: ["team", type, "pending-months"] });
       if (type === "leave") {

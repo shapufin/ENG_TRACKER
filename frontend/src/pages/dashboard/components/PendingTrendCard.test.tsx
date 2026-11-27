@@ -12,13 +12,13 @@ describe("PendingTrendCard", () => {
         ]}
       />
     );
-    expect(screen.getByText("Pending Trend")).toBeInTheDocument();
-    expect(screen.getByText(/last 14 days/)).toBeInTheDocument();
+    expect(screen.getByText("Open queue by submission date")).toBeInTheDocument();
+    expect(screen.getByText(/by the day they were submitted/)).toBeInTheDocument();
   });
 
   it("renders an empty state instead of an empty chart", () => {
     render(<PendingTrendCard />);
-    expect(screen.getByText("Pending Trend")).toBeInTheDocument();
-    expect(screen.getByText("No pending trend data for the last 14 days.")).toBeInTheDocument();
+    expect(screen.getByText("Open queue by submission date")).toBeInTheDocument();
+    expect(screen.getByText("No requests are waiting for a decision.")).toBeInTheDocument();
   });
 });

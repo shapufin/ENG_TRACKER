@@ -142,7 +142,10 @@ const TeamManagementPage: React.FC = () => {
           if (pendingIds.length > 0) {
             standbyService
               .bulkApprove(pendingIds)
-              .then(() => queryClient.invalidateQueries({ queryKey: ["team", "standby"] }))
+              .then(() => {
+                queryClient.invalidateQueries({ queryKey: ["team", "standby"] });
+                queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+              })
               .catch(() => toast.error("Could not approve this day. Refresh and try again."));
           }
         } else {
@@ -324,6 +327,8 @@ const TeamManagementPage: React.FC = () => {
                   .bulkReject(target.segment_ids, rejectReason)
                   .then(() => {
                     queryClient.invalidateQueries({ queryKey: ["team", "standby"] });
+                    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+                    setRejectOpen(false);
                     setRejectReason("");
                     setRejectingRecord(null);
                   })

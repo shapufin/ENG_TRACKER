@@ -47,6 +47,7 @@ export const useTLBulkMutations = ({
       }
       qc.invalidateQueries({ queryKey: ["team", type, "pending", dateFrom, dateTo] });
       qc.invalidateQueries({ queryKey: ["team", type, "pending-months"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
       if (type === "leave") invalidateVacationData();
     },
     onError: (err) => handleApiError(err),
@@ -71,6 +72,7 @@ export const useTLBulkMutations = ({
       }
       qc.invalidateQueries({ queryKey: ["team", type, "pending", dateFrom, dateTo] });
       qc.invalidateQueries({ queryKey: ["team", type, "pending-months"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
       if (type === "leave") invalidateVacationData();
     },
     onError: (err) => handleApiError(err),

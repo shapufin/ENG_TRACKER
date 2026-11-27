@@ -49,6 +49,7 @@ describe("useTLBulkMutations", () => {
       queryKey: ["team", "leave", "pending", "2026-08-01", "2026-08-31"],
     });
     expect(invalidateVacationData).toHaveBeenCalledOnce();
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["dashboard"] });
   });
 
   it("warns about failed rejections and still refreshes pending data", async () => {
@@ -74,5 +75,6 @@ describe("useTLBulkMutations", () => {
     expect(invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["team", "overtime", "pending", "", ""],
     });
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["dashboard"] });
   });
 });

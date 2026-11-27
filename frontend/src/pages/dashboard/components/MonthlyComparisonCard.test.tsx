@@ -12,7 +12,7 @@ describe("MonthlyComparisonCard", () => {
       comparison: { trend: "up", percent_change: 25 },
     } as any;
     render(<MonthlyComparisonCard data={data} />);
-    expect(screen.getByText("Monthly Comparison")).toBeInTheDocument();
+    expect(screen.getByText("Requests received")).toBeInTheDocument();
     expect(screen.getByText("10")).toBeInTheDocument();
     expect(screen.getByText("8")).toBeInTheDocument();
     expect(screen.getByText("Jan")).toBeInTheDocument();
@@ -21,7 +21,7 @@ describe("MonthlyComparisonCard", () => {
 
   it("renders with missing data", () => {
     render(<MonthlyComparisonCard />);
-    expect(screen.getByText("Monthly Comparison")).toBeInTheDocument();
+    expect(screen.getByText("Requests received")).toBeInTheDocument();
     expect(screen.getAllByText("0").length).toBeGreaterThanOrEqual(2);
   });
 

@@ -46,6 +46,7 @@ export const useStandbyLogsPage = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "standby", "admin_logs"] });
       void invalidateAdminDashboard(qc);
+      void qc.invalidateQueries({ queryKey: ["dashboard"] });
       onRowRemoved();
       toast.success("Approved");
     },
@@ -62,6 +63,7 @@ export const useStandbyLogsPage = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "standby", "admin_logs"] });
       void invalidateAdminDashboard(qc);
+      void qc.invalidateQueries({ queryKey: ["dashboard"] });
       onRowRemoved();
       toast.success("Standby record deleted");
     },

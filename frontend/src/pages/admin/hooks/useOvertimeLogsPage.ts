@@ -48,6 +48,7 @@ export const useOvertimeLogsPage = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "overtime", "admin_logs"] });
       void invalidateAdminDashboard(qc);
+      void qc.invalidateQueries({ queryKey: ["dashboard"] });
       onRowRemoved();
       toast.success("Approved");
     },
@@ -64,6 +65,7 @@ export const useOvertimeLogsPage = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "overtime", "admin_logs"] });
       void invalidateAdminDashboard(qc);
+      void qc.invalidateQueries({ queryKey: ["dashboard"] });
       onRowRemoved();
       toast.success("Overtime record deleted");
     },

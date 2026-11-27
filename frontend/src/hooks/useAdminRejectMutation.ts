@@ -38,6 +38,7 @@ export const useAdminRejectMutation = (
       const keysToInvalidate = options?.invalidateKeys ?? defaultInvalidateKeys;
       keysToInvalidate.forEach((key) => queryClient.invalidateQueries({ queryKey: key }));
       void invalidateAdminDashboard(queryClient);
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       toast.success("Rejected");
       options?.onSuccess?.();
     },

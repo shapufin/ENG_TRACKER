@@ -86,18 +86,18 @@ describe("TeamLeaderDashboard", () => {
     vi.mocked(usePermissions).mockReturnValue(basePermissions as any);
     renderDashboard();
     expect(screen.getByText("Team Leader Dashboard")).toBeInTheDocument();
-    expect(screen.getByText(/Alpha Team/)).toBeInTheDocument();
-    expect(screen.getByText(/5 members/)).toBeInTheDocument();
+    expect(screen.getByText("Managing 5 direct reports")).toBeInTheDocument();
+    expect(screen.queryByText(/Alpha Team/)).not.toBeInTheDocument();
   });
 
-  it("renders fallback team name when user has no team", () => {
+  it("does not name a team in the subtitle", () => {
     vi.mocked(useAuth).mockReturnValue({
       user: { id: 1, teams: [] },
       isLoading: false,
     } as any);
     vi.mocked(usePermissions).mockReturnValue(basePermissions as any);
     renderDashboard();
-    expect(screen.getByText(/your team/)).toBeInTheDocument();
+    expect(screen.getByText(/direct report/)).toBeInTheDocument();
   });
 
   it("calls onDashboardChange when header dropdown changes", () => {

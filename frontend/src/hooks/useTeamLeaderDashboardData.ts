@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { dashboardService } from "@/services/dashboardService";
+import { FRESH_MS } from "@/lib/queryFreshness";
 
 interface UseTeamLeaderDashboardDataProps {
   userId?: number;
-  teamId?: number;
   shouldQueryTeamData: boolean;
   comparisonGranularity?: "week" | "month";
 }
@@ -16,39 +16,38 @@ interface UseTeamLeaderDashboardDataProps {
  */
 export const useTeamLeaderDashboardData = ({
   userId,
-  teamId,
   shouldQueryTeamData,
   comparisonGranularity = "month",
 }: UseTeamLeaderDashboardDataProps) => {
-  const teamKeySuffix = [userId ?? "anonymous", teamId ?? "no-team"] as const;
-  // Slow-moving aggregates stay fresh for 30s to avoid a refetch storm on
-  // every mount/tab switch; the approval queue itself stays realtime.
-  const AGGREGATE_STALE_TIME = 30_000;
+  // No team_id here: it would narrow the API to one team and drop linked reports in others.
+  const viewerKey = userId ?? "anonymous";
+  // Other people's new requests appear on window focus once the data is FRESH_MS old
+  // (item 93); the approval queue itself is never considered fresh.
 
   const { data: teamStats } = useQuery({
-    queryKey: ["dashboard", "team", ...teamKeySuffix],
-    queryFn: () => dashboardService.getTeamStats(teamId),
+    queryKey: ["dashboard", "team", viewerKey],
+    queryFn: () => dashboardService.getTeamStats(),
     refetchOnMount: true,
-    staleTime: AGGREGATE_STALE_TIME,
-    refetchOnWindowFocus: false,
+    staleTime: FRESH_MS,
+    refetchOnWindowFocus: true,
     enabled: shouldQueryTeamData,
   });
 
   const { data: pendingTrend } = useQuery({
-    queryKey: ["dashboard", "pending_trend", ...teamKeySuffix],
-    queryFn: () => dashboardService.getPendingTrend(teamId),
+    queryKey: ["dashboard", "pending_trend", viewerKey],
+    queryFn: () => dashboardService.getPendingTrend(),
     refetchOnMount: true,
-    staleTime: AGGREGATE_STALE_TIME,
-    refetchOnWindowFocus: false,
+    staleTime: FRESH_MS,
+    refetchOnWindowFocus: true,
     enabled: shouldQueryTeamData,
   });
 
   const { data: monthlyComparison } = useQuery({
-    queryKey: ["dashboard", "monthly_comparison", ...teamKeySuffix, comparisonGranularity],
-    queryFn: () => dashboardService.getMonthlyComparison(teamId, comparisonGranularity),
+    queryKey: ["dashboard", "monthly_comparison", viewerKey, comparisonGranularity],
+    queryFn: () => dashboardService.getMonthlyComparison(undefined, comparisonGranularity),
     refetchOnMount: true,
-    staleTime: AGGREGATE_STALE_TIME,
-    refetchOnWindowFocus: false,
+    staleTime: FRESH_MS,
+    refetchOnWindowFocus: true,
     enabled: shouldQueryTeamData,
   });
 
@@ -57,11 +56,11 @@ export const useTeamLeaderDashboardData = ({
     isLoading: isQueueHighlightsLoading,
     isError: isQueueHighlightsError,
   } = useQuery({
-    queryKey: ["dashboard", "queue_highlights", ...teamKeySuffix],
-    queryFn: () => dashboardService.getQueueHighlights(teamId, 20),
+    queryKey: ["dashboard", "queue_highlights", viewerKey],
+    queryFn: () => dashboardService.getQueueHighlights(undefined, 20),
     refetchOnMount: true,
     staleTime: 0,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
     enabled: shouldQueryTeamData,
   });
 

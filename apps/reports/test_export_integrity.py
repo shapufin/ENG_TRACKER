@@ -4,8 +4,10 @@ The data is built to hit the edges: an overnight shift, entries sharing a paid h
 the next month's first day, rejected and pending rows, a half day, sick leave and a leave crossing the month boundary.
 """
 import io
-from datetime import date, time
+from datetime import date, datetime, time, timedelta
+from datetime import timezone as dt_timezone
 from decimal import Decimal
+from unittest import mock
 
 import openpyxl
 from django.contrib.auth import get_user_model
@@ -241,6 +243,43 @@ class DashboardIntegrityTests(ExportIntegrityBase):
         self.assertEqual(backlog['overtime']['hours'], float(sum(o.hours for o in OvertimeLog.objects.filter(status='pending'))))
         self.assertEqual(backlog['leave']['count'], LeaveRequest.objects.filter(status='pending').count())
         self.assertEqual(backlog['leave']['days'], float(sum(Decimal(row.days_counted) for row in LeaveRequest.objects.filter(status="pending"))))
+
+
+class LeaderDashboardIntegrityTests(ExportIntegrityBase):
+    """The Line Manager's trend and comparison equal the source tables by submission date."""
+
+    NOW = datetime(2026, 6, 15, 10, 0, tzinfo=dt_timezone.utc)
+
+    @classmethod
+    def _seed(cls):
+        super()._seed()
+        # Spread the submissions 10 days apart, back into April.
+        for model in (OvertimeLog, StandbyLog, LeaveRequest):
+            for i, pk in enumerate(model.objects.order_by('pk').values_list('pk', flat=True)):
+                model.objects.filter(pk=pk).update(submitted_at=cls.NOW - timedelta(days=1 + i * 10 % 70))
+
+    def setUp(self):
+        patcher = mock.patch('django.utils.timezone.now', return_value=self.NOW)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        today = mock.patch('apps.dashboard.viewsets.business_today', return_value=self.NOW.date())
+        today.start()
+        self.addCleanup(today.stop)
+        self.api = APIClient()
+        self.api.force_authenticate(user=self.mgr)
+
+    def test_the_trend_adds_up_to_every_pending_source_row(self):
+        trend = self.api.get('/api/dashboard/widgets/pending_trend/').data
+        pending = sum(m.objects.filter(status='pending').count() for m in (OvertimeLog, StandbyLog, LeaveRequest))
+        self.assertGreater(pending, 0)
+        self.assertEqual(sum(p['count'] for p in trend), pending)
+
+    def test_requests_received_equal_the_rows_submitted_in_each_month(self):
+        data = self.api.get('/api/dashboard/widgets/monthly_comparison/').data
+        for key, month in (('current_month', 6), ('previous_month', 5)):
+            for name, model in (('overtime', OvertimeLog), ('standby', StandbyLog), ('leave', LeaveRequest)):
+                expected = model.objects.filter(submitted_at__year=2026, submitted_at__month=month).count()
+                self.assertEqual(data[key]['data'][name], expected, (key, name))
 
 
 class LeaveSeriesIntegrityTests(ExportIntegrityBase):

@@ -50,7 +50,6 @@ const TeamLeaderDashboard: React.FC<TeamLeaderDashboardProps> = ({
   const { user, isLoading } = useAuth();
   const { availableDashboards, isTeamLeader, isHR, isAdmin, isSuperuser } = usePermissions();
   const userId = user?.id;
-  const teamId = user?.teams?.[0]?.id;
   const shouldQueryTeamData = !isLoading && !!userId && isTeamLeader;
 
   const [comparisonGranularity, setComparisonGranularity] = useState<"week" | "month">("month");
@@ -68,7 +67,6 @@ const TeamLeaderDashboard: React.FC<TeamLeaderDashboardProps> = ({
 
   const dashboardData = useTeamLeaderDashboardData({
     userId,
-    teamId,
     shouldQueryTeamData,
     comparisonGranularity,
   });
@@ -149,7 +147,9 @@ const TeamLeaderDashboard: React.FC<TeamLeaderDashboardProps> = ({
     });
   };
 
-  const teamSubtitle = `Managing ${user?.teams?.[0]?.name || "your team"} - ${dashboardData.teamStats?.team_size || 0} members`;
+  // No team name: teams are calendar data (item 64) and do not define this scope.
+  const reportCount = dashboardData.teamStats?.team_size ?? 0;
+  const teamSubtitle = `Managing ${reportCount} direct report${reportCount === 1 ? "" : "s"}`;
 
   return (
     <PageShell

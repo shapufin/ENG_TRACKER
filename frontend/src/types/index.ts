@@ -671,6 +671,8 @@ export interface TeamDashboardStats {
 export interface PendingTrendData {
   date: string;
   count: number;
+  /** First point only: requests submitted before the 14-day window, included in count. */
+  includes_earlier?: number;
 }
 
 export interface TopPendingUser {
