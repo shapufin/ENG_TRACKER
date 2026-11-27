@@ -786,6 +786,12 @@ describe("DataTable fits its container", () => {
         unobserve() {}
       }
     );
+    // Width updates are coalesced per animation frame; run the frame at once.
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+      cb(0);
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", () => {});
   });
 
   it("table is w-full table-auto: no min-w-max, no table-fixed, no inline min width", () => {
@@ -826,9 +832,53 @@ describe("DataTable fits its container", () => {
     expect(screen.getByText("alice@test.com")).toBeInTheDocument();
     // Only the user's own choice is persisted, never the auto-hidden columns.
     expect(JSON.parse(localStorage.getItem("fit-override")!)).toEqual({
-      _version: 1,
+      _version: 2,
       email: true,
     });
+  });
+
+  it("a legacy all-true stored map does not pin: the priority 3 column still auto-hides", () => {
+    // The old Reset wrote every column as true under _version 1.
+    localStorage.setItem(
+      "fit-legacy",
+      JSON.stringify({ _version: 1, name: true, team: true, email: true, notes: true })
+    );
+    render(<DataTable columns={wideColumns} data={wideRows} storageKey="fit-legacy" />);
+    resizeTo(500);
+    expect(screen.queryByRole("columnheader", { name: "Email" })).not.toBeInTheDocument();
+  });
+
+  it("a legacy hidden column stays hidden", () => {
+    localStorage.setItem("fit-legacy-hidden", JSON.stringify({ _version: 1, team: false }));
+    render(<DataTable columns={wideColumns} data={wideRows} storageKey="fit-legacy-hidden" />);
+    resizeTo(2000);
+    expect(screen.queryByRole("columnheader", { name: "Team" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Email" })).toBeInTheDocument();
+  });
+
+  it("a true entry in defaultColumnVisibility does not pin: the column still auto-hides", () => {
+    render(
+      <DataTable
+        columns={wideColumns}
+        data={wideRows}
+        storageKey="fit-default"
+        defaultColumnVisibility={{ email: true, notes: false }}
+      />
+    );
+    resizeTo(400);
+    expect(screen.queryByRole("columnheader", { name: "Email" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Notes" })).not.toBeInTheDocument();
+  });
+
+  it("an explicit menu show keeps the column after the table shrinks", () => {
+    render(<DataTable columns={wideColumns} data={wideRows} storageKey="fit-explicit" />);
+    resizeTo(500);
+    fireEvent.click(screen.getByRole("button", { name: /Columns \(3\/4\)/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Email" }));
+    resizeTo(100);
+    // The Columns dialog is still open (the table is aria-hidden), so check cell text.
+    expect(screen.getByText("alice@test.com")).toBeInTheDocument();
+    expect(screen.queryByText("Core")).not.toBeInTheDocument();
   });
 
   it("reset to default restores auto", () => {

@@ -42,7 +42,9 @@ import { RowActionsPill } from "./RowActionsPill";
 import { DataTableCards, MOBILE_CARD_QUERY, type DataTableCardSpec } from "./DataTableCards";
 import {
   clearStoredColumnVisibility,
-  readStoredColumnVisibility,
+  defaultColumnOverride,
+  readStoredColumnOverride,
+  writeStoredColumnOverride,
   writeStoredColumnVisibility,
 } from "./columnVisibilityStorage";
 import { computeAutoVisibility, resolveFitColumnId, type FitColumn } from "./columnFit";
@@ -140,11 +142,14 @@ export const DataTable = function DataTable<TData extends RowData>({
   const [showLeftShadow, setShowLeftShadow] = React.useState(false);
   const [showRightShadow, setShowRightShadow] = React.useState(false);
 
-  // The user's own column choices (Columns menu, localStorage, or the caller's
-  // controlled prop). They always beat the auto-fit below.
+  // The user's own column choices: explicit Columns-menu toggles (persisted as a
+  // v2 override under `storageKey`) plus the hidden entries of
+  // `defaultColumnVisibility` and of a legacy v1 map. A `true` here pins a column
+  // against auto-fit, so only an explicit toggle may write one. A controlled
+  // `columnVisibility` prop is taken as-is: its caller owns that rule.
   const [internalColumnVisibility, setInternalColumnVisibility] = React.useState<
     Record<string, boolean>
-  >(() => readStoredColumnVisibility(storageKey, defaultColumnVisibility));
+  >(() => readStoredColumnOverride(storageKey, defaultColumnVisibility));
 
   const userVisibility = React.useMemo(
     () => withoutActions(externalColumnVisibility ?? internalColumnVisibility),
@@ -165,7 +170,14 @@ export const DataTable = function DataTable<TData extends RowData>({
   // `size` hints with the container, not the real rendered widths. A table whose
   // content is wider than its hints still scrolls rather than clipping.
   const fitsToWidth = columns.some((c) => c.meta?.priority !== undefined);
-  const containerWidth = useContainerWidth(scrollRef);
+  const [containerWidth, measureScrollRef] = useContainerWidth();
+  const setScrollRef = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      scrollRef.current = element;
+      measureScrollRef(element);
+    },
+    [measureScrollRef]
+  );
   const autoVisibility = React.useMemo<ColumnVisibilityState>(() => {
     if (!fitsToWidth || containerWidth === null) return {};
     const fitColumns = columns.flatMap((column): FitColumn[] => {
@@ -206,14 +218,19 @@ export const DataTable = function DataTable<TData extends RowData>({
       );
       const newVisibility = withoutActions({ ...userVisibility, ...changed });
       commitUserVisibility(newVisibility);
-      writeStoredColumnVisibility(storageKey, newVisibility);
+      // Only an auto-fit table needs the v2 "explicit choice" meaning; every other
+      // table keeps writing the v1 map it always wrote (shared with TeamGroupedTables).
+      (fitsToWidth ? writeStoredColumnOverride : writeStoredColumnVisibility)(
+        storageKey,
+        newVisibility
+      );
     },
-    [commitUserVisibility, storageKey, columnVisibility, userVisibility]
+    [commitUserVisibility, storageKey, columnVisibility, userVisibility, fitsToWidth]
   );
 
   // Reset drops the user's choices: the page default plus auto-fit again.
   const resetColumnVisibility = React.useCallback(() => {
-    commitUserVisibility(defaultColumnVisibility ?? {});
+    commitUserVisibility(defaultColumnOverride(defaultColumnVisibility));
     clearStoredColumnVisibility(storageKey);
   }, [commitUserVisibility, defaultColumnVisibility, storageKey]);
 
@@ -522,7 +539,7 @@ export const DataTable = function DataTable<TData extends RowData>({
             {showRightShadow && (
               <div className="from-card pointer-events-none absolute inset-y-0 right-0 z-10 w-8 rounded-r-md bg-linear-to-l to-transparent" />
             )}
-            <div ref={scrollRef} className="overflow-x-auto">
+            <div ref={setScrollRef} className="overflow-x-auto">
               {/* `table-auto` (no `min-w-max`): every cell keeps its min-content, so
               nothing spills; the table scrolls only when that truly exceeds the
               container. Column `size` stays a width hint on the cells. */}
