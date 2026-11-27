@@ -27,6 +27,7 @@ const ControlRoomAdminSidebarItem: React.FC = () => {
     <li>
       <Link
         to="/admin/control-room/access"
+        aria-current={isActive ? "page" : undefined}
         role="menuitem"
         className={`group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
           isActive

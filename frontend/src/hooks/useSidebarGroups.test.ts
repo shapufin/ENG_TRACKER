@@ -50,4 +50,18 @@ describe("useSidebarGroups", () => {
     const admin = renderHook(() => useSidebarGroups("admin", null), { wrapper });
     expect(admin.result.current.isOpen("core")).toBe(true);
   });
+
+  it("reloads stored state when the user id changes", () => {
+    localStorage.setItem("sidebar_groups:app:9", JSON.stringify({ closed: ["hr"] }));
+    let userId = 7;
+    const dynamic = ({ children }: { children: ReactNode }) =>
+      createElement(AuthContext.Provider, { value: { user: { id: userId } } as never }, children);
+    const { result, rerender } = renderHook(() => useSidebarGroups("app", null), {
+      wrapper: dynamic,
+    });
+    expect(result.current.isOpen("hr")).toBe(true);
+    userId = 9;
+    rerender();
+    expect(result.current.isOpen("hr")).toBe(false);
+  });
 });

@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useState, type RefObject } from "react";
+import { useCallback, useContext, useLayoutEffect, useState, type RefObject } from "react";
 import { AuthContext } from "@/context/auth-context-base";
 
 const read = (key: string): string[] => {
@@ -24,6 +24,12 @@ export const useSidebarGroups = (scope: "app" | "admin", activeSection: string |
   const userId = useContext(AuthContext)?.user?.id ?? "anon";
   const key = `sidebar_groups:${scope}:${userId}`;
   const [closed, setClosed] = useState<string[]>(() => read(key));
+  // The user id can change after mount (anon -> real): reload for the new key.
+  const [loadedKey, setLoadedKey] = useState(key);
+  if (key !== loadedKey) {
+    setLoadedKey(key);
+    setClosed(read(key));
+  }
   const [dismissed, setDismissed] = useState<string | null>(null);
 
   // Adjust state during render: a new active section ends an earlier dismissal.
@@ -75,7 +81,7 @@ export const useDomActiveSection = (
   rescanKey: number
 ): string | null => {
   const [found, setFound] = useState<{ path: string; section: string } | null>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const section = navRef.current
       ?.querySelector('[aria-current="page"]')
       ?.closest("[data-sidebar-section]")

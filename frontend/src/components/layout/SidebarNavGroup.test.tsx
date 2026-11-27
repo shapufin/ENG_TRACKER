@@ -37,6 +37,15 @@ describe("SidebarNavGroup", () => {
     expect(screen.queryByText("Skill History")).not.toBeInTheDocument();
   });
 
+  it("marks the active sub-item aria-current so its section can open", () => {
+    renderGroup("/skills/team");
+    expect(screen.getByRole("menuitem", { name: "Team Skills" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+    expect(screen.getByRole("menuitem", { name: "My Skills" })).not.toHaveAttribute("aria-current");
+  });
+
   it("auto-expands when a child route is active", () => {
     renderGroup("/skills/team");
     expect(screen.getByText("Team Skills")).toBeInTheDocument();

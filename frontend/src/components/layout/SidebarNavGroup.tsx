@@ -145,7 +145,11 @@ export const SidebarNavGroup: React.FC<SidebarNavGroupProps> = ({
   const renderSubItems = () => (
     <ul className="space-y-0.5" role="menu" aria-label={`${label} submenu`}>
       {items.map((item) => {
-        const active = isChildActive(item.to);
+        // The most specific matching sibling wins, so "/skills" is not also
+        // highlighted while "/skills/team" is open.
+        const active =
+          isChildActive(item.to) &&
+          !items.some((o) => o.to.length > item.to.length && isChildActive(o.to));
         const ItemIcon = item.icon;
         return (
           <li key={item.to}>
@@ -153,6 +157,7 @@ export const SidebarNavGroup: React.FC<SidebarNavGroupProps> = ({
               to={item.to}
               onClick={onItemClick}
               role="menuitem"
+              aria-current={active ? "page" : undefined}
               className={`group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 pl-8 text-sm font-medium transition-colors pointer-coarse:py-2.5 ${
                 active
                   ? "bg-primary/10 text-foreground"

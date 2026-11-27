@@ -17,6 +17,7 @@ const BackupSidebarItem: React.FC = () => {
     <li>
       <Link
         to="/admin/backup-restore"
+        aria-current={isActive ? "page" : undefined}
         role="menuitem"
         className={`group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
           isActive
