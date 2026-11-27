@@ -37,3 +37,7 @@ export function writeStoredColumnVisibility(
     localStorage.setItem(storageKey, JSON.stringify({ _version: 1, ...visibility }));
   }
 }
+
+export function clearStoredColumnVisibility(storageKey: string | undefined): void {
+  if (storageKey) localStorage.removeItem(storageKey);
+}

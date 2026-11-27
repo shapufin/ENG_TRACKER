@@ -14,12 +14,15 @@ interface ColumnToggleMenuProps {
   columns: ColumnToggleItem[];
   visibility: Record<string, boolean>;
   onVisibilityChange: (visibility: Record<string, boolean>) => void;
+  /** Replaces the default "every column visible" reset (DataTable: back to auto-fit). */
+  onReset?: () => void;
 }
 
 export function ColumnToggleMenu({
   columns,
   visibility,
   onVisibilityChange,
+  onReset,
 }: ColumnToggleMenuProps) {
   const [open, setOpen] = useState(false);
 
@@ -28,6 +31,7 @@ export function ColumnToggleMenu({
   };
 
   const handleReset = () => {
+    if (onReset) return onReset();
     onVisibilityChange(Object.fromEntries(columns.map(({ id }) => [id, true])));
   };
 

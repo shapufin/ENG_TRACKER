@@ -7,12 +7,14 @@ interface ColumnVisibilityMenuProps<TData extends RowData> {
   columns: AppColumnDef<TData, unknown>[];
   visibility: Record<string, boolean>;
   onVisibilityChange: (visibility: Record<string, boolean>) => void;
+  onReset?: () => void;
 }
 
 export function ColumnVisibilityMenu<TData extends RowData>({
   columns,
   visibility,
   onVisibilityChange,
+  onReset,
 }: ColumnVisibilityMenuProps<TData>) {
   const hideableColumns = useMemo(
     () =>
@@ -42,6 +44,7 @@ export function ColumnVisibilityMenu<TData extends RowData>({
       columns={hideableColumns}
       visibility={visibility}
       onVisibilityChange={onVisibilityChange}
+      onReset={onReset}
     />
   );
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { useState } from "react";
 import { createCrudActionsColumn, pillOffsetForEntry } from "./tableColumnHelpers";
 import { DataTable } from "./DataTable";
@@ -739,5 +739,113 @@ describe("pillOffsetForEntry", () => {
     expect(
       pillOffsetForEntry(300, { left: -500, width: 1390 }, 444, 1440, { left: 314, right: 1390 })
     ).toBe(`${314 + 230 - -500 - 1390}px`);
+  });
+});
+
+describe("DataTable fits its container", () => {
+  interface Wide {
+    id: number;
+    name: string;
+    team: string;
+    email: string;
+    notes: string;
+  }
+  const wideColumns: AppColumnDef<Wide>[] = [
+    { accessorKey: "name", header: "Name", size: 200 },
+    { accessorKey: "team", header: "Team", size: 150, meta: { priority: 2 } },
+    { accessorKey: "email", header: "Email", size: 150, meta: { priority: 3 } },
+    { accessorKey: "notes", header: "Notes", size: 120, meta: { truncate: true } },
+  ];
+  const wideRows: Wide[] = [
+    { id: 1, name: "Alice", team: "Core", email: "alice@test.com", notes: "A long note" },
+  ];
+
+  type Callback = (entries: { contentRect: { width: number } }[]) => void;
+  let callbacks: Callback[] = [];
+  const resizeTo = (width: number) =>
+    act(() => {
+      for (const cb of callbacks) cb([{ contentRect: { width } }]);
+    });
+
+  beforeEach(() => {
+    callbacks = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(cb: Callback) {
+          callbacks.push(cb);
+        }
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      }
+    );
+  });
+
+  it("table has no min-w-max and uses table-fixed with a min width equal to visible column sizes", () => {
+    const { container } = render(<DataTable columns={wideColumns} data={wideRows} />);
+    const table = container.querySelector("table")!;
+    expect(table.className).not.toContain("min-w-max");
+    expect(table.className).toContain("table-fixed");
+    expect(table.className).toContain("w-full");
+    // Before the first measure every column shows: 200 + 150 + 150 + 120.
+    expect(table).toHaveStyle({ minWidth: "620px" });
+    expect(container.querySelectorAll("colgroup col")).toHaveLength(4);
+  });
+
+  it("auto-hides the lowest priority column that does not fit and offers the Columns menu", () => {
+    const { container } = render(<DataTable columns={wideColumns} data={wideRows} />);
+    resizeTo(500);
+    expect(screen.queryByRole("columnheader", { name: "Email" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Team" })).toBeInTheDocument();
+    expect(container.querySelector("table")).toHaveStyle({ minWidth: "470px" });
+    expect(screen.getByRole("button", { name: /Columns \(3\/4\)/ })).toBeInTheDocument();
+  });
+
+  it("menu shows Columns (n/m)", () => {
+    render(<DataTable columns={wideColumns} data={wideRows} />);
+    resizeTo(330);
+    expect(screen.getByRole("button", { name: /Columns \(2\/4\)/ })).toBeInTheDocument();
+  });
+
+  it("user override beats auto visibility after resize", () => {
+    render(<DataTable columns={wideColumns} data={wideRows} storageKey="fit-override" />);
+    resizeTo(500);
+    fireEvent.click(screen.getByRole("button", { name: /Columns \(3\/4\)/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Email" }));
+    expect(screen.getByText("alice@test.com")).toBeInTheDocument();
+    resizeTo(300);
+    expect(screen.getByText("alice@test.com")).toBeInTheDocument();
+    // Only the user's own choice is persisted, never the auto-hidden columns.
+    expect(JSON.parse(localStorage.getItem("fit-override")!)).toEqual({
+      _version: 1,
+      email: true,
+    });
+  });
+
+  it("reset to default restores auto", () => {
+    render(<DataTable columns={wideColumns} data={wideRows} storageKey="fit-reset" />);
+    resizeTo(500);
+    fireEvent.click(screen.getByRole("button", { name: /Columns \(3\/4\)/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Email" }));
+    expect(screen.getByText("alice@test.com")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Reset to default/i }));
+    expect(screen.queryByText("alice@test.com")).not.toBeInTheDocument();
+    expect(localStorage.getItem("fit-reset")).toBeNull();
+  });
+
+  it("a table without priorities never auto-hides and gets no Columns menu", () => {
+    render(<DataTable columns={columns} data={[{ id: 1, name: "Alice", email: "a@test.com" }]} />);
+    resizeTo(10);
+    expect(screen.getByText("a@test.com")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Columns/ })).not.toBeInTheDocument();
+  });
+
+  it("truncate cell renders title with the full text", () => {
+    render(<DataTable columns={wideColumns} data={wideRows} />);
+    const cell = screen.getByText("A long note").closest("td")!;
+    expect(cell).toHaveAttribute("title", "A long note");
+    expect(cell.className).toContain("truncate");
+    expect(cell.className).toContain("max-w-0");
   });
 });
