@@ -1,4 +1,3 @@
-import { CalendarRange } from "lucide-react";
 import { StandbyDateCell, StandbyHoursCell } from "@/components/standby/StandbyDayCells";
 import { useMemo } from "react";
 import { leaveDaysLabel } from "@/components/leave/leaveDuration";
@@ -8,12 +7,10 @@ import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { UserCell } from "@/components/admin/UserCell";
 import { TicketIdBadges } from "@/components/ui/TicketIdBadges";
 import { createViewApproveRejectActionsColumn } from "@/components/ui/tableColumnHelpers";
-import { toneSurfaceClass } from "@/components/ui/tone";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { OvertimeHoursBadge } from "@/pages/overtime/components/OvertimeHoursBadge";
 import type { DayGroupedOvertimeLog } from "@/lib/overtimeDayGroups";
 import type { StandbyRotationLog } from "@/lib/standbyDayGroups";
-import type { ClusteredLeaveRequest } from "@/lib/leaveRangeGroups";
 import type { OvertimeLog, StandbyLog, LeaveRequest } from "@/types";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 
@@ -287,48 +284,6 @@ export const useTeamColumns = (
         meta: { flex: true },
         cell: ({ row }) => leaveDaysLabel(row.original),
       },
-      ...(isRangeMode
-        ? [
-            {
-              id: "overlap",
-              header: "Overlap",
-              size: 195,
-              meta: { flex: true },
-              cell: ({ row }: { row: { original: ClusteredLeaveRequest } }) => {
-                const r = row.original;
-                if (!r.cluster_id) {
-                  return r.continues_next_month ? (
-                    <span className="text-muted-foreground text-xs">Continues next month</span>
-                  ) : (
-                    <span className="text-muted-foreground text-xs">—</span>
-                  );
-                }
-                if (!r.is_cluster_head) {
-                  return <span className="text-muted-foreground text-xs">Same window</span>;
-                }
-                return (
-                  <div className="space-y-1 text-xs">
-                    <div className="flex items-center gap-1 font-medium">
-                      <CalendarRange className="text-primary h-3.5 w-3.5 shrink-0" />
-                      <span>
-                        {r.cluster_size} overlapping ({r.cluster_total_days}d)
-                      </span>
-                    </div>
-                    {r.team_peaks?.map((p) => (
-                      <Badge
-                        key={p.team}
-                        variant="outline"
-                        className={`text-xs ${toneSurfaceClass.warning}`}
-                      >
-                        {p.team} ({p.count} off)
-                      </Badge>
-                    ))}
-                  </div>
-                );
-              },
-            } satisfies AppColumnDef<LeaveRequest>,
-          ]
-        : []),
       {
         accessorKey: "user_leave_balance",
         header: "Balance Left",
@@ -365,7 +320,7 @@ export const useTeamColumns = (
         size: 150,
       },
     ],
-    [onView, onReject, leaveApprove, leaveReject, isRangeMode]
+    [onView, onReject, leaveApprove, leaveReject]
   );
 
   return { getOvertimeColumns, getStandbyColumns, getLeaveColumns };

@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import React, { useState, useMemo } from "react";
+import React, { useCallback, useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTeamManagement } from "@/hooks/useTeamManagement";
 import { AnimatePresence } from "framer-motion";
@@ -85,8 +85,44 @@ const TEAM_LEAVE_RANGE_CARD = {
   title: "user_name",
   hero: "days_requested",
   status: "status",
-  meta: ["request_type", "start_date", "end_date", "overlap", "user_leave_balance"],
+  meta: ["request_type", "start_date", "end_date", "user_leave_balance"],
 };
+
+const buildOvertimeSections = (
+  rows: DayGroupedOvertimeLog[]
+): MonthlyTableSection<DayGroupedOvertimeLog>[] =>
+  buildMonthlyOvertimeSections(rows).map((s) => ({
+    key: s.monthKey,
+    title: s.monthLabel,
+    rows: s.rows,
+    summary: `${s.totalBlocks} ${s.totalBlocks === 1 ? "block" : "blocks"} · ${s.totalHours.toFixed(1)}h`,
+    pendingLabel: s.pendingCount > 0 ? `${s.pendingCount} pending` : undefined,
+  }));
+
+const buildStandbySections = (
+  rows: StandbyRotationLog[]
+): MonthlyTableSection<StandbyRotationLog>[] =>
+  buildMonthlyStandbySections(rows).map((s) => ({
+    key: s.monthKey,
+    title: s.monthLabel,
+    rows: s.rows,
+    summary: `${s.totalShifts} ${s.totalShifts === 1 ? "shift" : "shifts"} · ${s.totalHours.toFixed(0)}h`,
+    pendingLabel: s.pendingCount > 0 ? `${s.pendingCount} pending` : undefined,
+  }));
+
+const buildLeaveSections = (
+  rows: ClusteredLeaveRequest[]
+): MonthlyTableSection<ClusteredLeaveRequest>[] =>
+  buildMonthlyLeaveSections(rows).map((s) => ({
+    key: s.monthKey,
+    title: s.monthLabel,
+    rows: s.rows,
+    summary: `${s.totalRequests} ${s.totalRequests === 1 ? "request" : "requests"} · ${s.totalDays}d`,
+    pendingLabel: s.pendingCount > 0 ? `${s.pendingCount} pending` : undefined,
+  }));
+
+const getLeaveRowClassName = (row: ClusteredLeaveRequest) =>
+  cn("hover:bg-table-hover", row.cluster_id && "shadow-[inset_3px_0_0_hsl(var(--tone-info-text))]");
 
 const QUICK_REJECTION_REASONS = [
   "Missing ticket reference",
@@ -262,10 +298,10 @@ const TeamManagementPage: React.FC = () => {
     setDateTo("");
   };
 
-  const handleReject = (id: number, type: "overtime" | "standby" | "leave") => {
+  const handleReject = useCallback((id: number, type: "overtime" | "standby" | "leave") => {
     setRejectingRecord({ id, type });
     setRejectOpen(true);
-  };
+  }, []);
 
   const wrappedOtApprove = useMemo(
     () => ({
@@ -398,38 +434,20 @@ const TeamManagementPage: React.FC = () => {
     };
   }, [selectedRecord, activeTab, overtimeLogs, standbyLogs, leaveRequests]);
 
-  const buildOvertimeSections = (
-    rows: DayGroupedOvertimeLog[]
-  ): MonthlyTableSection<DayGroupedOvertimeLog>[] =>
-    buildMonthlyOvertimeSections(rows).map((s) => ({
-      key: s.monthKey,
-      title: s.monthLabel,
-      rows: s.rows,
-      summary: `${s.totalBlocks} ${s.totalBlocks === 1 ? "block" : "blocks"} · ${s.totalHours.toFixed(1)}h`,
-      pendingLabel: s.pendingCount > 0 ? `${s.pendingCount} pending` : undefined,
-    }));
+  const clearCollapsedSelection = useCallback((rowIds: string[]) => {
+    const idSet = new Set(rowIds);
+    setRowSelection((prev) => {
+      const next: RowSelectionState = {};
+      for (const [k, v] of Object.entries(prev)) {
+        if (v && !idSet.has(k)) next[k] = v;
+      }
+      return next;
+    });
+  }, []);
 
-  const buildStandbySections = (
-    rows: StandbyRotationLog[]
-  ): MonthlyTableSection<StandbyRotationLog>[] =>
-    buildMonthlyStandbySections(rows).map((s) => ({
-      key: s.monthKey,
-      title: s.monthLabel,
-      rows: s.rows,
-      summary: `${s.totalShifts} ${s.totalShifts === 1 ? "shift" : "shifts"} · ${s.totalHours.toFixed(0)}h`,
-      pendingLabel: s.pendingCount > 0 ? `${s.pendingCount} pending` : undefined,
-    }));
-
-  const buildLeaveSections = (
-    rows: ClusteredLeaveRequest[]
-  ): MonthlyTableSection<ClusteredLeaveRequest>[] =>
-    buildMonthlyLeaveSections(rows).map((s) => ({
-      key: s.monthKey,
-      title: s.monthLabel,
-      rows: s.rows,
-      summary: `${s.totalRequests} ${s.totalRequests === 1 ? "request" : "requests"} · ${s.totalDays}d`,
-      pendingLabel: s.pendingCount > 0 ? `${s.pendingCount} pending` : undefined,
-    }));
+  const overtimeColumnsBuilder = useCallback(() => getOvertimeColumns, [getOvertimeColumns]);
+  const standbyColumnsBuilder = useCallback(() => getStandbyColumns, [getStandbyColumns]);
+  const leaveColumnsBuilder = useCallback(() => getLeaveColumns, [getLeaveColumns]);
 
   if (!canManageTeam) {
     return (
@@ -444,17 +462,6 @@ const TeamManagementPage: React.FC = () => {
       </PageShell>
     );
   }
-
-  const clearCollapsedSelection = (rowIds: string[]) => {
-    const idSet = new Set(rowIds);
-    setRowSelection((prev) => {
-      const next: RowSelectionState = {};
-      for (const [k, v] of Object.entries(prev)) {
-        if (v && !idSet.has(k)) next[k] = v;
-      }
-      return next;
-    });
-  };
 
   const activeRows =
     activeTab === "overtime"
@@ -605,7 +612,7 @@ const TeamManagementPage: React.FC = () => {
             <LoadingStateWrapper isLoading={isLoading}>
               <TeamGroupedTables
                 rows={displayOvertime}
-                columnsBuilder={() => getOvertimeColumns}
+                columnsBuilder={overtimeColumnsBuilder}
                 emptyCopy="No overtime entries match your filters."
                 memberGroupMode={memberGroupMode}
                 userMetaMap={userMetaMap}
@@ -624,7 +631,7 @@ const TeamManagementPage: React.FC = () => {
             <LoadingStateWrapper isLoading={isLoading}>
               <TeamGroupedTables
                 rows={displayStandby}
-                columnsBuilder={() => getStandbyColumns}
+                columnsBuilder={standbyColumnsBuilder}
                 emptyCopy="No standby entries match your filters."
                 memberGroupMode={memberGroupMode}
                 userMetaMap={userMetaMap}
@@ -643,7 +650,7 @@ const TeamManagementPage: React.FC = () => {
             <LoadingStateWrapper isLoading={isLoading}>
               <TeamGroupedTables
                 rows={displayLeaves}
-                columnsBuilder={() => getLeaveColumns}
+                columnsBuilder={leaveColumnsBuilder}
                 emptyCopy="No leave requests match your filters."
                 memberGroupMode={memberGroupMode}
                 userMetaMap={userMetaMap}
@@ -655,13 +662,7 @@ const TeamManagementPage: React.FC = () => {
                 onRowSelectionChange={setRowSelection}
                 buildSections={buildLeaveSections}
                 onSectionCollapse={clearCollapsedSelection}
-                getRowClassName={(row) =>
-                  cn(
-                    "hover:bg-table-hover",
-                    (row as ClusteredLeaveRequest).cluster_id &&
-                      "shadow-[inset_3px_0_0_hsl(var(--tone-info-text))]"
-                  )
-                }
+                getRowClassName={getLeaveRowClassName}
               />
             </LoadingStateWrapper>
           </TabsContent>

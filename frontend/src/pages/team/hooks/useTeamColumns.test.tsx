@@ -28,4 +28,25 @@ describe("useTeamColumns", () => {
       expect(actionsCol?.meta?.actionsDisplay).toBe("column");
     }
   });
+
+  it("leave columns have no Overlap column in any grouping mode", () => {
+    for (const isRangeMode of [true, false]) {
+      const { result } = renderHook(() =>
+        useTeamColumns(
+          vi.fn(),
+          vi.fn(),
+          noopMut,
+          noopMut,
+          noopMut,
+          noopMut,
+          noopMut,
+          noopMut,
+          isRangeMode
+        )
+      );
+      const cols = result.current.getLeaveColumns;
+      expect(cols.map((c) => c.id)).not.toContain("overlap");
+      expect(cols.map((c) => c.header)).not.toContain("Overlap");
+    }
+  });
 });
