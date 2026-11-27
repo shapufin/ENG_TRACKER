@@ -17,12 +17,13 @@ REPORT_TYPE_CHOICES = (
 )
 
 
-def apply_visibility_constraints(queryset, user):
+def apply_visibility_constraints(queryset, user, team_only=False):
     """Scope a queryset by the caller's role-based visibility.
 
     Staff/superuser/HR: all records.
     Team leaders: own + team member records (via get_team_member_ids).
     Everyone else: own records only.
+    ``team_only`` ignores the HR grant (Team Overview export); it can only narrow.
 
     This is the single source of truth for report/export row-level scoping.
     Both UnifiedReportFilter and the standalone export views (ExportOTStandbyView,
@@ -32,7 +33,7 @@ def apply_visibility_constraints(queryset, user):
         return queryset.none()
 
     profile = getattr(user, 'profile', None)
-    if user.is_staff or user.is_superuser or has_hr_role(user):
+    if user.is_staff or user.is_superuser or (not team_only and has_hr_role(user)):
         return queryset
 
     if has_team_leader_role(user):
@@ -90,6 +91,14 @@ def apply_team_filter(queryset, raw_team_ids):
     return queryset.filter(user__profile__teams__id__in=team_ids).distinct()
 
 
+def apply_line_manager_filter(queryset, leader_ids):
+    """Rows of the picked Line Managers' people, plus the Line Managers' own rows.
+
+    A Line Manager never has a Line Manager of their own, so a link-only filter would hide their records.
+    """
+    return queryset.filter(Q(user__profile__albanian_tl_id__in=leader_ids) | Q(user_id__in=leader_ids))
+
+
 class UnifiedReportFilter(filters.FilterSet):
     """Single entry point for validating and applying report query filters.
 
@@ -137,9 +146,9 @@ class UnifiedReportFilter(filters.FilterSet):
 
         albanian_tl_id = self.data.get('albanian_tl_id')
         if albanian_tl_id:
-            overtime_qs = overtime_qs.filter(user__profile__albanian_tl_id=albanian_tl_id)
-            standby_qs = standby_qs.filter(user__profile__albanian_tl_id=albanian_tl_id)
-            leave_qs = leave_qs.filter(user__profile__albanian_tl_id=albanian_tl_id)
+            overtime_qs = apply_line_manager_filter(overtime_qs, [albanian_tl_id])
+            standby_qs = apply_line_manager_filter(standby_qs, [albanian_tl_id])
+            leave_qs = apply_line_manager_filter(leave_qs, [albanian_tl_id])
 
         team_raw = self.data.get('team_ids')
         overtime_qs = apply_team_filter(overtime_qs, team_raw)

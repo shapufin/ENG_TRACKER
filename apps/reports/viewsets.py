@@ -32,6 +32,7 @@ from core.utils.sheet_titles import safe_sheet_title
 from .filters import (
     UnifiedReportFilter,
     apply_team_filter,
+    apply_line_manager_filter,
     apply_visibility_constraints,
     parse_int_list,
     workspace_user_ids_for_ids,
@@ -669,6 +670,7 @@ class ExportExcelView(HbprBlockedMixin, APIView):
         OpenApiParameter(name='albanian_tl_ids', type=str, location=OpenApiParameter.QUERY),
         OpenApiParameter(name='workspace_ids', type=str, location=OpenApiParameter.QUERY),
         OpenApiParameter(name='team_ids', type=str, location=OpenApiParameter.QUERY),
+        OpenApiParameter(name='team_only', type=bool, location=OpenApiParameter.QUERY),
         OpenApiParameter(name='status', type=str, location=OpenApiParameter.QUERY,
                          description='Filter by status: "approved" (default) or "pending".'),
     ],
@@ -692,6 +694,7 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
             albanian_tl_ids = request.query_params.get('albanian_tl_ids', '')
             workspace_ids = request.query_params.get('workspace_ids', '')
             team_ids = request.query_params.get('team_ids', '')
+            team_only = request.query_params.get('team_only') == 'true'
             # status: 'approved' (default) or 'pending'
             status_filter = request.query_params.get('status', 'approved')
             if status_filter not in ('approved', 'pending'):
@@ -746,13 +749,13 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
             if italian_tl_id_list:
                 ot_qs = ot_qs.filter(user__profile__italian_tl__in=italian_tl_id_list)
             if albanian_tl_id_list:
-                ot_qs = ot_qs.filter(user__profile__albanian_tl__in=albanian_tl_id_list)
+                ot_qs = apply_line_manager_filter(ot_qs, albanian_tl_id_list)
             if workspace_users is not None:
                 ot_qs = ot_qs.filter(user_id__in=workspace_users)
             ot_qs = apply_team_filter(ot_qs, team_ids)
             # Apply role-based visibility (prevents TL/employee from exporting
             # records outside their scope — matches UnifiedReportFilter).
-            ot_qs = apply_visibility_constraints(ot_qs, request.user)
+            ot_qs = apply_visibility_constraints(ot_qs, request.user, team_only)
 
             # Filter StandbyLog by status (approved by default, pending when requested)
             sb_qs = StandbyLog.objects.filter(**base_filters)
@@ -771,12 +774,12 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
             if italian_tl_id_list:
                 sb_qs = sb_qs.filter(user__profile__italian_tl__in=italian_tl_id_list)
             if albanian_tl_id_list:
-                sb_qs = sb_qs.filter(user__profile__albanian_tl__in=albanian_tl_id_list)
+                sb_qs = apply_line_manager_filter(sb_qs, albanian_tl_id_list)
             if workspace_users is not None:
                 sb_qs = sb_qs.filter(user_id__in=workspace_users)
             sb_qs = apply_team_filter(sb_qs, team_ids)
             # Apply role-based visibility (same as ot_qs above).
-            sb_qs = apply_visibility_constraints(sb_qs, request.user)
+            sb_qs = apply_visibility_constraints(sb_qs, request.user, team_only)
 
             logger.info(f"[OT/Standby Export] Querysets - OT: {ot_qs.count()}, SB: {sb_qs.count()}, status: {status_filter}, date_mode: {date_mode}")
 
@@ -819,6 +822,7 @@ class ExportOTStandbyView(HbprBlockedMixin, APIView):
         OpenApiParameter(name='albanian_tl_ids', type=str, location=OpenApiParameter.QUERY),
         OpenApiParameter(name='workspace_ids', type=str, location=OpenApiParameter.QUERY),
         OpenApiParameter(name='team_ids', type=str, location=OpenApiParameter.QUERY),
+        OpenApiParameter(name='team_only', type=bool, location=OpenApiParameter.QUERY),
     ],
     responses={
         (200, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'): OpenApiTypes.BINARY
@@ -839,6 +843,7 @@ class ExportLeaveView(HbprBlockedMixin, APIView):
             albanian_tl_ids = request.query_params.get('albanian_tl_ids', '')
             workspace_ids = request.query_params.get('workspace_ids', '')
             team_ids = request.query_params.get('team_ids', '')
+            team_only = request.query_params.get('team_only') == 'true'
 
             # Parse comma-separated IDs (skip 'none' string - treat as no filter)
             italian_tl_id_list = (
@@ -872,14 +877,14 @@ class ExportLeaveView(HbprBlockedMixin, APIView):
             if italian_tl_id_list:
                 leave_qs = leave_qs.filter(user__profile__italian_tl__in=italian_tl_id_list)
             if albanian_tl_id_list:
-                leave_qs = leave_qs.filter(user__profile__albanian_tl__in=albanian_tl_id_list)
+                leave_qs = apply_line_manager_filter(leave_qs, albanian_tl_id_list)
             if workspace_id_list is not None:
                 workspace_users = workspace_user_ids_for_ids(workspace_id_list)
                 leave_qs = leave_qs.filter(user_id__in=workspace_users)
             leave_qs = apply_team_filter(leave_qs, team_ids)
             # Apply role-based visibility (prevents TL/employee from exporting
             # records outside their scope — matches UnifiedReportFilter).
-            leave_qs = apply_visibility_constraints(leave_qs, request.user)
+            leave_qs = apply_visibility_constraints(leave_qs, request.user, team_only)
 
             logger.info(f"[Leave Export] Queryset - Leave: {leave_qs.count()}")
 

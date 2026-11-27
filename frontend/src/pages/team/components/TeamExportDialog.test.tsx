@@ -62,6 +62,7 @@ describe("TeamExportDialog", () => {
       expect(reportService.exportOTStandby).toHaveBeenCalledWith({
         start_date: undefined,
         end_date: undefined,
+        team_only: true,
         status: "approved",
         date_mode: "processing_period",
       });
@@ -89,6 +90,7 @@ describe("TeamExportDialog", () => {
       expect(reportService.exportOTStandby).toHaveBeenCalledWith({
         start_date: undefined,
         end_date: undefined,
+        team_only: true,
         status: "approved",
         date_mode: "processing_period",
       });
@@ -118,6 +120,7 @@ describe("TeamExportDialog", () => {
       expect(reportService.exportLeave).toHaveBeenCalledWith({
         start_date: undefined,
         end_date: undefined,
+        team_only: true,
       });
     });
   });
