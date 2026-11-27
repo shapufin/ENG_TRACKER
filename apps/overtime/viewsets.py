@@ -547,9 +547,9 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
         ``self.filter_queryset(self.get_queryset())`` so all row-level
         scoping (PersonalOnlyFilterMixin, search, filterset) applies.
 
-        CSV column shape is frozen and must match the frontend
-        ``OvertimePage`` rowMapper exactly:
-        User, Date, Client, Hours, Status, Evidence Type, Evidence, Description.
+        CSV column shape is frozen: User, Date, Day, Start Time, End Time, Total
+        Hours, Type, Client, Status, Evidence Type, Evidence, Reference Code,
+        Description. Rows run by date (newest first), user, then start time.
 
         Hours are the entry's paid share: whole numbers without a decimal
         point, fractions (entries sharing a paid hour) kept.
@@ -559,8 +559,11 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
         from django.http import StreamingHttpResponse
         from core.utils.csv_safe import csv_safe
         from core.utils.hours import format_hours
+        from core.utils.shift_order import OVERTIME_TYPE_LABEL, clock
+        from django.db.models import F
 
-        queryset = self.filter_queryset(self.get_queryset()).select_related('user', 'client')
+        queryset = self.filter_queryset(self.get_queryset()).select_related('user', 'client').order_by(
+            '-date', 'user_id', F('start_time').asc(nulls_first=True), 'id')
 
         def csv_generator():
             # UTF-8 BOM for Excel compatibility (non-ASCII usernames).
@@ -568,7 +571,7 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
             buffer = io.StringIO()
             writer = csv.writer(buffer)
             writer.writerow([
-                'User', 'Date', 'Client', 'Hours',
+                'User', 'Date', 'Day', 'Start Time', 'End Time', 'Total Hours', 'Type', 'Client',
                 'Status', 'Evidence Type', 'Evidence', 'Reference Code', 'Description',
             ])
             yield buffer.getvalue()
@@ -585,8 +588,12 @@ class OvertimeLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateM
                 writer.writerow([csv_safe(v) for v in (
                     ot.user.username if ot.user else '',
                     ot.date.strftime('%d/%m/%Y') if ot.date else '',
-                    ot.client.name if ot.client else '',
+                    ot.date.strftime('%A') if ot.date else '',
+                    clock(ot.start_time),
+                    clock(ot.end_time),
                     format_hours(ot.hours),
+                    OVERTIME_TYPE_LABEL,
+                    ot.client.name if ot.client else '',
                     ot.status,
                     ot.evidence_type or '',
                     evidence_col,

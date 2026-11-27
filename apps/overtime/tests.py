@@ -631,7 +631,7 @@ class OvertimeLogExportTests(TestCase):
         self.assertIn('User', header)
         self.assertIn('Date', header)
         self.assertIn('Client', header)
-        self.assertIn('Hours', header)
+        self.assertIn('Total Hours', header)
         self.assertIn('export-emp', body)
 
     def test_export_neutralises_spreadsheet_formulas(self):
@@ -727,7 +727,7 @@ class OvertimeLogExportTests(TestCase):
             '/api/overtime/logs/export/', {'ignore_date_filter': 'true'},
         )
         data_lines = [ln for ln in _streaming_body(response).split('\r\n') if ln][1:]
-        self.assertEqual([ln.split(',')[3] for ln in data_lines], ['0.5', '0.5'])
+        self.assertEqual([ln.split(',')[5] for ln in data_lines], ['0.5', '0.5'])
 
     def test_export_preserves_integer_hours(self):
         """Whole hours export without a decimal point (4, not 4.0 or 4.00)."""
@@ -742,7 +742,7 @@ class OvertimeLogExportTests(TestCase):
         body = _streaming_body(response)
         # The data row should contain "4" not "4.0" or "4.00".
         data_lines = [ln for ln in body.split('\r\n') if ln][1:]
-        self.assertTrue(any('4' in ln.split(',')[3] for ln in data_lines))
+        self.assertTrue(any(ln.split(',')[5] == '4' for ln in data_lines))
 
     def test_export_returns_only_headers_when_empty(self):
         """Empty queryset returns CSV with BOM + header row only."""

@@ -2,7 +2,8 @@ import pandas as pd
 import io
 
 from core.utils.csv_safe import xlsx_safe
-from datetime import timedelta
+from core.utils.shift_order import clock, overtime_sort_key, standby_sort_key
+from datetime import time, timedelta
 
 from django.utils import timezone
 
@@ -277,6 +278,7 @@ class AnalyticsReportGenerator:
                     'Status': log.status,
                     'Client': log.client.name if log.client else '',
                     'Description': log.description or '',
+                    **cls._time_columns(log),
                 })
 
         if include_standby:
@@ -292,6 +294,7 @@ class AnalyticsReportGenerator:
                     'Status': log.status,
                     'Client': '',
                     'Description': log.description or '',
+                    **cls._time_columns(log),
                 })
 
         if include_leave:
@@ -308,9 +311,22 @@ class AnalyticsReportGenerator:
                     'Status': req.status,
                     'Client': '',
                     'Description': req.reason or '',
+                    'Day': '', 'Start Time': '', 'End Time': '',
                 })
 
-        return rows
+        def order(row):
+            start = time.fromisoformat(row['Start Time']) if row['Start Time'] else None
+            if row['Category'] == 'Standby':
+                end = time.fromisoformat(row['End Time']) if row['End Time'] else None
+                return (row['Date'], row['Username'], row['Category'], standby_sort_key(start, end))
+            return (row['Date'], row['Username'], row['Category'], overtime_sort_key(start))
+
+        return sorted(rows, key=order)
+
+    @staticmethod
+    def _time_columns(log):
+        """Appended after the existing columns: the sheets are read by position."""
+        return {'Day': log.date.strftime('%A'), 'Start Time': clock(log.start_time), 'End Time': clock(log.end_time)}
 
     @classmethod
     def generate_excel_report(cls, period='month', date_from=None, date_to=None,
@@ -345,11 +361,13 @@ class AnalyticsReportGenerator:
 
         # 4. Client Breakdown Sheet
         client_rows = []
-        for log in (overtime_data if include_overtime else []):
+        for log in sorted(overtime_data if include_overtime else [],
+                          key=lambda o: (o.date, o.user_id, overtime_sort_key(o.start_time))):
             client_rows.append({
                 'Date': log.date,
                 'Client': log.client.name if log.client else 'Unassigned',
                 'Hours': float(log.hours),
+                **cls._time_columns(log),
             })
         df_client = pd.DataFrame(client_rows).map(xlsx_safe)
 
