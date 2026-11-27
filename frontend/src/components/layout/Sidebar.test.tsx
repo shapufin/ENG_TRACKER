@@ -7,11 +7,12 @@ import { dashboardService } from "@/services/dashboardService";
 import type { NavItem } from "./hooks/useVisibleNavItems";
 
 vi.mock("./SidebarNav", () => ({ SidebarNav: () => <nav data-testid="sidebar-nav" /> }));
-vi.mock("./SidebarUserProfile", () => ({
-  SidebarUserProfile: () => <div data-testid="user-profile" />,
-}));
-vi.mock("@/components/ui/ThemeToggle", () => ({
-  ThemeToggle: () => <div data-testid="theme-toggle" />,
+vi.mock("./SidebarProfileMenu", () => ({
+  SidebarProfileMenu: ({ onLogout }: { onLogout: () => void }) => (
+    <button type="button" onClick={onLogout}>
+      Profile row
+    </button>
+  ),
 }));
 vi.mock("@/components/plugins/PluginSlot", () => ({
   PluginSlot: () => <div data-testid="plugin-slot" />,
@@ -46,7 +47,8 @@ describe("Sidebar", () => {
       />
     );
     expect(screen.getByText("Time Tracker")).toBeInTheDocument();
-    expect(screen.getByText("Logout")).toBeInTheDocument();
+    expect(screen.getByText("Profile row")).toBeInTheDocument();
+    expect(screen.queryByText("a@b.com")).not.toBeInTheDocument();
   });
 
   it("renders collapsed sidebar", () => {
@@ -62,7 +64,7 @@ describe("Sidebar", () => {
       />
     );
     expect(screen.queryByText("Time Tracker")).not.toBeInTheDocument();
-    expect(screen.queryByText("Logout")).not.toBeInTheDocument();
+    expect(screen.queryByText("Time Tracker")).not.toBeInTheDocument();
   });
 
   it("stacks header vertically when collapsed (prevents button overflow)", () => {
@@ -102,10 +104,10 @@ describe("Sidebar", () => {
         onLogout={onLogout}
       />
     );
-    fireEvent.click(
-      document.querySelector("button[title]") || document.querySelectorAll("button")[1]
-    );
+    fireEvent.click(screen.getByLabelText("Collapse sidebar"));
     expect(onToggleCollapse).toHaveBeenCalled();
+    fireEvent.click(screen.getByText("Profile row"));
+    expect(onLogout).toHaveBeenCalled();
   });
 
   it("renders the gradient logo tile (mockup fidelity)", () => {

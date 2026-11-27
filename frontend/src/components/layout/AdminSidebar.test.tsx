@@ -15,11 +15,8 @@ vi.mock("@/components/plugins/PluginSlot", () => ({
     return null;
   },
 }));
-vi.mock("@/components/ui/ThemeToggle", () => ({
-  ThemeToggle: () => <div>Theme toggle</div>,
-}));
-vi.mock("./SidebarUserProfile", () => ({
-  SidebarUserProfile: () => <div>User profile</div>,
+vi.mock("./SidebarProfileMenu", () => ({
+  SidebarProfileMenu: () => <div>Profile row</div>,
 }));
 vi.mock("@/context/PluginContext", () => ({
   usePlugins: vi.fn(() => ({ getInjectedComponents: () => [] })),
@@ -259,6 +256,13 @@ describe("AdminSidebar palette trigger", () => {
       </MemoryRouter>
     );
 
+  it("puts the search trigger in the header row, not as a separate bar", () => {
+    renderTrigger(vi.fn());
+    const header = document.querySelector(".border-b.border-border\\/30");
+    expect(header?.contains(screen.getByRole("button", { name: /search pages/i }))).toBe(true);
+    expect(screen.queryByText("Search pages")).not.toBeInTheDocument();
+  });
+
   it("renders no trigger unless onOpenPalette is provided", () => {
     renderTrigger();
     expect(screen.queryByRole("button", { name: /search pages/i })).not.toBeInTheDocument();
@@ -275,7 +279,7 @@ describe("AdminSidebar palette trigger", () => {
     expect(open).toHaveBeenCalledTimes(2);
   });
 
-  it("shows the Mac shortcut on Apple platforms", async () => {
+  it("shows the Mac shortcut in the trigger tooltip on Apple platforms", async () => {
     vi.resetModules();
     vi.spyOn(globalThis.navigator, "platform", "get").mockReturnValue("MacIntel");
     const { AdminSidebar: MacSidebar } = await import("./AdminSidebar");
@@ -292,7 +296,10 @@ describe("AdminSidebar palette trigger", () => {
         />
       </MemoryRouter>
     );
-    expect(screen.getByText("⌘ K")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /search pages/i })).toHaveAttribute(
+      "title",
+      "Search pages (⌘+K)"
+    );
     vi.restoreAllMocks();
   });
 });

@@ -1,0 +1,109 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { SidebarProfileMenu } from "./SidebarProfileMenu";
+
+const setTheme = vi.fn();
+vi.mock("@/context/ThemeContext", () => ({
+  useTheme: () => ({ theme: "dark", setTheme, resolved: "dark" }),
+}));
+vi.mock("@/hooks/useInstallPrompt", () => ({ useInstallPrompt: vi.fn() }));
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
+
+const mockInstall = (canShowInstallButton: boolean) =>
+  vi.mocked(useInstallPrompt).mockReturnValue({
+    isIOS: false,
+    isFirefox: false,
+    isStandalone: false,
+    isInstallable: true,
+    canShowInstallGuidance: true,
+    canShowInstallButton,
+    promptInstall: vi.fn().mockResolvedValue(true),
+    dismiss: vi.fn(),
+  });
+
+const user = { full_name: "Alice Smith", email: "alice@example.com" };
+
+const renderMenu = (props: Partial<React.ComponentProps<typeof SidebarProfileMenu>> = {}) =>
+  render(
+    <MemoryRouter initialEntries={["/"]}>
+      <Routes>
+        <Route
+          path="/"
+          element={<SidebarProfileMenu user={user} collapsed={false} onLogout={vi.fn()} {...props} />}
+        />
+        <Route path="/settings" element={<div>Settings page</div>} />
+      </Routes>
+    </MemoryRouter>
+  );
+
+const openMenu = () => {
+  const trigger = screen.getByRole("button", { name: /Account menu/ });
+  trigger.focus();
+  fireEvent.keyDown(trigger, { key: "Enter" });
+};
+
+describe("SidebarProfileMenu", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockInstall(true);
+  });
+
+  it("footer is a single profile row with the name and no email", () => {
+    renderMenu();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.getByText("Alice Smith")).toBeInTheDocument();
+    expect(screen.queryByText("alice@example.com")).not.toBeInTheDocument();
+  });
+
+  it("collapsed rail shows only the avatar with an accessible name", () => {
+    renderMenu({ collapsed: true });
+    expect(screen.queryByText("Alice Smith")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Account menu, Alice Smith" })).toBeInTheDocument();
+  });
+
+  it("profile menu holds theme, settings and log out", () => {
+    renderMenu();
+    openMenu();
+    expect(screen.getByRole("menuitem", { name: "Light theme" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Dark theme" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "System theme" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /Settings/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /Log out/ })).toBeInTheDocument();
+  });
+
+  it("choosing a theme calls setTheme", () => {
+    renderMenu();
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Light theme" }));
+    expect(setTheme).toHaveBeenCalledWith("light");
+  });
+
+  it("log out from the menu runs the same logout handler", () => {
+    const onLogout = vi.fn();
+    renderMenu({ onLogout });
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: /Log out/ }));
+    expect(onLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it("settings item navigates to /settings", () => {
+    renderMenu();
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: /Settings/ }));
+    expect(screen.getByText("Settings page")).toBeInTheDocument();
+  });
+
+  it("shows the install item when install is available", () => {
+    renderMenu();
+    openMenu();
+    expect(screen.getByRole("menuitem", { name: /Install app/ })).toBeInTheDocument();
+  });
+
+  it("install item hidden when install is unavailable", () => {
+    mockInstall(false);
+    renderMenu();
+    openMenu();
+    expect(screen.queryByRole("menuitem", { name: /Install app/ })).not.toBeInTheDocument();
+  });
+});
