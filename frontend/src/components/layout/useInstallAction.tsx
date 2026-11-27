@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type React from "react";
 import { Download, Share, Info } from "lucide-react";
 import {
   Dialog,
@@ -12,7 +13,7 @@ import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
 /** Install flow shared by the button and the profile-menu item. `dialog` must be
  * rendered outside any menu content, which unmounts when the menu closes. */
-export function useInstallAction() {
+export function useInstallAction(returnFocusRef?: React.RefObject<HTMLElement | null>) {
   const { isIOS, isFirefox, isInstallable, canShowInstallButton, promptInstall } =
     useInstallPrompt();
   const [showDialog, setShowDialog] = useState(false);
@@ -28,7 +29,15 @@ export function useInstallAction() {
   const dialog = (
     <>
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent size="sm">
+        <DialogContent
+          size="sm"
+          onCloseAutoFocus={(e) => {
+            // The dialog has no trigger of its own (it opens from a closed menu).
+            if (!returnFocusRef?.current) return;
+            e.preventDefault();
+            returnFocusRef.current.focus();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Download className="h-5 w-5" />

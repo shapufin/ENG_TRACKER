@@ -137,5 +137,21 @@ describe("SidebarProfileMenu", () => {
     openMenu();
     fireEvent.click(screen.getByRole("menuitem", { name: /Install app/ }));
     expect(await screen.findByText(/Install site as app/)).toBeInTheDocument();
+    expect(screen.getByText(/Chrome/)).toBeInTheDocument();
+  });
+
+  it("returns focus to the profile trigger when the install dialog closes", async () => {
+    mockInstall(true, { isIOS: true, isInstallable: false });
+    renderMenu();
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: /Install app/ }));
+    await screen.findByText("Install Engineering Tracker");
+    fireEvent.keyDown(document.querySelector("[role='dialog']") as HTMLElement, {
+      key: "Escape",
+    });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: /Account menu/ }))
+    );
   });
 });

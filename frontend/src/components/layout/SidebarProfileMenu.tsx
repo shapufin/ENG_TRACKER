@@ -41,7 +41,8 @@ export const SidebarProfileMenu: React.FC<SidebarProfileMenuProps> = ({
 }) => {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
-  const { canShow: canInstall, install, dialog } = useInstallAction();
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const { canShow: canInstall, install, dialog } = useInstallAction(triggerRef);
   // The install dialog opens only after the menu has closed and released focus,
   // otherwise the two focus traps fight each other.
   const installPending = React.useRef(false);
@@ -50,6 +51,7 @@ export const SidebarProfileMenu: React.FC<SidebarProfileMenuProps> = ({
 
   const trigger = (
     <button
+      ref={triggerRef}
       type="button"
       aria-label={`Account menu, ${displayName}`}
       className={`hover:bg-accent focus-visible:ring-ring flex h-10 items-center gap-2.5 rounded-lg text-left transition-colors outline-none focus-visible:ring-2 ${collapsed ? "w-10 justify-center" : "w-full px-2"}`}
