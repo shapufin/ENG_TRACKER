@@ -131,7 +131,7 @@ describe("AdminSidebar", () => {
     const name = screen.getByText("Admin Panel");
     const classes = name.className.split(/\s+/);
     expect(classes).toContain("truncate");
-    expect(classes).toContain("text-base");
+    expect(classes).toContain("text-sm");
     expect(classes).not.toContain("md:inline");
     expect(name.parentElement?.className.split(/\s+/)).toContain("min-w-0");
   });
