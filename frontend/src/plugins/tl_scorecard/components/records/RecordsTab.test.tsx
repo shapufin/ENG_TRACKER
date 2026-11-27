@@ -172,8 +172,11 @@ const renderTab = (
   );
 
 const openAction = (title: string, label: string) => {
-  fireEvent.click(screen.getByRole("button", { name: `Actions for ${title}` }));
-  fireEvent.click(screen.getByRole("button", { name: label }));
+  fireEvent.pointerDown(screen.getByRole("button", { name: `Actions for ${title}` }), {
+    button: 0,
+    ctrlKey: false,
+  });
+  fireEvent.click(screen.getByRole("menuitem", { name: label }));
 };
 
 beforeEach(() => {
@@ -438,9 +441,12 @@ describe("RecordsTab ownership", () => {
   it("does not offer approve to the owning team leader", async () => {
     renderTab("?tab=records&kind=pips");
     await screen.findByText("Pending approval");
-    fireEvent.click(screen.getByRole("button", { name: "Actions for PIP for Jane" }));
-    expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Actions for PIP for Jane" }), {
+      button: 0,
+      ctrlKey: false,
+    });
+    expect(screen.queryByRole("menuitem", { name: "Approve" })).not.toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
   });
 });
 

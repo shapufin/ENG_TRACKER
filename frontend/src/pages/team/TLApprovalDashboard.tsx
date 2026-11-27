@@ -187,6 +187,7 @@ export const TLApprovalDashboard: React.FC = () => {
         open={selectedRecord !== null}
         onOpenChange={(open) => !open && setSelectedRecord(null)}
         record={selectedRecord}
+        layout="panel"
       />
 
       <ConfirmDialog

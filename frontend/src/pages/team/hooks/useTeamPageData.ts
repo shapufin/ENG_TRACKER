@@ -75,8 +75,16 @@ export const useTeamPageData = (
     () => calcHours(overtimeLogs || [], membersData, filterTeam, dateFrom, dateTo),
     [overtimeLogs, membersData, filterTeam, dateFrom, dateTo]
   );
+  const pendingOvertimeHours = useMemo(
+    () => calcHours(overtimeLogs || [], membersData, filterTeam, dateFrom, dateTo, "pending"),
+    [overtimeLogs, membersData, filterTeam, dateFrom, dateTo]
+  );
   const standbyHours = useMemo(
     () => calcHours(standbyLogs || [], membersData, filterTeam, dateFrom, dateTo),
+    [standbyLogs, membersData, filterTeam, dateFrom, dateTo]
+  );
+  const pendingStandbyHours = useMemo(
+    () => calcHours(standbyLogs || [], membersData, filterTeam, dateFrom, dateTo, "pending"),
     [standbyLogs, membersData, filterTeam, dateFrom, dateTo]
   );
 
@@ -113,7 +121,9 @@ export const useTeamPageData = (
     availableTeams,
     vacationDaysLeft,
     overtimeHours,
+    pendingOvertimeHours,
     standbyHours,
+    pendingStandbyHours,
     filteredOvertime,
     filteredStandby,
     filteredLeaves,

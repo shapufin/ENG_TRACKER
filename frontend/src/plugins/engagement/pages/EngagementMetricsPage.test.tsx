@@ -342,8 +342,11 @@ describe("EngagementMetricsPage", () => {
       });
 
       renderPage();
-      fireEvent.click(screen.getByRole("button", { name: /export report/i }));
-      fireEvent.click(await screen.findByRole("button", { name: label }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: /export report/i }), {
+        button: 0,
+        ctrlKey: false,
+      });
+      fireEvent.click(await screen.findByRole("menuitem", { name: label }));
 
       await waitFor(() =>
         expect(exportReport).toHaveBeenCalledWith("2026-09-01", scope, fileFormat)

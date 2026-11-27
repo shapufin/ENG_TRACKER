@@ -75,14 +75,14 @@ describe("HoursLogExportButtons", () => {
 
     const trigger = screen.getByRole("button", { name: "Export" });
     expect(trigger).toHaveClass("md:hidden");
-    fireEvent.click(trigger);
-    fireEvent.click(await screen.findByRole("button", { name: "CSV" }));
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "CSV" }));
     expect(onCsv).toHaveBeenCalled();
     // The trigger is disabled while the download runs.
     await waitFor(() => expect(trigger).toBeEnabled());
 
-    fireEvent.click(trigger);
-    fireEvent.click(await screen.findByRole("button", { name: "JSON" }));
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "JSON" }));
     expect(exportData).toHaveBeenCalledWith(logs, "ot", "json");
   });
 

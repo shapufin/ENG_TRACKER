@@ -316,8 +316,8 @@ describe("TLScorecardPage", () => {
     renderPage();
 
     const buttons = await screen.findAllByRole("button", { name: "Export Summary" });
-    fireEvent.click(buttons[0]);
-    fireEvent.click(await screen.findByRole("button", { name: "Excel — this month" }));
+    fireEvent.pointerDown(buttons[0], { button: 0, ctrlKey: false });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Excel — this month" }));
 
     await waitFor(() =>
       expect(tlScorecardService.exportSummary).toHaveBeenCalledWith(
@@ -337,8 +337,11 @@ describe("TLScorecardPage", () => {
     });
     renderPage();
 
-    fireEvent.click((await screen.findAllByRole("button", { name: "Export Summary" }))[0]);
-    fireEvent.click(await screen.findByRole("button", { name: "Excel — this month" }));
+    fireEvent.pointerDown((await screen.findAllByRole("button", { name: "Export Summary" }))[0], {
+      button: 0,
+      ctrlKey: false,
+    });
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Excel — this month" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/could not be exported/i);
     expect(downloadBlobResponse).not.toHaveBeenCalled();

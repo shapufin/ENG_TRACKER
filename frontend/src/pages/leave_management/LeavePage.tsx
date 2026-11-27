@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useLeaveQueries } from "@/hooks/useLeaveQueries";
 import { useAuth } from "@/context/AuthContext";
-import { Plus, FileDown, Download, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import type { LeaveRequest } from "@/types";
 import { RecordDetailModal } from "@/components/team/RecordDetailModal";
 import { usePhoneRecordDetail } from "@/components/team/usePhoneRecordDetail";
@@ -14,6 +14,7 @@ import { FormDialog } from "@/components/ui/FormDialog";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageShell } from "@/components/layout/PageShell";
 import { LoadingCard } from "@/components/ui/LoadingCard";
+import { HoursLogExportButtons } from "@/pages/hours_logs/components/HoursLogExportButtons";
 import { exportData } from "@/utils/exportUtils";
 import { useLeaveForm } from "./hooks/useLeaveForm";
 import { getRemainingDays } from "./hooks/leaveBalanceUtils";
@@ -122,7 +123,7 @@ export const LeavePage: React.FC = () => {
     handleRejectClick
   );
 
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
     exportData(requests ?? [], "vacations", "csv", {
       headers: ["ID", "User", "Type", "Start", "End", "Days", "Status", "Reason"],
       rowMapper: (r: LeaveRequest) => [
@@ -144,17 +145,11 @@ export const LeavePage: React.FC = () => {
       subtitle="Manage vacation leave requests and balances."
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportCSV}>
-            <FileDown className="h-3.5 w-3.5" /> CSV
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => exportData(requests ?? [], "vacations", "json")}
-          >
-            <Download className="h-3.5 w-3.5" /> JSON
-          </Button>
+          <HoursLogExportButtons
+            logs={requests ?? []}
+            filename="vacations"
+            onExportCsv={handleExportCSV}
+          />
           <Button size="sm" className="gap-1.5" onClick={openCreate}>
             <Plus className="h-3.5 w-3.5" /> New Request
           </Button>

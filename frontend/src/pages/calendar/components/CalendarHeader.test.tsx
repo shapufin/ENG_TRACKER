@@ -97,15 +97,21 @@ describe("CalendarHeader", () => {
   it("collapses CSV and iCal into one export menu that calls the right exporter", async () => {
     render(<CalendarHeader {...baseProps} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Export calendar" }));
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Export calendar" }), {
+      button: 0,
+      ctrlKey: false,
+    });
 
-    const csv = await screen.findByRole("button", { name: "Export calendar as CSV" });
+    const csv = await screen.findByRole("menuitem", { name: "Export calendar as CSV" });
     fireEvent.click(csv);
     await waitFor(() => expect(exportToCSV).toHaveBeenCalledTimes(1));
     expect(exportToICal).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Export calendar" }));
-    const ical = await screen.findByRole("button", { name: "Export calendar as iCal" });
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Export calendar" }), {
+      button: 0,
+      ctrlKey: false,
+    });
+    const ical = await screen.findByRole("menuitem", { name: "Export calendar as iCal" });
     fireEvent.click(ical);
     await waitFor(() => expect(exportToICal).toHaveBeenCalledTimes(1));
   });

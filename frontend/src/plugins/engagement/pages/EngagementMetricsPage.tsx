@@ -5,7 +5,13 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { InfoCallout } from "@/components/ui/InfoCallout";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SearchField } from "@/components/ui/SearchField";
 import {
   Select,
@@ -87,7 +93,6 @@ export const EngagementMetricsPage: React.FC = () => {
       { replace: true }
     );
   const [teamFilter, setTeamFilter] = useState("");
-  const [exportOpen, setExportOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -135,7 +140,6 @@ export const EngagementMetricsPage: React.FC = () => {
   }, [teamBreakdown, teamFilter]);
 
   const handleExport = async (scope: "month" | "year", fileFormat: "xlsx" | "pdf") => {
-    setExportOpen(false);
     const targetMonth = month ?? summary?.month;
     if (!targetMonth) return;
     setIsExporting(true);
@@ -251,49 +255,33 @@ export const EngagementMetricsPage: React.FC = () => {
               Visualize
             </Link>
           </Button>
-          <Popover open={exportOpen} onOpenChange={setExportOpen}>
-            <PopoverTrigger asChild>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button type="button" size="control-sm" disabled={isExporting}>
                 <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
                 {isExporting ? "Exporting…" : "Export Report"}
               </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-56 p-1.5">
-              <button
-                type="button"
-                onClick={() => handleExport("month", "xlsx")}
-                className="hover:bg-muted flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm"
-              >
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onSelect={() => void handleExport("month", "xlsx")}>
                 <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
                 Excel — this month
-              </button>
-              <button
-                type="button"
-                onClick={() => handleExport("year", "xlsx")}
-                className="hover:bg-muted flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm"
-              >
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => void handleExport("year", "xlsx")}>
                 <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
                 Excel — full year
-              </button>
-              <div className="bg-border my-1 h-px" role="separator" />
-              <button
-                type="button"
-                onClick={() => handleExport("month", "pdf")}
-                className="hover:bg-muted flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm"
-              >
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => void handleExport("month", "pdf")}>
                 <FileText className="h-4 w-4" aria-hidden="true" />
                 PDF report — this month
-              </button>
-              <button
-                type="button"
-                onClick={() => handleExport("year", "pdf")}
-                className="hover:bg-muted flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm"
-              >
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => void handleExport("year", "pdf")}>
                 <FileText className="h-4 w-4" aria-hidden="true" />
                 PDF report — full year
-              </button>
-            </PopoverContent>
-          </Popover>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </>
       }
     >

@@ -104,6 +104,7 @@ export const leaveService = {
     workspace_ids?: string;
     status?: string;
     request_type?: "vacation" | "sick";
+    page?: number;
     page_size?: number;
   }): Promise<PaginatedResponse<LeaveRequest>> {
     const { data } = await api.get<PaginatedResponse<LeaveRequest>>(

@@ -11,7 +11,10 @@ import {
 } from "@/components/ui/select";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
-import { Filter, Users, Calendar } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Filter, Users, Calendar, RotateCcw } from "lucide-react";
+
+export type TeamGroupingMode = "range" | "none" | "team" | "italian_tl";
 
 interface TeamFilterBarProps {
   searchQuery: string;
@@ -24,16 +27,15 @@ interface TeamFilterBarProps {
   onDateFromChange: (v: string) => void;
   dateTo: string;
   onDateToChange: (v: string) => void;
-  memberGroupMode: "none" | "team" | "italian_tl";
-  onMemberGroupModeChange: (v: "none" | "team" | "italian_tl") => void;
+  memberGroupMode: TeamGroupingMode;
+  onMemberGroupModeChange: (v: TeamGroupingMode) => void;
   availableTeams: { id: number; name: string }[];
+  rangeGroupLabel?: string;
+  statusCounts?: { all: number; pending: number; approved: number; rejected: number };
+  tier1Left?: React.ReactNode;
+  resultCount?: number;
+  onResetFilters?: () => void;
 }
-
-const groupOptions: { label: string; value: "none" | "team" | "italian_tl" }[] = [
-  { label: "Ungrouped", value: "none" },
-  { label: "By Team", value: "team" },
-  { label: "By Manager", value: "italian_tl" },
-];
 
 export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
   searchQuery,
@@ -49,9 +51,38 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
   memberGroupMode,
   onMemberGroupModeChange,
   availableTeams,
+  rangeGroupLabel,
+  statusCounts,
+  tier1Left,
+  resultCount,
+  onResetFilters,
 }) => {
+  const groupOptions: { label: string; value: TeamGroupingMode }[] = [
+    ...(rangeGroupLabel ? [{ label: rangeGroupLabel, value: "range" as const }] : []),
+    { label: rangeGroupLabel ? "List" : "Ungrouped", value: "none" },
+    { label: "By Team", value: "team" },
+    { label: "By Manager", value: "italian_tl" },
+  ];
+
+  const hasActiveFilters =
+    searchQuery.trim().length > 0 ||
+    filterStatus !== "all" ||
+    filterTeam !== "all" ||
+    Boolean(dateFrom) ||
+    Boolean(dateTo);
+
   return (
     <GlassCard className="space-y-4 p-4">
+      <div className="border-line-subtle flex flex-col gap-3 border-b pb-3 md:flex-row md:items-center md:justify-between">
+        {tier1Left && <div className="min-w-0 flex-1">{tier1Left}</div>}
+        <FilterChipRow<TeamGroupingMode>
+          label="Grouping"
+          options={groupOptions}
+          selected={[memberGroupMode]}
+          onToggle={onMemberGroupModeChange}
+        />
+      </div>
+
       <FilterToolbar className="gap-4">
         <FilterToolbar.Search>
           <SearchField
@@ -68,17 +99,25 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
             onFilterStatusChange(v as "all" | "pending" | "approved" | "rejected")
           }
         >
-          <SelectTrigger controlSize="lg" className="w-full px-3 sm:w-[140px]">
+          <SelectTrigger controlSize="lg" className="w-full px-3 sm:w-[155px]">
             <div className="flex items-center gap-2">
               <Filter className="text-muted-foreground h-4 w-4" />
               <SelectValue placeholder="Status" />
             </div>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="all">
+              All Status{statusCounts ? ` (${statusCounts.all})` : ""}
+            </SelectItem>
+            <SelectItem value="pending">
+              Pending{statusCounts ? ` (${statusCounts.pending})` : ""}
+            </SelectItem>
+            <SelectItem value="approved">
+              Approved{statusCounts ? ` (${statusCounts.approved})` : ""}
+            </SelectItem>
+            <SelectItem value="rejected">
+              Rejected{statusCounts ? ` (${statusCounts.rejected})` : ""}
+            </SelectItem>
           </SelectContent>
         </Select>
         {availableTeams.length > 0 && (
@@ -114,14 +153,18 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
           />
         </div>
       </FilterToolbar>
-      <div className="border-line-subtle border-t pt-3">
-        <FilterChipRow<"none" | "team" | "italian_tl">
-          label="Grouping"
-          options={groupOptions}
-          selected={[memberGroupMode]}
-          onToggle={onMemberGroupModeChange}
-        />
-      </div>
+
+      {hasActiveFilters && onResetFilters && (
+        <div className="border-line-subtle flex flex-wrap items-center justify-between gap-2 border-t pt-2.5 text-xs">
+          <span className="text-muted-foreground tabular-nums">
+            Showing {resultCount ?? 0} matching {resultCount === 1 ? "record" : "records"}
+          </span>
+          <Button type="button" variant="ghost" size="sm" onClick={onResetFilters}>
+            <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+            Reset filters
+          </Button>
+        </div>
+      )}
     </GlassCard>
   );
 };

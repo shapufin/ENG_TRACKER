@@ -244,6 +244,7 @@ export const overtimeService = {
     status?: string;
     client?: number;
     date?: string;
+    page?: number;
     page_size?: number;
   }): Promise<PaginatedResponse<OvertimeLog>> {
     const { data } = await api.get<PaginatedResponse<OvertimeLog>>("/overtime/logs/team_logs/", {

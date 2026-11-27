@@ -1,7 +1,6 @@
 import React from "react";
-import { motion } from "framer-motion";
-import { Badge } from "@/components/ui/badge";
-import { GlassCard } from "@/components/ui/GlassCard";
+import { Calendar, Clock, Layers, Users } from "lucide-react";
+import { StatCard } from "@/components/ui/StatCard";
 import { toneTextClass } from "@/components/ui/tone";
 
 interface TeamOverviewCardProps {
@@ -10,6 +9,14 @@ interface TeamOverviewCardProps {
   vacationDaysLeft: number;
   overtimeHours: number;
   standbyHours: number;
+  pendingOvertimeHours?: number;
+  pendingStandbyHours?: number;
+  activeTab?: "overtime" | "standby" | "leave";
+  isTeamsActive?: boolean;
+  onSelectTeams?: () => void;
+  onSelectLeave?: () => void;
+  onSelectOvertime?: () => void;
+  onSelectStandby?: () => void;
 }
 
 export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
@@ -18,54 +25,74 @@ export const TeamOverviewCard: React.FC<TeamOverviewCardProps> = ({
   vacationDaysLeft,
   overtimeHours,
   standbyHours,
+  pendingOvertimeHours = 0,
+  pendingStandbyHours = 0,
+  activeTab,
+  isTeamsActive = false,
+  onSelectTeams,
+  onSelectLeave,
+  onSelectOvertime,
+  onSelectStandby,
 }) => {
+  const avgVacation =
+    memberCount > 0 ? `${(vacationDaysLeft / memberCount).toFixed(1)} avg / member` : undefined;
+
   return (
-    <GlassCard glow="primary" className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Team Overview</h2>
-          <p className="text-muted-foreground text-sm">
-            Manage your team&apos;s overtime, standby, and leave requests
-          </p>
-        </div>
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.2 }}
-        >
-          <Badge variant="secondary" className="px-4 py-2 text-lg">
-            {memberCount}
-          </Badge>
-        </motion.div>
-      </div>
-      {memberCount > 0 && (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <div className="space-y-2">
-            <p className="text-muted-foreground text-xs tracking-wider uppercase">Teams</p>
-            <p className="font-mono text-2xl font-semibold tabular-nums">
-              {teamCount > 0 ? teamCount : "–"}
-            </p>
-          </div>
-          <div className="space-y-2">
-            <p className="text-muted-foreground text-xs tracking-wider uppercase">Vacation Left</p>
-            <p className={`font-mono text-2xl font-semibold tabular-nums ${toneTextClass.success}`}>
-              {vacationDaysLeft.toFixed(1)}
-            </p>
-          </div>
-          <div className="space-y-2">
-            <p className="text-muted-foreground text-xs tracking-wider uppercase">Overtime (Mo)</p>
-            <p className={`font-mono text-2xl font-semibold tabular-nums ${toneTextClass.warning}`}>
-              {overtimeHours.toFixed(2)}
-            </p>
-          </div>
-          <div className="space-y-2">
-            <p className="text-muted-foreground text-xs tracking-wider uppercase">Standby (Mo)</p>
-            <p className={`font-mono text-2xl font-semibold tabular-nums ${toneTextClass.danger}`}>
-              {standbyHours.toFixed(2)}
-            </p>
-          </div>
-        </div>
-      )}
-    </GlassCard>
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <StatCard
+        label="Teams"
+        value={teamCount > 0 ? String(teamCount) : "–"}
+        icon={Users}
+        trend={`${memberCount} ${memberCount === 1 ? "member" : "members"}`}
+        onClick={onSelectTeams}
+        pressed={isTeamsActive}
+      />
+      <StatCard
+        label="Vacation Left"
+        value={vacationDaysLeft.toFixed(1)}
+        valueColorClass={toneTextClass.success}
+        icon={Calendar}
+        iconTone="success"
+        trend={avgVacation}
+        onClick={onSelectLeave}
+        pressed={activeTab === "leave"}
+      />
+      <StatCard
+        label="Overtime (Mo)"
+        value={overtimeHours.toFixed(2)}
+        valueColorClass={toneTextClass.warning}
+        icon={Clock}
+        iconTone="warning"
+        delta={
+          pendingOvertimeHours > 0
+            ? {
+                text: `+${pendingOvertimeHours.toFixed(1)}h awaiting approval`,
+                direction: "up",
+                tone: "warning",
+              }
+            : undefined
+        }
+        onClick={onSelectOvertime}
+        pressed={activeTab === "overtime"}
+      />
+      <StatCard
+        label="Standby (Mo)"
+        value={standbyHours.toFixed(2)}
+        valueColorClass={toneTextClass.danger}
+        icon={Layers}
+        iconTone="danger"
+        delta={
+          pendingStandbyHours > 0
+            ? {
+                text: `+${pendingStandbyHours.toFixed(1)}h awaiting approval`,
+                direction: "up",
+                tone: "danger",
+              }
+            : undefined
+        }
+        onClick={onSelectStandby}
+        pressed={activeTab === "standby"}
+      />
+    </div>
   );
 };

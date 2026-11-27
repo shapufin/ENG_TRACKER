@@ -155,7 +155,10 @@ describe("Edit layout toggle", () => {
 describe("Reset to default", () => {
   it("offers an 8 second Undo that restores the previous layout", async () => {
     renderPage();
-    fireEvent.click(screen.getByRole("button", { name: "Dashboard actions" }));
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Dashboard actions" }), {
+      button: 0,
+      ctrlKey: false,
+    });
     fireEvent.click(await screen.findByRole("menuitem", { name: /reset to default/i }));
     fireEvent.click(await screen.findByRole("button", { name: "Reset layout" }));
     await waitFor(() => expect(ctx.toast).toHaveBeenCalled());
@@ -170,7 +173,10 @@ describe("Reset to default", () => {
   it("does not claim success when the reset failed to save", async () => {
     ctx.resetLayout.mockResolvedValue(false);
     renderPage();
-    fireEvent.click(screen.getByRole("button", { name: "Dashboard actions" }));
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Dashboard actions" }), {
+      button: 0,
+      ctrlKey: false,
+    });
     fireEvent.click(await screen.findByRole("menuitem", { name: /reset to default/i }));
     fireEvent.click(await screen.findByRole("button", { name: "Reset layout" }));
     await waitFor(() => expect(ctx.toastError).toHaveBeenCalled());

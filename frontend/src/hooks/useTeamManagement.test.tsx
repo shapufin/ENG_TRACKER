@@ -69,4 +69,26 @@ describe("useTeamManagement", () => {
     expect(leaveService.approve).toHaveBeenCalled();
     expect(leaveService.reject).toHaveBeenCalled();
   });
+
+  it("fetches all pages when next is non-null instead of truncating at page 1", async () => {
+    vi.mocked(overtimeService.getTeamLogs)
+      .mockResolvedValueOnce({
+        results: [{ id: 1 }, { id: 2 }],
+        next: "http://api/overtime/logs/team_logs/?page=2",
+        count: 3,
+      } as any)
+      .mockResolvedValueOnce({
+        results: [{ id: 3 }],
+        next: null,
+        count: 3,
+      } as any);
+    vi.mocked(standbyService.getTeamLogs).mockResolvedValue({ results: [], next: null } as any);
+    vi.mocked(leaveService.getTeamLogs).mockResolvedValue({ results: [], next: null } as any);
+    vi.mocked(leaveService.getTeamBalances).mockResolvedValue([] as any);
+    vi.mocked(userService.getMyTeamMembers).mockResolvedValue([] as any);
+
+    const { result } = renderHook(() => useTeamManagement(), { wrapper });
+    await waitFor(() => expect(result.current.overtimeLogs).toHaveLength(3));
+    expect(result.current.overtimeLogs.map((r: any) => r.id)).toEqual([1, 2, 3]);
+  });
 });

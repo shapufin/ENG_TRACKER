@@ -1,7 +1,7 @@
 import React from "react";
-import { Clock, Users, Calendar } from "lucide-react";
-import { GlassCard } from "@/components/ui/GlassCard";
-import { cn } from "@/lib/utils";
+import { Clock, Users, Calendar, type LucideIcon } from "lucide-react";
+import { StatCard } from "@/components/ui/StatCard";
+import type { Tone } from "@/components/ui/tone";
 
 export type PendingStatType = "overtime" | "standby" | "leave";
 
@@ -36,78 +36,34 @@ export const TLApprovalStats: React.FC<TLApprovalStatsProps> = ({
     type: PendingStatType,
     count: number,
     loading: boolean,
-    icon: React.ReactNode,
+    icon: LucideIcon,
     label: string,
-    iconClass: string
+    iconTone: Tone
   ) => {
     const hasPendingMonths = (pendingMonths?.[type]?.length ?? 0) > 0;
     const isClickable = !!onCardClick && hasPendingMonths && !loading;
     return (
-      <GlassCard
-        delay={0}
-        interactive={isClickable}
-        className={cn(
-          "flex flex-col items-start gap-2 p-3 sm:flex-row sm:items-center sm:gap-4 sm:p-4",
-          isClickable && "hover:border-primary/50 cursor-pointer"
-        )}
-        onClick={isClickable ? () => onCardClick!(type) : undefined}
-        role={isClickable ? "button" : undefined}
-        tabIndex={isClickable ? 0 : undefined}
-        onKeyDown={
-          isClickable
-            ? (e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onCardClick!(type);
-                }
-              }
-            : undefined
-        }
-        aria-disabled={!isClickable}
-      >
-        <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl", iconClass)}>
-          {icon}
-        </div>
-        <div>
-          <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-            {label}
-          </p>
-          <p className="text-xl font-bold">{loading ? "..." : count}</p>
-          <p className="text-muted-foreground text-xs">
+      <StatCard
+        label={label}
+        value={loading ? "..." : String(count)}
+        icon={icon}
+        iconTone={iconTone}
+        trend={
+          <>
             Pending
             {hasPendingMonths && <span className="max-sm:hidden"> · click to jump</span>}
-          </p>
-        </div>
-      </GlassCard>
+          </>
+        }
+        onClick={isClickable ? () => onCardClick!(type) : undefined}
+      />
     );
   };
 
   return (
     <div className="grid grid-cols-3 gap-2 sm:gap-3">
-      {renderCard(
-        "overtime",
-        overtimeCount,
-        isLoading.overtime,
-        <Clock className="h-5 w-5" />,
-        "Overtime",
-        "bg-primary/10 text-primary"
-      )}
-      {renderCard(
-        "standby",
-        standbyCount,
-        isLoading.standby,
-        <Users className="h-5 w-5" />,
-        "Standby",
-        "bg-icon-standby/10 text-icon-standby"
-      )}
-      {renderCard(
-        "leave",
-        leaveCount,
-        isLoading.leave,
-        <Calendar className="h-5 w-5" />,
-        "Leave",
-        "bg-icon-leave/10 text-icon-leave"
-      )}
+      {renderCard("overtime", overtimeCount, isLoading.overtime, Clock, "Overtime", "info")}
+      {renderCard("standby", standbyCount, isLoading.standby, Users, "Standby", "accent")}
+      {renderCard("leave", leaveCount, isLoading.leave, Calendar, "Leave", "success")}
     </div>
   );
 };

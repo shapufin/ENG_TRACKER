@@ -5,6 +5,9 @@ import {
   collapseSameDayStandbyLogs,
   computeDayGroups,
   formatSegmentRange,
+  buildStandbyRotations,
+  buildMonthlyStandbySections,
+  pendingIdsOf,
 } from "./standbyDayGroups";
 import type { StandbyLog } from "@/types";
 
@@ -85,6 +88,22 @@ describe("collapseSameDayStandbyLogs", () => {
     const collapsed = collapseSameDayStandbyLogs(list);
     expect(collapsed[0].status).toBe("pending");
   });
+
+  it("collapses interleaved same-person same-day segments regardless of array position", () => {
+    const list = [
+      { ...log(1, 1, "2026-11-24", 9), start_time: "00:00:00", end_time: "09:00:00" },
+      { ...log(2, 2, "2026-11-24", 6), start_time: "18:00:00", end_time: "00:00:00" },
+      { ...log(3, 1, "2026-11-24", 6), start_time: "18:00:00", end_time: "00:00:00" },
+    ];
+    const collapsed = collapseSameDayStandbyLogs(list);
+    expect(collapsed).toHaveLength(2);
+    const user1 = collapsed.find((r) => r.user === 1);
+    const user2 = collapsed.find((r) => r.user === 2);
+    expect(user1?.hours).toBe(15);
+    expect(user1?.segment_ids).toEqual([1, 3]);
+    expect(user2?.hours).toBe(6);
+    expect(user2?.segments).toBeUndefined();
+  });
 });
 
 describe("computeDayGroups", () => {
@@ -145,5 +164,40 @@ describe("selectedRecordIds", () => {
 
   it("ignores unselected keys and unknown ids", () => {
     expect(selectedRecordIds(rows, { "20": false, "99": true })).toEqual([]);
+  });
+});
+
+describe("buildStandbyRotations & pendingIdsOf", () => {
+  it("groups consecutive collapsed days into rotations with hour-tier breakdown", () => {
+    const raw = [
+      log(1, 1, "2026-11-16", 9, "approved"),
+      log(2, 1, "2026-11-16", 6, "pending"),
+      log(3, 1, "2026-11-17", 15, "pending"),
+      log(4, 1, "2026-11-18", 24, "approved"),
+      // gap to 2026-11-22 -> separate single-day rotation
+      log(5, 1, "2026-11-22", 24, "approved"),
+    ];
+    const collapsed = collapseSameDayStandbyLogs(raw);
+    const rotations = buildStandbyRotations(collapsed);
+    expect(rotations).toHaveLength(2);
+    const multi = rotations.find((r) => (r.day_count ?? 1) > 1)!;
+    expect(multi.date).toBe("2026-11-16");
+    expect(multi.date_end).toBe("2026-11-18");
+    expect(multi.day_count).toBe(3);
+    expect(multi.hours).toBe(54);
+    expect(multi.breakdown).toBe("2×15h + 1×24h");
+    expect(multi.segment_ids).toEqual([1, 2, 3, 4]);
+    expect(pendingIdsOf(multi)).toEqual([2, 3]);
+  });
+
+  it("splits rotations on payroll period boundary", () => {
+    const collapsed = collapseSameDayStandbyLogs([
+      { ...log(1, 1, "2026-11-30", 15), requested_processing_period: "2026-11-01" },
+      { ...log(2, 1, "2026-12-01", 15), requested_processing_period: "2026-12-01" },
+    ]);
+    const rotations = buildStandbyRotations(collapsed);
+    expect(rotations).toHaveLength(2);
+    const sections = buildMonthlyStandbySections(rotations);
+    expect(sections.map((s) => s.monthKey)).toEqual(["2026-12", "2026-11"]);
   });
 });

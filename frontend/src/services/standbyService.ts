@@ -148,6 +148,7 @@ export const standbyService = {
     workspace_ids?: string;
     status?: string;
     date?: string;
+    page?: number;
     page_size?: number;
   }): Promise<PaginatedResponse<StandbyLog>> {
     const { data } = await api.get<PaginatedResponse<StandbyLog>>("/standby/logs/team_logs/", {
