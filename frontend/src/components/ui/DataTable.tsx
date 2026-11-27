@@ -45,7 +45,7 @@ import {
   readStoredColumnVisibility,
   writeStoredColumnVisibility,
 } from "./columnVisibilityStorage";
-import { computeAutoVisibility, type FitColumn } from "./columnFit";
+import { computeAutoVisibility, resolveFitColumnId, type FitColumn } from "./columnFit";
 import { useContainerWidth } from "./useContainerWidth";
 
 /** The actions column is never user-hideable; drop any persisted or emitted `actions` key. */
@@ -56,11 +56,6 @@ const withoutActions = (visibility: ColumnVisibilityState): ColumnVisibilityStat
 const SELECTION_COLUMN_WIDTH = 40;
 /** TanStack's default column size, for defs that set none. */
 const DEFAULT_COLUMN_SIZE = 150;
-
-const columnIdOf = <TData extends RowData>(column: AppColumnDef<TData, unknown>) => {
-  const { id, accessorKey } = column as { id?: string; accessorKey?: string };
-  return id ?? accessorKey;
-};
 
 /** A column that absorbs the table's spare width instead of holding a fixed one. */
 const isFlexColumn = (id: string, flex: boolean | undefined) => id === "description" || !!flex;
@@ -165,12 +160,16 @@ export const DataTable = function DataTable<TData extends RowData>({
   // Fit to width: only tables that rank their columns (`meta.priority`) auto-hide.
   // The scroll container is measured, not the table, so hiding a column cannot
   // feed back into the measure. Unmeasured (null) shows every column.
+  // Approximation: the table is `table-auto`, so a rendered column is as wide as
+  // its content needs (at least its min-content); the fit compares the summed
+  // `size` hints with the container, not the real rendered widths. A table whose
+  // content is wider than its hints still scrolls rather than clipping.
   const fitsToWidth = columns.some((c) => c.meta?.priority !== undefined);
   const containerWidth = useContainerWidth(scrollRef);
   const autoVisibility = React.useMemo<ColumnVisibilityState>(() => {
     if (!fitsToWidth || containerWidth === null) return {};
     const fitColumns = columns.flatMap((column): FitColumn[] => {
-      const id = columnIdOf(column);
+      const id = resolveFitColumnId(column);
       if (!id || userVisibility[id] === false) return [];
       if (id === "actions" && actionsInPill) return [];
       // A column the user switched on, and the actions column, are never auto-hidden.
@@ -371,8 +370,7 @@ export const DataTable = function DataTable<TData extends RowData>({
                 key={cell.id}
                 className={cn(
                   TABLE_BODY_CELL_CLASS,
-                  cell.column.id === "actions" ? TABLE_ACTIONS_CELL_CLASS : TABLE_CELL_FIT_PX_CLASS,
-                  cell.column.columnDef.meta?.truncate && "max-w-0 truncate"
+                  cell.column.id === "actions" ? TABLE_ACTIONS_CELL_CLASS : TABLE_CELL_FIT_PX_CLASS
                 )}
                 title={
                   cell.column.columnDef.meta?.truncate ? cellTitle(cell.getValue()) : undefined
@@ -397,7 +395,19 @@ export const DataTable = function DataTable<TData extends RowData>({
                     : undefined
                 }
               >
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                {cell.column.columnDef.meta?.truncate ? (
+                  // Under `table-auto` a td's max-width is not a hard cap, but a
+                  // block child's max-width caps its min-content contribution, so
+                  // long text ellipsises at the size hint instead of widening the table.
+                  <span
+                    className="block truncate"
+                    style={{ maxWidth: cell.column.columnDef.size ?? DEFAULT_COLUMN_SIZE }}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </span>
+                ) : (
+                  flexRender(cell.column.columnDef.cell, cell.getContext())
+                )}
               </td>
             )
           )}
@@ -455,20 +465,6 @@ export const DataTable = function DataTable<TData extends RowData>({
 
   const totalCols = columns.length + (enableRowSelection ? 1 : 0);
 
-  // `table-fixed` takes its widths from the <col>s; the min width is their sum, so
-  // columns that still do not fit scroll instead of being squeezed or clipped.
-  const colWidths = [
-    ...(enableRowSelection ? [{ id: "__select", width: SELECTION_COLUMN_WIDTH, flex: false }] : []),
-    ...table.getVisibleLeafColumns().map((column) => {
-      const inPill = column.id === "actions" && actionsInPill;
-      return {
-        id: column.id,
-        width: inPill ? 0 : (column.columnDef.size ?? DEFAULT_COLUMN_SIZE),
-        flex: !inPill && isFlexColumn(column.id, column.columnDef.meta?.flex),
-      };
-    }),
-  ];
-  const tableMinWidth = colWidths.reduce((sum, c) => sum + c.width, 0);
   const showColumnsMenu = enableColumnVisibility || fitsToWidth;
 
   const totalRows = server ? server.total : table.getFilteredRowModel().rows.length;
@@ -527,12 +523,10 @@ export const DataTable = function DataTable<TData extends RowData>({
               <div className="from-card pointer-events-none absolute inset-y-0 right-0 z-10 w-8 rounded-r-md bg-linear-to-l to-transparent" />
             )}
             <div ref={scrollRef} className="overflow-x-auto">
-              <table className="text-dense w-full table-fixed" style={{ minWidth: tableMinWidth }}>
-                <colgroup>
-                  {colWidths.map((c) => (
-                    <col key={c.id} style={c.flex ? undefined : { width: c.width }} />
-                  ))}
-                </colgroup>
+              {/* `table-auto` (no `min-w-max`): every cell keeps its min-content, so
+              nothing spills; the table scrolls only when that truly exceeds the
+              container. Column `size` stays a width hint on the cells. */}
+              <table className="text-dense w-full">
                 <thead>
                   <tr className={TABLE_HEAD_ROW_CLASS}>
                     {enableRowSelection && (

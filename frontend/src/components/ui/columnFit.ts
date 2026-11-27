@@ -29,3 +29,29 @@ export function computeAutoVisibility(
   }
   return visibility;
 }
+
+const warnedWithoutId = new Set<string>();
+
+/**
+ * The column id the fit uses. A column with `meta.priority` must declare an
+ * explicit `id`: TanStack derives ids from `accessorKey` (a nested `user.name`
+ * does not keep its dots), so a guessed id could miss the visibility key. Without
+ * one, dev builds warn once; an undotted `accessorKey` still works, a dotted one
+ * leaves the column out of the fit (it is then never auto-hidden).
+ */
+export function resolveFitColumnId(column: {
+  id?: string;
+  meta?: { priority?: ColumnPriority };
+}): string | undefined {
+  if (column.id) return column.id;
+  const accessorKey = (column as { accessorKey?: unknown }).accessorKey;
+  const key = typeof accessorKey === "string" ? accessorKey : undefined;
+  if (column.meta?.priority !== undefined && import.meta.env.DEV) {
+    const label = key ?? "(unnamed)";
+    if (!warnedWithoutId.has(label)) {
+      warnedWithoutId.add(label);
+      console.warn(`DataTable: column "${label}" sets meta.priority without an explicit id.`);
+    }
+  }
+  return key && !key.includes(".") ? key : undefined;
+}

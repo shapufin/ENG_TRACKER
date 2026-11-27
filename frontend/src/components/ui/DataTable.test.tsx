@@ -752,12 +752,18 @@ describe("DataTable fits its container", () => {
   }
   const wideColumns: AppColumnDef<Wide>[] = [
     { accessorKey: "name", header: "Name", size: 200 },
-    { accessorKey: "team", header: "Team", size: 150, meta: { priority: 2 } },
-    { accessorKey: "email", header: "Email", size: 150, meta: { priority: 3 } },
+    { id: "team", accessorKey: "team", header: "Team", size: 150, meta: { priority: 2 } },
+    { id: "email", accessorKey: "email", header: "Email", size: 150, meta: { priority: 3 } },
     { accessorKey: "notes", header: "Notes", size: 120, meta: { truncate: true } },
   ];
   const wideRows: Wide[] = [
-    { id: 1, name: "Alice", team: "Core", email: "alice@test.com", notes: "A long note" },
+    {
+      id: 1,
+      name: "Alice",
+      team: "Core",
+      email: "alice@test.com",
+      notes: "A long note that is much wider than its 120px size hint",
+    },
   ];
 
   type Callback = (entries: { contentRect: { width: number } }[]) => void;
@@ -782,15 +788,17 @@ describe("DataTable fits its container", () => {
     );
   });
 
-  it("table has no min-w-max and uses table-fixed with a min width equal to visible column sizes", () => {
+  it("table is w-full table-auto: no min-w-max, no table-fixed, no inline min width", () => {
     const { container } = render(<DataTable columns={wideColumns} data={wideRows} />);
     const table = container.querySelector("table")!;
-    expect(table.className).not.toContain("min-w-max");
-    expect(table.className).toContain("table-fixed");
     expect(table.className).toContain("w-full");
-    // Before the first measure every column shows: 200 + 150 + 150 + 120.
-    expect(table).toHaveStyle({ minWidth: "620px" });
-    expect(container.querySelectorAll("colgroup col")).toHaveLength(4);
+    expect(table.className).not.toContain("min-w-max");
+    expect(table.className).not.toContain("table-fixed");
+    expect(table.style.minWidth).toBe("");
+    expect(container.querySelector("colgroup")).toBeNull();
+    // Before the first measure every column shows; sizes stay width hints on the cells.
+    expect(container.querySelectorAll("thead th")).toHaveLength(4);
+    expect(screen.getByRole("columnheader", { name: "Name" })).toHaveStyle({ width: "200px" });
   });
 
   it("auto-hides the lowest priority column that does not fit and offers the Columns menu", () => {
@@ -798,7 +806,7 @@ describe("DataTable fits its container", () => {
     resizeTo(500);
     expect(screen.queryByRole("columnheader", { name: "Email" })).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Team" })).toBeInTheDocument();
-    expect(container.querySelector("table")).toHaveStyle({ minWidth: "470px" });
+    expect(container.querySelectorAll("thead th")).toHaveLength(3);
     expect(screen.getByRole("button", { name: /Columns \(3\/4\)/ })).toBeInTheDocument();
   });
 
@@ -843,9 +851,33 @@ describe("DataTable fits its container", () => {
 
   it("truncate cell renders title with the full text", () => {
     render(<DataTable columns={wideColumns} data={wideRows} />);
-    const cell = screen.getByText("A long note").closest("td")!;
-    expect(cell).toHaveAttribute("title", "A long note");
-    expect(cell.className).toContain("truncate");
-    expect(cell.className).toContain("max-w-0");
+    const note = wideRows[0].notes;
+    expect(screen.getByText(note).closest("td")).toHaveAttribute("title", note);
+  });
+
+  it("a long truncate cell cannot widen the table beyond its size hint", () => {
+    // jsdom does no layout, so this pins the CSS that does the work in a browser:
+    // under table-auto a block child's max-width caps the cell's min-content
+    // contribution, and `truncate` (overflow hidden + nowrap + ellipsis) clips the
+    // rest, so the column stays at its 120px hint.
+    render(<DataTable columns={wideColumns} data={wideRows} />);
+    const inner = screen.getByText(wideRows[0].notes);
+    expect(inner.tagName).toBe("SPAN");
+    expect(inner.className).toContain("block");
+    expect(inner.className).toContain("truncate");
+    expect(inner).toHaveStyle({ maxWidth: "120px" });
+    expect(inner.closest("td")).toHaveStyle({ maxWidth: "120px" });
+  });
+
+  it("warns in dev when a priority column has no explicit id", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const noId: AppColumnDef<Wide>[] = [
+      { accessorKey: "name", header: "Name" },
+      { accessorKey: "team", header: "Team", meta: { priority: 3 } },
+    ];
+    render(<DataTable columns={noId} data={wideRows} />);
+    resizeTo(100);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('"team"'));
+    warn.mockRestore();
   });
 });
