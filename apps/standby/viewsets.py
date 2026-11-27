@@ -378,9 +378,9 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
         ``self.filter_queryset(self.get_queryset())`` so all row-level
         scoping (PersonalOnlyFilterMixin, search, filterset) applies.
 
-        CSV column shape is frozen and must match the frontend
-        ``StandbyPage`` rowMapper exactly:
-        User, Date, Hours, Status, Description.
+        CSV column shape is frozen: User, Date, Day, Start Time, End Time, Total
+        Hours, Type, Status, Description, Evidence. One row per stored segment,
+        by date (newest first) and user, in ``core.utils.shift_order`` order.
 
         User column uses ``user.get_full_name()`` to match
         ``StandbyLogSerializer.user_name`` (source='user.get_full_name').
@@ -392,6 +392,7 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
         """
         import csv
         from core.utils.csv_safe import csv_safe
+        from core.utils.shift_order import STANDBY_TYPE_LABEL, clock, standby_order_by
         import io
         from django.http import StreamingHttpResponse
 
@@ -409,39 +410,30 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
             yield '\ufeff'
             buffer = io.StringIO()
             writer = csv.writer(buffer)
-            writer.writerow(['User', 'Date', 'Hours', 'Status', 'Description', 'Evidence'])
+            writer.writerow([
+                'User', 'Date', 'Day', 'Start Time', 'End Time', 'Total Hours', 'Type', 'Status',
+                'Description', 'Evidence',
+            ])
             yield buffer.getvalue()
             buffer.seek(0)
             buffer.truncate()
-            # One row per person, day and status: the weekly generator stores a night
-            # as one record per calendar-day segment (invariant 63), and a file reads
-            # better with a day total. Adjacent rows are merged, so the order puts a
-            # day's segments together.
-            def emit(group):
-                first = group[0]
-                descriptions = dict.fromkeys(g.description for g in group if g.description)
-                evidence = dict.fromkeys(g.evidence for g in group if g.evidence)
+            ordered = queryset.order_by('-date', 'user_id', *standby_order_by(), 'id')
+            for sb in ordered.iterator(chunk_size=1000):
                 writer.writerow([csv_safe(v) for v in (
-                    (first.user.get_full_name() or first.user.username) if first.user else '',
-                    first.date.strftime('%d/%m/%Y') if first.date else '',
-                    _format_hours(sum((g.hours or 0 for g in group), 0)) if any(g.hours for g in group) else '0',
-                    first.status,
-                    '; '.join(descriptions),
-                    ', '.join(evidence),
+                    (sb.user.get_full_name() or sb.user.username) if sb.user else '',
+                    sb.date.strftime('%d/%m/%Y') if sb.date else '',
+                    sb.date.strftime('%A') if sb.date else '',
+                    clock(sb.start_time),
+                    clock(sb.end_time),
+                    _format_hours(sb.hours),
+                    STANDBY_TYPE_LABEL,
+                    sb.status,
+                    sb.description or '',
+                    sb.evidence or '',
                 )])
-                data = buffer.getvalue()
+                yield buffer.getvalue()
                 buffer.seek(0)
                 buffer.truncate()
-                return data
-
-            group = []
-            for sb in queryset.order_by('-date', 'user_id', 'status', 'start_time', 'id').iterator(chunk_size=1000):
-                if group and (sb.user_id, sb.date, sb.status) != (group[0].user_id, group[0].date, group[0].status):
-                    yield emit(group)
-                    group = []
-                group.append(sb)
-            if group:
-                yield emit(group)
 
         response = StreamingHttpResponse(csv_generator(), content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="standby_logs.csv"'

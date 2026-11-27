@@ -26,6 +26,13 @@ from django.contrib.auth.models import User
 
 from apps.leave_management.models import counted_days, leave_days_in_window
 from apps.leave_management.models.core import plain_days
+from core.utils.shift_order import (
+    OVERTIME_TYPE_LABEL,
+    STANDBY_TYPE_LABEL,
+    clock,
+    overtime_sort_key,
+    standby_sort_key,
+)
 from core.utils.csv_safe import csv_safe, xlsx_safe_row
 from core.utils.sheet_titles import safe_sheet_title
 
@@ -70,43 +77,6 @@ class ExportConfig:
         self.sort_by = sort_by
         self.include_summary = include_summary
         self.batch_size = batch_size
-
-
-def bundle_standby_days(records: list[dict]) -> list[dict]:
-    """Merge the standby segments of one person and day into one row.
-
-    The weekly generator stores a night as one record per calendar day segment
-    (workflow invariant 63), so a day can hold ``00:00-09:00`` and ``18:00-00:00``.
-    A file reads better with one row per day: hours added up, and the segment
-    times listed in start order (``00:00 / 18:00`` and ``09:00 / 00:00``). Rows
-    never mix status, payroll period or settlement, and an entry typed as plain
-    hours (no times) stays as it is. Only display changes; the records stay separate.
-    """
-    merged: dict[tuple, dict] = {}
-    out: list[dict] = []
-    for rec in sorted(records, key=lambda r: r['start_time'] or time.min):
-        if rec['type'] != 'SB' or not rec['start_time'] or not rec['end_time']:
-            out.append(rec)
-            continue
-        key = (rec['user'].pk, rec['date'], rec['status'],
-               rec.get('requested_processing_period'), rec.get('settlement'))
-        first = merged.get(key)
-        if first is None:
-            merged[key] = first = dict(rec)
-            first['segments'] = [(rec['start_time'], rec['end_time'])]
-            out.append(first)
-            continue
-        first['hours'] += rec['hours']
-        first['segments'].append((rec['start_time'], rec['end_time']))
-        for field in ('description', 'evidence'):
-            parts = dict.fromkeys(p for p in (first[field], rec[field]) if p)
-            first[field] = '; '.join(parts)
-    for rec in out:
-        segments = rec.get('segments')
-        if segments and len(segments) > 1:
-            rec['start_label'] = ' / '.join(s.strftime('%H:%M') for s, _ in segments)
-            rec['end_label'] = ' / '.join(e.strftime('%H:%M') for _, e in segments)
-    return out
 
 
 def bundle_paid_blocks(records: list[dict]) -> list[dict]:
@@ -370,8 +340,12 @@ class ExportService:
         # date. This groups each user's records together AND keeps each
         # user's categories contiguous (all Extra hours, then all On Call
         # Service) before moving to the next user.
-        records = bundle_standby_days(bundle_paid_blocks(records))
-        records.sort(key=lambda x: (x['user'].username, x['type'], x['date'], x['start_time'] or time.min))
+        records = bundle_paid_blocks(records)
+        records.sort(key=lambda x: (
+            x['user'].username, x['type'], x['date'],
+            standby_sort_key(x['start_time'], x['end_time']) if x['type'] == 'SB'
+            else overtime_sort_key(x['start_time']),
+        ))
         
         # Group by Manager
         tl_groups = defaultdict(list)
@@ -414,11 +388,9 @@ class ExportService:
                 full_name = f"{user.first_name} {user.last_name}".strip() or user.username
                 date_str = rec['date'].strftime('%d/%m/%Y')
                 day_str = rec['date'].strftime('%A')
-                start_time_str = rec.get('start_label') or (
-                    rec['start_time'].strftime('%H:%M') if rec['start_time'] else '')
-                end_time_str = rec.get('end_label') or (
-                    rec['end_time'].strftime('%H:%M') if rec['end_time'] else '')
-                type_str = "Extra hours" if rec['type'] == 'OT' else "On Call Service"
+                start_time_str = clock(rec['start_time'])
+                end_time_str = clock(rec['end_time'])
+                type_str = OVERTIME_TYPE_LABEL if rec['type'] == 'OT' else STANDBY_TYPE_LABEL
 
                 row = [
                     full_name,

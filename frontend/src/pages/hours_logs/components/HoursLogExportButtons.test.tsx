@@ -20,43 +20,10 @@ interface Row {
 const logs: Row[] = [{ user: "alice", hours: 4 }];
 
 describe("HoursLogExportButtons", () => {
+  const onCsv = vi.fn().mockResolvedValue(undefined);
+
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it("exports the provided logs when onFetchAll is not supplied", () => {
-    render(
-      <HoursLogExportButtons
-        logs={logs}
-        filename="ot"
-        csvHeaders={["User", "Hours"]}
-        rowMapper={(l) => [l.user, String(l.hours)]}
-      />
-    );
-    fireEvent.click(screen.getByText("Export CSV"));
-    expect(exportData).toHaveBeenCalledWith(logs, "ot", "csv", expect.any(Object));
-  });
-
-  it("awaits onFetchAll and exports the fetched rows", async () => {
-    const fetched: Row[] = [
-      { user: "alice", hours: 4 },
-      { user: "bob", hours: 2.5 },
-    ];
-    const onFetchAll = vi.fn().mockResolvedValue(fetched);
-    render(
-      <HoursLogExportButtons
-        logs={logs}
-        filename="ot"
-        csvHeaders={["User", "Hours"]}
-        rowMapper={(l) => [l.user, String(l.hours)]}
-        onFetchAll={onFetchAll}
-      />
-    );
-    fireEvent.click(screen.getByText("Export CSV"));
-    await waitFor(() => {
-      expect(exportData).toHaveBeenCalledWith(fetched, "ot", "csv", expect.any(Object));
-    });
-    expect(onFetchAll).toHaveBeenCalled();
   });
 
   it("calls onExportCsv for CSV and does not call exportData", async () => {
@@ -66,15 +33,13 @@ describe("HoursLogExportButtons", () => {
       <HoursLogExportButtons
         logs={logs}
         filename="ot"
-        csvHeaders={["User", "Hours"]}
-        rowMapper={(l) => [l.user, String(l.hours)]}
         onFetchAll={onFetchAll}
         onExportCsv={onExportCsv}
       />
     );
     fireEvent.click(screen.getByText("Export CSV"));
     await waitFor(() => expect(onExportCsv).toHaveBeenCalled());
-    // exportData must NOT be called for CSV when onExportCsv is provided.
+    // CSV is built by the server, never in the browser.
     expect(exportData).not.toHaveBeenCalled();
   });
 
@@ -85,8 +50,6 @@ describe("HoursLogExportButtons", () => {
       <HoursLogExportButtons
         logs={logs}
         filename="ot"
-        csvHeaders={["User", "Hours"]}
-        rowMapper={(l) => [l.user, String(l.hours)]}
         onFetchAll={onFetchAll}
         onExportCsv={onExportCsv}
       />
@@ -101,35 +64,22 @@ describe("HoursLogExportButtons", () => {
   it("shows error toast when onExportCsv throws", async () => {
     const { toast } = await import("sonner");
     const onExportCsv = vi.fn().mockRejectedValue(new Error("Export failed"));
-    render(
-      <HoursLogExportButtons
-        logs={logs}
-        filename="ot"
-        csvHeaders={["User", "Hours"]}
-        rowMapper={(l) => [l.user, String(l.hours)]}
-        onExportCsv={onExportCsv}
-      />
-    );
+    render(<HoursLogExportButtons logs={logs} filename="ot" onExportCsv={onExportCsv} />);
     fireEvent.click(screen.getByText("Export CSV"));
     await waitFor(() => expect(onExportCsv).toHaveBeenCalled());
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
   });
 
   it("collapses both exports into one Export menu on phones", async () => {
-    render(
-      <HoursLogExportButtons
-        logs={logs}
-        filename="ot"
-        csvHeaders={["User", "Hours"]}
-        rowMapper={(l) => [l.user, String(l.hours)]}
-      />
-    );
+    render(<HoursLogExportButtons logs={logs} filename="ot" onExportCsv={onCsv} />);
 
     const trigger = screen.getByRole("button", { name: "Export" });
     expect(trigger).toHaveClass("md:hidden");
     fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
     fireEvent.click(await screen.findByRole("menuitem", { name: "CSV" }));
-    expect(exportData).toHaveBeenCalledWith(logs, "ot", "csv", expect.any(Object));
+    expect(onCsv).toHaveBeenCalled();
+    // The trigger is disabled while the download runs.
+    await waitFor(() => expect(trigger).toBeEnabled());
 
     fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
     fireEvent.click(await screen.findByRole("menuitem", { name: "JSON" }));
@@ -138,12 +88,7 @@ describe("HoursLogExportButtons", () => {
 
   it("wraps the export action row on narrow screens", () => {
     const { container } = render(
-      <HoursLogExportButtons
-        logs={logs}
-        filename="ot"
-        csvHeaders={["User", "Hours"]}
-        rowMapper={(l) => [l.user, String(l.hours)]}
-      />
+      <HoursLogExportButtons logs={logs} filename="ot" onExportCsv={onCsv} />
     );
 
     const actionRow = container.querySelector(".flex.justify-end");

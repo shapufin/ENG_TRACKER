@@ -632,7 +632,7 @@ class StandbyLogExportTests(TestCase):
         header = body.split('\r\n')[0]
         self.assertIn('User', header)
         self.assertIn('Date', header)
-        self.assertIn('Hours', header)
+        self.assertIn('Total Hours', header)
         # StandbyLogSerializer uses user.get_full_name() for user_name.
         self.assertIn('Export Employee', body)
 
@@ -740,7 +740,7 @@ class StandbyLogExportTests(TestCase):
         )
         body = _streaming_body(response)
         data_lines = [ln for ln in body.split('\r\n') if ln][1:]
-        hours_values = [ln.split(',')[2] for ln in data_lines]
+        hours_values = [ln.split(',')[5] for ln in data_lines]
         self.assertIn('1.5', hours_values)
         self.assertIn('2', hours_values)
         # Ensure no trailing-zero formats like "1.50" or "2.0".

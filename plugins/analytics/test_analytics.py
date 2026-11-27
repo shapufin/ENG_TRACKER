@@ -519,11 +519,25 @@ class AnalyticsUserBreakdownTests(TestCase):
         alpha_ot = next(r for r in ot_rows if r['Username'] == 'alpha-emp')
         self.assertEqual(alpha_ot['Date'], date(2026, 7, 6))
         self.assertEqual(float(alpha_ot['Hours']), 8.0)
+        # New columns are appended (positional readers), blank for leave.
+        self.assertEqual(list(rows[0])[-3:], ['Day', 'Start Time', 'End Time'])
+        self.assertEqual(alpha_ot['Day'], 'Monday')
+        self.assertEqual([r['Day'] for r in rows if r['Category'] == 'Leave'], [''])
+        self.assertEqual([r['Date'] for r in rows], sorted(r['Date'] for r in rows))
         # Check leave record has business days
         leave_rows = [r for r in rows if r['Category'] == 'Leave']
         self.assertEqual(len(leave_rows), 1)
         self.assertEqual(leave_rows[0]['Leave Days'], 3)
         self.assertEqual(leave_rows[0]['Hours'], '')
+
+    def test_client_breakdown_has_times_appended(self):
+        import openpyxl
+        data = AnalyticsReportGenerator.generate_excel_report(
+            period='custom', date_from='2026-07-01', date_to='2026-07-31',
+        )
+        sheet = openpyxl.load_workbook(io.BytesIO(data))['Client Breakdown']
+        self.assertEqual(
+            [c.value for c in sheet[1]], ['Date', 'Client', 'Hours', 'Day', 'Start Time', 'End Time'])
 
     def test_excel_export_contains_user_breakdown_sheet(self):
         """Excel export includes the User Breakdown sheet."""

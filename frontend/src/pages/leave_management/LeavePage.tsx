@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageShell } from "@/components/layout/PageShell";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { HoursLogExportButtons } from "@/pages/hours_logs/components/HoursLogExportButtons";
+import { exportData } from "@/utils/exportUtils";
 import { useLeaveForm } from "./hooks/useLeaveForm";
 import { getRemainingDays } from "./hooks/leaveBalanceUtils";
 import { useLeaveColumns } from "./hooks/useLeaveColumns";
@@ -122,17 +123,21 @@ export const LeavePage: React.FC = () => {
     handleRejectClick
   );
 
-  const leaveCsvHeaders = ["ID", "User", "Type", "Start", "End", "Days", "Status", "Reason"];
-  const leaveRowMapper = (r: LeaveRequest) => [
-    String(r.id),
-    r.user_name || String(r.user),
-    leaveTypeLabel(r),
-    r.start_date,
-    r.end_date,
-    String(r.days_requested),
-    r.status,
-    r.reason || "",
-  ];
+  const handleExportCSV = async () => {
+    exportData(requests ?? [], "vacations", "csv", {
+      headers: ["ID", "User", "Type", "Start", "End", "Days", "Status", "Reason"],
+      rowMapper: (r: LeaveRequest) => [
+        String(r.id),
+        r.user_name || String(r.user),
+        leaveTypeLabel(r),
+        r.start_date,
+        r.end_date,
+        String(r.days_requested),
+        r.status,
+        r.reason || "",
+      ],
+    });
+  };
 
   return (
     <PageShell
@@ -143,8 +148,7 @@ export const LeavePage: React.FC = () => {
           <HoursLogExportButtons
             logs={requests ?? []}
             filename="vacations"
-            csvHeaders={leaveCsvHeaders}
-            rowMapper={leaveRowMapper}
+            onExportCsv={handleExportCSV}
           />
           <Button size="sm" className="gap-1.5" onClick={openCreate}>
             <Plus className="h-3.5 w-3.5" /> New Request

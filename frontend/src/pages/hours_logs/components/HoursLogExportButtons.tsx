@@ -13,23 +13,15 @@ import { exportData } from "@/utils/exportUtils";
 interface HoursLogExportButtonsProps<T extends object> {
   logs: T[];
   filename: string;
-  csvHeaders: string[];
-  rowMapper: (l: T) => string[];
-  /** When provided, exports fetch the full dataset first (bypassing UI pagination). */
+  /** When provided, JSON export fetches the full dataset first (bypassing UI pagination). */
   onFetchAll?: () => Promise<T[]>;
-  /**
-   * When provided, the CSV button triggers a server-side streaming CSV
-   * download via this callback instead of building the CSV client-side.
-   * The JSON button still uses ``onFetchAll`` + ``exportData``.
-   */
-  onExportCsv?: () => Promise<void>;
+  /** Server-side CSV download: the file's columns and row order are decided by the API. */
+  onExportCsv: () => Promise<void>;
 }
 
 export const HoursLogExportButtons = <T extends object>({
   logs,
   filename,
-  csvHeaders,
-  rowMapper,
   onFetchAll,
   onExportCsv,
 }: HoursLogExportButtonsProps<T>) => {
@@ -38,12 +30,7 @@ export const HoursLogExportButtons = <T extends object>({
   const handleExportCsv = async () => {
     try {
       setIsExporting(true);
-      if (onExportCsv) {
-        await onExportCsv();
-      } else {
-        const rows = onFetchAll ? await onFetchAll() : logs;
-        exportData(rows, filename, "csv", { headers: csvHeaders, rowMapper });
-      }
+      await onExportCsv();
     } catch {
       toast.error("Export failed", {
         description: "Could not fetch all records for export. Please try again.",

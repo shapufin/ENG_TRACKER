@@ -9,7 +9,6 @@ import { Plus } from "lucide-react";
 import type { OvertimeLog } from "@/types";
 import { RecordDetailModal } from "@/components/team/RecordDetailModal";
 import { usePhoneRecordDetail } from "@/components/team/usePhoneRecordDetail";
-import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { useBulkOperations } from "@/hooks/useBulkOperations";
 import { useOvertimeForm } from "./hooks/useOvertimeForm";
 import { useOvertimeColumns } from "./hooks/useOvertimeColumns";
@@ -173,27 +172,6 @@ export const OvertimePage: React.FC = () => {
           <HoursLogExportButtons
             logs={logs}
             filename="overtime-logs"
-            csvHeaders={[
-              "User",
-              "Date",
-              "Client",
-              "Hours",
-              "Status",
-              "Evidence Type",
-              "Evidence",
-              "Description",
-            ]}
-            // fallow-ignore-next-line complexity
-            rowMapper={(l) => [
-              l.user_name || "",
-              formatDateDDMMYYYY(l.date),
-              l.client_name || "",
-              String(Number(l.hours)),
-              l.status,
-              l.evidence_type || "",
-              l.evidence || "",
-              l.description || "",
-            ]}
             onFetchAll={async () => {
               const all = await overtimeService.downloadAllLogs(dateParams);
               return userId ? all.filter((l) => l.user === userId) : all;

@@ -10,7 +10,6 @@ import type { StandbyLog } from "@/types";
 import { RecordDetailModal } from "@/components/team/RecordDetailModal";
 import { usePhoneRecordDetail } from "@/components/team/usePhoneRecordDetail";
 import { useBulkOperations } from "@/hooks/useBulkOperations";
-import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import {
   collapseSameDayStandbyLogs,
   selectedRecordIds,
@@ -239,14 +238,6 @@ export const StandbyPage: React.FC = () => {
           <HoursLogExportButtons
             logs={logs}
             filename="standby-logs"
-            csvHeaders={["User", "Date", "Hours", "Status", "Description"]}
-            rowMapper={(l) => [
-              l.user_name || "",
-              formatDateDDMMYYYY(l.date),
-              String(Number(l.hours)),
-              l.status,
-              l.description || "",
-            ]}
             onFetchAll={async () => {
               const all = await standbyService.downloadAllLogs(dateParams);
               return userId ? all.filter((l) => l.user === userId) : all;

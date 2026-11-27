@@ -182,12 +182,12 @@ class CsvExportIntegrityTests(ExportIntegrityBase):
         source = OvertimeLog.objects.filter(user=self.people['bora'])
         self.assertEqual(len(rows), source.count())                       # pending, rejected and next-month rows too
         self.assertEqual(sorted(r['Status'] for r in rows), sorted(o.status for o in source))
-        self.assertEqual(sum(Decimal(r['Hours']) for r in rows), sum(o.hours for o in source))
+        self.assertEqual(sum(Decimal(r['Total Hours']) for r in rows), sum(o.hours for o in source))
 
     def test_overtime_csv_never_contains_someone_elses_entries(self):
         rows = _csv_rows(self._as('ana'), '/api/overtime/logs/export/?ignore_date_filter=true')
         self.assertEqual({r['User'] for r in rows}, {'ei_ana'})
-        self.assertEqual(sum(Decimal(r['Hours']) for r in rows), Decimal('3'))   # shared paid hour counted once
+        self.assertEqual(sum(Decimal(r['Total Hours']) for r in rows), Decimal('3'))   # shared paid hour counted once
 
     def test_the_csv_has_exactly_the_rows_of_the_list_with_the_same_filters(self):
         api = self._as('bora')
@@ -197,12 +197,12 @@ class CsvExportIntegrityTests(ExportIntegrityBase):
         self.assertEqual(len(rows), len(listed))
         self.assertEqual(sorted(r['Status'] for r in rows), sorted(o['status'] for o in listed))
 
-    def test_standby_csv_bundles_a_person_day_into_one_row_without_losing_hours(self):
-        # Documented rule (workflow-invariants item 63): shifts of one date are one row in files.
+    def test_standby_csv_lists_every_segment_without_losing_hours(self):
+        # Documented rule (workflow-invariants item 63): every stored segment is one row in files.
         rows = _csv_rows(self._as('ana'), '/api/standby/logs/export/?ignore_date_filter=true')
         source = StandbyLog.objects.filter(user=self.people['ana'])
-        self.assertEqual(len(rows), len({s.date for s in source}))          # 8 Jun and 9 Jun
-        self.assertEqual(sum(Decimal(r['Hours']) for r in rows), sum(s.hours for s in source))   # 6 + 15 = 21
+        self.assertEqual(len(rows), source.count())
+        self.assertEqual(sum(Decimal(r['Total Hours']) for r in rows), sum(s.hours for s in source))   # 6 + 9 + 6 = 21
 
 
 class DashboardIntegrityTests(ExportIntegrityBase):
