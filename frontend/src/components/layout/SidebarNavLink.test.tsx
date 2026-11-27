@@ -51,14 +51,14 @@ describe("SidebarNavLink badge", () => {
 });
 
 describe("SidebarNavLink density", () => {
-  it("uses the compact padding with a coarse-pointer fallback", () => {
+  it("nav link row is h-8 (pointer-coarse:h-10)", () => {
     render(
       <MemoryRouter>
         <SidebarNavLink {...base} />
       </MemoryRouter>
     );
     const link = screen.getByRole("menuitem");
-    expect(link.className.split(/\s+/)).toContain("py-2");
-    expect(link.className).toContain("pointer-coarse:py-2.5");
+    expect(link.className.split(/\s+/)).toContain("h-8");
+    expect(link.className).toContain("pointer-coarse:h-10");
   });
 });

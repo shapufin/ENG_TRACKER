@@ -136,7 +136,7 @@ export const SidebarNavGroup: React.FC<SidebarNavGroupProps> = ({
 
   const toggle = () => setOpen((prev) => !prev);
 
-  const parentClass = `group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+  const parentClass = `group relative flex w-full items-center h-8 pointer-coarse:h-10 gap-2.5 rounded-lg px-2.5 text-left text-sm font-medium transition-colors ${
     hasActiveChild
       ? "bg-primary/10 text-foreground"
       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -153,14 +153,14 @@ export const SidebarNavGroup: React.FC<SidebarNavGroupProps> = ({
               to={item.to}
               onClick={onItemClick}
               role="menuitem"
-              className={`group relative flex items-center gap-3 rounded-lg px-3 py-2 pl-9 text-sm font-medium transition-colors ${
+              className={`group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 pl-8 text-sm font-medium transition-colors pointer-coarse:py-2.5 ${
                 active
                   ? "bg-primary/10 text-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               }`}
             >
               {active && (
-                <span className="absolute inset-y-1 left-0 w-[3px] rounded-full bg-primary" />
+                <span className="bg-primary absolute inset-y-1 left-0 w-[3px] rounded-full" />
               )}
               <ItemIcon className={`h-4 w-4 shrink-0 ${active ? "text-primary" : ""}`} />
               <span>{item.label}</span>
@@ -189,13 +189,13 @@ export const SidebarNavGroup: React.FC<SidebarNavGroupProps> = ({
                 onFocus={openFlyout}
                 onBlur={handleBlur}
               >
-                <Icon className={`h-5 w-5 shrink-0 ${hasActiveChild ? "text-primary" : ""}`} />
+                <Icon className={`h-4 w-4 shrink-0 ${hasActiveChild ? "text-primary" : ""}`} />
               </button>
             </TooltipTrigger>
             {!open && (
               <TooltipContent
                 side="right"
-                className="rounded-md border-border bg-popover px-2 py-1 text-xs font-medium text-popover-foreground shadow-md"
+                className="border-border bg-popover text-popover-foreground rounded-md px-2 py-1 text-xs font-medium shadow-md"
               >
                 {label}
               </TooltipContent>
@@ -204,7 +204,7 @@ export const SidebarNavGroup: React.FC<SidebarNavGroupProps> = ({
         </TooltipProvider>
 
         {open && isMobileViewport && (
-          <div className="mt-1 rounded-lg border border-border/50 bg-muted/30 p-1">
+          <div className="border-border/50 bg-muted/30 mt-1 rounded-lg border p-1">
             {renderSubItems()}
           </div>
         )}
@@ -215,14 +215,14 @@ export const SidebarNavGroup: React.FC<SidebarNavGroupProps> = ({
           createPortal(
             <div
               ref={flyoutRef}
-              className="fixed z-[100] min-w-56 rounded-lg border border-border/70 bg-popover/95 p-2 shadow-xl backdrop-blur-xl"
+              className="border-border/70 bg-popover/95 fixed z-[100] min-w-56 rounded-lg border p-2 shadow-xl backdrop-blur-xl"
               style={{ top: flyoutPos.top, left: flyoutPos.left, width: FLYOUT_WIDTH }}
               onMouseEnter={openFlyout}
               onMouseLeave={scheduleClose}
               onFocus={openFlyout}
               onBlur={handleFlyoutBlur}
             >
-              <div className="mb-1 border-b border-border/50 px-2 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="border-border/50 text-muted-foreground mb-1 border-b px-2 pb-2 text-xs font-semibold tracking-wider uppercase">
                 {label}
               </div>
               {renderSubItems()}
@@ -245,9 +245,9 @@ export const SidebarNavGroup: React.FC<SidebarNavGroupProps> = ({
         onClick={toggle}
       >
         {hasActiveChild && (
-          <span className="absolute inset-y-1 left-0 w-[3px] rounded-full bg-primary" />
+          <span className="bg-primary absolute inset-y-1 left-0 w-[3px] rounded-full" />
         )}
-        <Icon className={`h-5 w-5 shrink-0 ${hasActiveChild ? "text-primary" : ""}`} />
+        <Icon className={`h-4 w-4 shrink-0 ${hasActiveChild ? "text-primary" : ""}`} />
         <span className="md:inline">{label}</span>
         <ChevronRight
           data-testid="sidebar-group-chevron"

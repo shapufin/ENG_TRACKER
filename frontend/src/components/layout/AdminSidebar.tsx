@@ -10,7 +10,8 @@ import { ChevronLeft, ChevronRight, LogOut, Search, Shield, X } from "lucide-rea
 import { SidebarUserProfile } from "./SidebarUserProfile";
 import { SidebarInstallButton } from "./SidebarInstallButton";
 import { useMobileSidebarFocus } from "./useMobileSidebarFocus";
-import { SidebarSectionLabel } from "./SidebarSectionLabel";
+import { SidebarSection } from "./SidebarSection";
+import { useDomActiveSection, useSidebarGroups } from "@/hooks/useSidebarGroups";
 import { SidebarNavLink } from "./SidebarNavLink";
 import type { AdminNavItem } from "./hooks/useAdminNavItems";
 import { useMotionTransition } from "@/lib/motion";
@@ -74,6 +75,16 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     item.exact
       ? location.pathname === item.path
       : location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
+
+  const navRef = React.useRef<HTMLElement>(null);
+  const domActive = useDomActiveSection(
+    navRef,
+    location.pathname,
+    getInjectedComponents("admin-sidebar-nav").length +
+      getInjectedComponents("admin-sidebar-nav-system").length
+  );
+  const activeGroup = items.find(isActive)?.group ?? domActive;
+  const { isOpen, toggle } = useSidebarGroups("admin", activeGroup);
 
   const renderItem = (item: AdminNavItem) => (
     <SidebarNavLink
@@ -176,8 +187,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </button>
         </div>
       )}
-      <nav className="flex-1 overflow-y-auto p-3" aria-label="Admin navigation">
-        <ul className="space-y-1">
+      <nav ref={navRef} className="flex-1 overflow-y-auto p-3" aria-label="Admin navigation">
+        <ul className="space-y-0.5">
           {ADMIN_NAV_GROUPS.map((group) => {
             const groupItems = items.filter((item) => item.group === group);
             const isExtensions = group === "Extensions";
@@ -189,12 +200,18 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             if (!groupHasItems) return null;
 
             return (
-              <React.Fragment key={group}>
-                {!collapsed && <SidebarSectionLabel label={group} />}
+              <SidebarSection
+                key={group}
+                id={group}
+                label={group}
+                open={isOpen(group)}
+                onToggle={() => toggle(group)}
+                collapsed={collapsed}
+              >
                 {groupItems.map(renderItem)}
                 {isExtensions && <PluginSlot slot="admin-sidebar-nav" />}
                 {isSystem && <PluginSlot slot="admin-sidebar-nav-system" />}
-              </React.Fragment>
+              </SidebarSection>
             );
           })}
         </ul>

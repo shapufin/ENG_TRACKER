@@ -187,4 +187,56 @@ describe("SidebarNav", () => {
     expect(screen.getByText("Leadership")).toBeInTheDocument();
     expect(await screen.findByText("Onboarding Link")).toBeInTheDocument();
   });
+
+  it("section header toggles aria-expanded", () => {
+    localStorage.clear();
+    mockGetInjected([]);
+    render(<SidebarNav items={allSectionItems} collapsed={false} onItemClick={onItemClick} />);
+    const header = screen.getByRole("button", { name: "Leadership" });
+    expect(header).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(header);
+    expect(header).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("Pending Approvals")).not.toBeVisible();
+  });
+
+  it("remembers a closed section across remounts", () => {
+    localStorage.clear();
+    mockGetInjected([]);
+    const first = render(
+      <SidebarNav items={allSectionItems} collapsed={false} onItemClick={onItemClick} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Leadership" }));
+    first.unmount();
+    render(<SidebarNav items={allSectionItems} collapsed={false} onItemClick={onItemClick} />);
+    expect(screen.getByRole("button", { name: "Leadership" })).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    );
+  });
+
+  it("opens the section holding the active route even when stored closed", () => {
+    localStorage.setItem("sidebar_groups:app:anon", JSON.stringify({ closed: ["core"] }));
+    mockGetInjected([]);
+    render(<SidebarNav items={allSectionItems} collapsed={false} onItemClick={onItemClick} />);
+    expect(screen.getByRole("button", { name: "Workspace" })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    );
+    expect(screen.getByText("Dashboard")).toBeVisible();
+  });
+
+  it("shows all links without headers when collapsed to the rail", () => {
+    localStorage.setItem("sidebar_groups:app:anon", JSON.stringify({ closed: ["leadership"] }));
+    mockGetInjected([]);
+    render(<SidebarNav items={allSectionItems} collapsed={true} onItemClick={onItemClick} />);
+    expect(screen.queryByRole("button", { name: "Leadership" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("menuitem").length).toBe(allSectionItems.length);
+  });
+
+  it("wraps unsectioned plugin items in a Plugins section only when injected", () => {
+    localStorage.clear();
+    mockGetInjected(["sidebar-nav"]);
+    render(<SidebarNav items={items} collapsed={false} onItemClick={onItemClick} />);
+    expect(screen.getByRole("button", { name: "Plugins" })).toBeInTheDocument();
+  });
 });

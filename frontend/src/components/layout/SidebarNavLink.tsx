@@ -49,7 +49,7 @@ export const SidebarNavLink: React.FC<SidebarNavLinkProps> = ({
   const collapsed = collapsedProp ?? contextCollapsed;
   const activeBarTransition = useMotionTransition({ type: "spring", stiffness: 400, damping: 30 });
 
-  const className = `group relative flex items-center gap-3 rounded-lg px-3 py-2 pointer-coarse:py-2.5 text-sm font-medium transition-colors ${
+  const className = `group relative flex items-center h-8 gap-2.5 rounded-lg px-2.5 pointer-coarse:h-10 text-sm font-medium transition-colors ${
     isActive
       ? "bg-primary/10 text-foreground"
       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -81,7 +81,13 @@ export const SidebarNavLink: React.FC<SidebarNavLinkProps> = ({
   if (!collapsed) {
     return (
       <li>
-        <Link to={to} onClick={onItemClick} role="menuitem" className={className}>
+        <Link
+          to={to}
+          onClick={onItemClick}
+          role="menuitem"
+          aria-current={isActive ? "page" : undefined}
+          className={className}
+        >
           {inner}
         </Link>
       </li>
@@ -93,7 +99,13 @@ export const SidebarNavLink: React.FC<SidebarNavLinkProps> = ({
       <TooltipProvider delayDuration={0}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Link to={to} onClick={onItemClick} role="menuitem" className={className}>
+            <Link
+              to={to}
+              onClick={onItemClick}
+              role="menuitem"
+              aria-current={isActive ? "page" : undefined}
+              className={className}
+            >
               {inner}
             </Link>
           </TooltipTrigger>

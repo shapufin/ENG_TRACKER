@@ -65,17 +65,28 @@ describe("AdminSidebar", () => {
     vi.mocked(dashboardService.getBranding).mockReset().mockRejectedValue(new Error("not mocked"));
   });
 
-  it("renders static section labels with flat items (no flyout buttons)", () => {
+  it("renders collapsible section headers with flat items", () => {
     mockGetInjected(["admin-sidebar-nav"]);
     renderSidebar();
 
-    // Groups are static labels, not collapsible flyout triggers.
-    expect(screen.getByText("People")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "People" })).not.toBeInTheDocument();
+    // Groups are inline collapsible headers, not flyout triggers.
+    expect(screen.getByRole("button", { name: "People" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("Extensions")).toBeInTheDocument();
 
     // Items render flat (no flyout hiding). SidebarNavLink uses menuitem role.
     expect(screen.getByRole("menuitem", { name: "Data Import" })).toBeInTheDocument();
+  });
+
+  it("section header toggles aria-expanded and hides the group's links", () => {
+    localStorage.clear();
+    renderSidebar();
+    const header = screen.getByRole("button", { name: "System" });
+    expect(header).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(header);
+    expect(header).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("Data Import")).not.toBeVisible();
+    fireEvent.click(header);
+    expect(screen.getByText("Data Import")).toBeVisible();
   });
 
   it("renders plugin nav items under the Extensions section only", () => {
