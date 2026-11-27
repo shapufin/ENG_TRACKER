@@ -47,9 +47,6 @@ export const UsersPageTable: React.FC<UsersPageTableProps> = ({
       pageSize={USERS_PAGE_SIZE}
       enableColumnVisibility
       storageKey="table-visibility-users-page"
-      // Hidden by default so the table fits 1440px with its Actions column in view;
-      // each is one click away in Columns.
-      defaultColumnVisibility={{ email: false, cr_teams: false, hire_date: false }}
       enableRowSelection
       rowSelection={rowSelection}
       onRowSelectionChange={onRowSelectionChange}

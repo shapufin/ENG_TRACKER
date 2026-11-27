@@ -4,8 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
 import {
-  readStoredColumnVisibility,
-  writeStoredColumnVisibility,
+  readStoredColumnOverride,
+  writeStoredColumnOverride,
 } from "@/components/ui/columnVisibilityStorage";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { toneTextClass } from "@/components/ui/tone";
@@ -153,21 +153,22 @@ export const TeamGroupedTables = <T extends GroupableRow>({
   onSectionCollapse,
 }: TeamGroupedTablesProps<T>) => {
   const [prevStorageKey, setPrevStorageKey] = useState(storageKey);
+  // The user's explicit Columns-menu choices (v2): a `true` pins a column against auto-fit.
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() =>
-    readStoredColumnVisibility(storageKey, defaultColumnVisibility)
+    readStoredColumnOverride(storageKey, defaultColumnVisibility)
   );
   // Explicit user choices only; absent key = default (newest month open, older months closed).
   const [collapseOverrides, setCollapseOverrides] = useState<Record<string, boolean>>({});
 
   if (prevStorageKey !== storageKey) {
     setPrevStorageKey(storageKey);
-    setColumnVisibility(readStoredColumnVisibility(storageKey, defaultColumnVisibility));
+    setColumnVisibility(readStoredColumnOverride(storageKey, defaultColumnVisibility));
   }
 
   const handleColumnVisibilityChange = useCallback(
     (next: Record<string, boolean>) => {
       setColumnVisibility(next);
-      writeStoredColumnVisibility(storageKey, next);
+      writeStoredColumnOverride(storageKey, next);
     },
     [storageKey]
   );

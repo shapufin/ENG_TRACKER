@@ -218,14 +218,24 @@ export const DataTable = function DataTable<TData extends RowData>({
       );
       const newVisibility = withoutActions({ ...userVisibility, ...changed });
       commitUserVisibility(newVisibility);
-      // Only an auto-fit table needs the v2 "explicit choice" meaning; every other
-      // table keeps writing the v1 map it always wrote (shared with TeamGroupedTables).
-      (fitsToWidth ? writeStoredColumnOverride : writeStoredColumnVisibility)(
-        storageKey,
-        newVisibility
-      );
+      // A controlled table (`onColumnVisibilityChange`) persists through its owner.
+      // Otherwise only an auto-fit table needs the v2 "explicit choice" meaning;
+      // every other table keeps writing the v1 map it always wrote.
+      if (!onColumnVisibilityChange) {
+        (fitsToWidth ? writeStoredColumnOverride : writeStoredColumnVisibility)(
+          storageKey,
+          newVisibility
+        );
+      }
     },
-    [commitUserVisibility, storageKey, columnVisibility, userVisibility, fitsToWidth]
+    [
+      commitUserVisibility,
+      onColumnVisibilityChange,
+      storageKey,
+      columnVisibility,
+      userVisibility,
+      fitsToWidth,
+    ]
   );
 
   // Reset drops the user's choices: the page default plus auto-fit again.

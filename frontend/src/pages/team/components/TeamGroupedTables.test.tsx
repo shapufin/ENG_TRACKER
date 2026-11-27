@@ -118,7 +118,8 @@ describe("TeamGroupedTables", () => {
 
       expect(screen.queryByRole("columnheader", { name: /Hours/i })).not.toBeInTheDocument();
       expect(JSON.parse(localStorage.getItem("test-team-overview-ungrouped")!)).toEqual({
-        _version: 1,
+        // v2: every entry is an explicit Columns-menu choice (a `true` pins against auto-fit).
+        _version: 2,
         hours: false,
       });
     });
