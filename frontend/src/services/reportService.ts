@@ -153,6 +153,7 @@ export const reportService = {
     albanian_tl_ids?: string;
     workspace_ids?: string;
     team_ids?: string;
+    team_only?: boolean;
     status?: "approved" | "pending";
     date_mode?: "work_date" | "processing_period";
   }): Promise<Blob> {
@@ -186,6 +187,7 @@ export const reportService = {
     albanian_tl_ids?: string;
     workspace_ids?: string;
     team_ids?: string;
+    team_only?: boolean;
   }): Promise<Blob> {
     const { data } = await api.get<Blob>("/reports/export-leave/", {
       params,

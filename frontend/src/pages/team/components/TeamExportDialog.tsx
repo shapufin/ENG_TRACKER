@@ -33,10 +33,9 @@ type ExportType = "ot-standby" | "leave";
 type ExportStatus = "approved" | "pending";
 type DateMode = "work_date" | "processing_period";
 
-/** TL-scoped export — no team/TL selector, unlike the HR export dialog:
- * the backend already scopes to the caller's own team via
- * `apply_visibility_constraints` (apps/reports/filters.py), so every row
- * returned here already belongs to a team this TL leads or is part of. */
+/** TL-scoped export — no team/TL selector, unlike the HR export dialog.
+ * `team_only` makes the backend scope to the caller's own team even when
+ * they also hold HR (`apply_visibility_constraints`, apps/reports/filters.py). */
 export const TeamExportDialog: React.FC<TeamExportDialogProps> = ({ open, onOpenChange }) => {
   const [exportType, setExportType] = useState<ExportType>("ot-standby");
   const [status, setStatus] = useState<ExportStatus>("approved");
@@ -48,7 +47,11 @@ export const TeamExportDialog: React.FC<TeamExportDialogProps> = ({ open, onOpen
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const params = { start_date: start || undefined, end_date: end || undefined };
+      const params = {
+        start_date: start || undefined,
+        end_date: end || undefined,
+        team_only: true,
+      };
       const blob =
         exportType === "leave"
           ? await reportService.exportLeave(params)
