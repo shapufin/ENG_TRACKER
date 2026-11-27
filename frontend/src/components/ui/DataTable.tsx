@@ -54,8 +54,8 @@ import { useContainerWidth } from "./useContainerWidth";
 const withoutActions = (visibility: ColumnVisibilityState): ColumnVisibilityState =>
   Object.fromEntries(Object.entries(visibility).filter(([id]) => id !== "actions"));
 
-/** Width of the selection checkbox column (`w-10`). */
-const SELECTION_COLUMN_WIDTH = 40;
+/** Rendered width of the selection checkbox column (`w-10` plus cell padding: 48-53px measured). */
+const SELECTION_COLUMN_WIDTH = 52;
 /** TanStack's default column size, for defs that set none. */
 const DEFAULT_COLUMN_SIZE = 150;
 

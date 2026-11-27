@@ -816,6 +816,13 @@ describe("DataTable fits its container", () => {
     expect(screen.getByRole("button", { name: /Columns \(3\/4\)/ })).toBeInTheDocument();
   });
 
+  it("reserves the rendered width of the selection column (about 52px) in the fit", () => {
+    render(<DataTable columns={wideColumns} data={wideRows} enableRowSelection />);
+    resizeTo(520);
+    // 620 - email 150 = 470 > 520 - 52: Team goes too (a 40px reserve would keep it).
+    expect(screen.queryByRole("columnheader", { name: "Team" })).not.toBeInTheDocument();
+  });
+
   it("menu shows Columns (n/m)", () => {
     render(<DataTable columns={wideColumns} data={wideRows} />);
     resizeTo(330);
