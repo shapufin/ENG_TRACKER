@@ -73,13 +73,14 @@ export const useTeamBulkActions = (
   };
 
   // fallow-ignore-next-line complexity
-  const confirmBulkAction = (selectedIds: number[]) => {
+  const confirmBulkAction = (selectedIds: number[], reason?: string) => {
     if (!confirmAction) return;
     const ids = selectedIds;
     const set = mutations[activeTab];
     const action = confirmAction.action;
     if (action === "approve") set.approve.mutate(ids);
-    else if (action === "reject") set.reject.mutate({ ids, reason: "Rejected by team leader" });
+    else if (action === "reject")
+      set.reject.mutate({ ids, reason: reason?.trim() || "Rejected by team leader" });
     else if (action === "delete" && set.delete) set.delete.mutate(ids);
     setConfirmAction(null);
   };

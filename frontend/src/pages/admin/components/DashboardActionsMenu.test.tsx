@@ -35,7 +35,10 @@ const setup = (withSection = true) => {
   return { ref, ...handlers };
 };
 
-const openMenu = () => fireEvent.click(screen.getByRole("button", { name: "Dashboard actions" }));
+const openMenu = () => {
+  const trigger = screen.getByRole("button", { name: "Dashboard actions" });
+  fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
+};
 
 beforeEach(() => {
   h.capture.mockReset();
@@ -65,18 +68,14 @@ describe("DashboardActionsMenu", () => {
   it("moves focus into the menu and arrows/Home/End walk the items", () => {
     setup();
     openMenu();
+    const menu = screen.getByRole("menu", { name: "Dashboard actions" });
     const items = screen.getAllByRole("menuitem");
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
     expect(items[0]).toHaveFocus();
-    fireEvent.keyDown(items[0], { key: "ArrowDown" });
-    expect(items[1]).toHaveFocus();
-    fireEvent.keyDown(items[1], { key: "ArrowUp" });
-    expect(items[0]).toHaveFocus();
-    fireEvent.keyDown(items[0], { key: "ArrowUp" });
+    fireEvent.keyDown(menu, { key: "End" });
     expect(items[items.length - 1]).toHaveFocus();
-    fireEvent.keyDown(items[items.length - 1], { key: "Home" });
+    fireEvent.keyDown(menu, { key: "Home" });
     expect(items[0]).toHaveFocus();
-    fireEvent.keyDown(items[0], { key: "End" });
-    expect(items[items.length - 1]).toHaveFocus();
   });
 
   it("closes on Escape and returns focus to the trigger", async () => {

@@ -2,7 +2,12 @@ import React, { useState } from "react";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { downloadBlobResponse, parseFilenameFromDisposition } from "@/lib/download";
 import {
   tlScorecardService,
@@ -34,12 +39,10 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
   iconOnly,
   label = "Export Summary",
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleExport = async (fileFormat: SummaryFileFormat, scope: SummaryScope) => {
-    setIsOpen(false);
     setIsExporting(true);
     setError(null);
     try {
@@ -84,21 +87,19 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
 
   return (
     <div className="flex flex-col items-start gap-1">
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-        <PopoverContent align="end" className="w-56 p-1.5">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
           {EXPORT_OPTIONS.map((option) => (
-            <button
+            <DropdownMenuItem
               key={`${option.format}-${option.scope}`}
-              type="button"
-              onClick={() => handleExport(option.format, option.scope)}
-              className="hover:bg-muted block w-full rounded-lg px-3 py-2 text-left text-sm"
+              onSelect={() => handleExport(option.format, option.scope)}
             >
               {option.label}
-            </button>
+            </DropdownMenuItem>
           ))}
-        </PopoverContent>
-      </Popover>
+        </DropdownMenuContent>
+      </DropdownMenu>
       {error && (
         <p role="alert" className="text-tone-danger-text text-xs">
           {error}

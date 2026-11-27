@@ -7,6 +7,29 @@ import { handleApiError } from "@/lib/error-handler";
 import { useInvalidateVacationData } from "@/hooks/useInvalidateVacationData";
 import { toast } from "sonner";
 
+const TEAM_PAGE_SIZE = 1000;
+const MAX_TEAM_PAGES = 20;
+
+async function fetchAllTeamPages<T>(
+  fetcher: (params: { page: number; page_size: number }) => Promise<{
+    results: T[];
+    next?: string | null;
+    count?: number;
+  }>
+) {
+  const results: T[] = [];
+  let page = 1;
+  let totalCount: number | undefined;
+  while (page <= MAX_TEAM_PAGES) {
+    const data = await fetcher({ page, page_size: TEAM_PAGE_SIZE });
+    results.push(...(data.results ?? []));
+    totalCount = data.count;
+    if (!data.next) break;
+    page += 1;
+  }
+  return { results, count: totalCount ?? results.length, next: null, previous: null };
+}
+
 /**
  * Custom hook for team management queries and mutations.
  * Centralizes all team-related administrative logic.
@@ -17,13 +40,10 @@ export const useTeamManagement = () => {
   const qc = useQueryClient();
   const invalidateVacationData = useInvalidateVacationData();
 
-  // Include page_size in keys so changing fetch size never serves a stale page.
-  const teamPageSize = 500;
-
   // Overtime data
   const { data: overtimeLogs, isLoading: otLoading } = useQuery({
-    queryKey: ["team", "overtime", "logs", teamPageSize],
-    queryFn: () => overtimeService.getTeamLogs({ page_size: teamPageSize }),
+    queryKey: ["team", "overtime", "logs", "all"],
+    queryFn: () => fetchAllTeamPages(overtimeService.getTeamLogs),
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
@@ -31,8 +51,8 @@ export const useTeamManagement = () => {
 
   // Standby data
   const { data: standbyLogs, isLoading: sbLoading } = useQuery({
-    queryKey: ["team", "standby", "logs", teamPageSize],
-    queryFn: () => standbyService.getTeamLogs({ page_size: teamPageSize }),
+    queryKey: ["team", "standby", "logs", "all"],
+    queryFn: () => fetchAllTeamPages(standbyService.getTeamLogs),
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,
@@ -40,8 +60,8 @@ export const useTeamManagement = () => {
 
   // Leave data
   const { data: leaveRequests, isLoading: leaveLoading } = useQuery({
-    queryKey: ["team", "leave", "requests", teamPageSize],
-    queryFn: () => leaveService.getTeamLogs({ page_size: teamPageSize }),
+    queryKey: ["team", "leave", "requests", "all"],
+    queryFn: () => fetchAllTeamPages(leaveService.getTeamLogs),
     refetchOnMount: true,
     staleTime: 0,
     refetchOnWindowFocus: false,

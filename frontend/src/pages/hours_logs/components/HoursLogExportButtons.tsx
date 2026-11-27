@@ -1,7 +1,12 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { exportData } from "@/utils/exportUtils";
 
@@ -29,7 +34,6 @@ export const HoursLogExportButtons = <T extends object>({
   onExportCsv,
 }: HoursLogExportButtonsProps<T>) => {
   const [isExporting, setIsExporting] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleExportCsv = async () => {
     try {
@@ -63,15 +67,10 @@ export const HoursLogExportButtons = <T extends object>({
     }
   };
 
-  const runFromMenu = (run: () => Promise<void>) => () => {
-    setMenuOpen(false);
-    void run();
-  };
-
   return (
     <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-      <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-        <PopoverTrigger asChild>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <Button variant="outline" size="control" className="md:hidden" disabled={isExporting}>
             {isExporting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -80,26 +79,12 @@ export const HoursLogExportButtons = <T extends object>({
             )}
             Export
           </Button>
-        </PopoverTrigger>
-        <PopoverContent align="end" className="w-40 space-y-1 p-2">
-          <Button
-            variant="ghost"
-            size="control"
-            className="w-full justify-start"
-            onClick={runFromMenu(handleExportCsv)}
-          >
-            CSV
-          </Button>
-          <Button
-            variant="ghost"
-            size="control"
-            className="w-full justify-start"
-            onClick={runFromMenu(handleExportJson)}
-          >
-            JSON
-          </Button>
-        </PopoverContent>
-      </Popover>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuItem onSelect={() => void handleExportCsv()}>CSV</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => void handleExportJson()}>JSON</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <div className="hidden flex-wrap items-center justify-end gap-2 md:flex">
         <Button variant="outline" size="control" onClick={handleExportCsv} disabled={isExporting}>
           {isExporting ? (

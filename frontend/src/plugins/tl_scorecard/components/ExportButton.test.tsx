@@ -17,12 +17,15 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
 const exportSummary = vi.mocked(tlScorecardService.exportSummary);
 
+const openTrigger = (button: HTMLElement) =>
+  fireEvent.pointerDown(button, { button: 0, ctrlKey: false });
+
 describe("ExportButton", () => {
   it("exports the Excel workbook from the menu for the viewed month", async () => {
     exportSummary.mockResolvedValue({ data: new Blob() } as never);
     render(<ExportButton month="2026-10-01" />);
-    fireEvent.click(screen.getByRole("button", { name: "Export Summary" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Excel — this month" }));
+    openTrigger(screen.getByRole("button", { name: "Export Summary" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Excel — this month" }));
     await waitFor(() =>
       expect(exportSummary).toHaveBeenCalledWith("2026-10-01", undefined, "xlsx", "month")
     );
@@ -32,8 +35,8 @@ describe("ExportButton", () => {
   it("exports the PDF report from the menu", async () => {
     exportSummary.mockResolvedValue({ data: new Blob() } as never);
     render(<ExportButton month="2026-10-01" leaderId={7} />);
-    fireEvent.click(screen.getByRole("button", { name: "Export Summary" }));
-    fireEvent.click(await screen.findByRole("button", { name: "PDF report — this month" }));
+    openTrigger(screen.getByRole("button", { name: "Export Summary" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "PDF report — this month" }));
     await waitFor(() =>
       expect(exportSummary).toHaveBeenCalledWith("2026-10-01", 7, "pdf", "month")
     );
@@ -45,8 +48,8 @@ describe("ExportButton", () => {
   ])("exports %s from January through the viewed month", async (label, format) => {
     exportSummary.mockResolvedValue({ data: new Blob() } as never);
     render(<ExportButton month="2026-10-01" leaderId={7} />);
-    fireEvent.click(screen.getByRole("button", { name: "Export Summary" }));
-    fireEvent.click(await screen.findByRole("button", { name: label }));
+    openTrigger(screen.getByRole("button", { name: "Export Summary" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: label }));
     await waitFor(() =>
       expect(exportSummary).toHaveBeenCalledWith("2026-10-01", 7, format, "year")
     );
@@ -62,8 +65,8 @@ describe("ExportButton", () => {
     render(<ExportButton month="2026-10-01" iconOnly />);
     const button = screen.getByRole("button", { name: "Export summary" });
     expect(button).toHaveAttribute("title", "Export summary");
-    fireEvent.click(button);
-    fireEvent.click(await screen.findByRole("button", { name: "PDF report — this month" }));
+    openTrigger(button);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "PDF report — this month" }));
     await waitFor(() =>
       expect(exportSummary).toHaveBeenCalledWith("2026-10-01", undefined, "pdf", "month")
     );
@@ -75,8 +78,8 @@ describe("ExportButton", () => {
       headers: { "content-disposition": 'attachment; filename="tl_scorecard_lead_2026-10.pdf"' },
     } as never);
     render(<ExportButton month="2026-10-01" />);
-    fireEvent.click(screen.getByRole("button", { name: "Export Summary" }));
-    fireEvent.click(await screen.findByRole("button", { name: "PDF report — this month" }));
+    openTrigger(screen.getByRole("button", { name: "Export Summary" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "PDF report — this month" }));
     await waitFor(() =>
       expect(downloadBlobResponse).toHaveBeenCalledWith(
         expect.anything(),

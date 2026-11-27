@@ -50,7 +50,7 @@ describe("TLApprovalStats", () => {
 
   it("calls onCardClick with the correct type when a card with pending months is clicked", () => {
     const onCardClick = vi.fn();
-    const { container } = render(
+    render(
       <TLApprovalStats
         overtimeCount={5}
         standbyCount={0}
@@ -64,10 +64,9 @@ describe("TLApprovalStats", () => {
         onCardClick={onCardClick}
       />
     );
-    // The overtime card should be clickable (role=button)
-    const overtimeCard = container.querySelector('[role="button"]');
+    const overtimeCard = screen.getByRole("button", { name: /Overtime/i });
     expect(overtimeCard).toBeInTheDocument();
-    fireEvent.click(overtimeCard!);
+    fireEvent.click(overtimeCard);
     expect(onCardClick).toHaveBeenCalledWith("overtime");
   });
 
@@ -114,7 +113,7 @@ describe("TLApprovalStats", () => {
     expect(screen.getByText(/click to jump/)).toBeInTheDocument();
   });
 
-  it("activates a pending card from the keyboard with Enter and Space", () => {
+  it("renders a native button with accessible label when pending months exist", () => {
     const onCardClick = vi.fn();
     render(
       <TLApprovalStats
@@ -130,11 +129,10 @@ describe("TLApprovalStats", () => {
         onCardClick={onCardClick}
       />
     );
-    const card = screen.getByRole("button");
-    fireEvent.keyDown(card, { key: "Enter" });
-    fireEvent.keyDown(card, { key: " " });
-    fireEvent.keyDown(card, { key: "a" });
-    expect(onCardClick).toHaveBeenCalledTimes(2);
+    const card = screen.getByRole("button", { name: /Overtime: 5/i });
+    expect(card.tagName).toBe("BUTTON");
+    fireEvent.click(card);
+    expect(onCardClick).toHaveBeenCalledTimes(1);
     expect(onCardClick).toHaveBeenCalledWith("overtime");
   });
 });

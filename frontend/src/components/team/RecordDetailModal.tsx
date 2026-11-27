@@ -22,10 +22,26 @@ import {
 import type { OvertimeLog, StandbyLog, LeaveRequest } from "@/types";
 import { formatDateDDMMYYYY, formatDateTime } from "@/lib/date-format-utils";
 
+export interface RecordDetailSiblingItem {
+  id: number;
+  label: string;
+  meta?: string;
+  status?: string;
+  active?: boolean;
+  onSelect?: () => void;
+}
+
+export interface RecordDetailSiblings {
+  title: string;
+  items: RecordDetailSiblingItem[];
+}
+
 interface RecordDetailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   record: OvertimeLog | StandbyLog | LeaveRequest | null;
+  layout?: "bottom" | "panel";
+  siblings?: RecordDetailSiblings;
 }
 
 const isOvertimeLog = (record: unknown): record is OvertimeLog => {
@@ -187,7 +203,7 @@ const getStatusStyles = (status: string) => {
     case "rejected":
       return toneSurfaceClass.danger;
     case "cancelled":
-      return "bg-muted/30 text-muted-foreground border-muted-foreground/20 shadow-muted-foreground/10";
+      return toneSurfaceClass.neutral;
     default:
       return toneSurfaceClass.warning;
   }
@@ -211,6 +227,8 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
   open,
   onOpenChange,
   record,
+  layout = "bottom",
+  siblings,
 }) => {
   if (!record) return null;
 
@@ -227,7 +245,12 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent side="bottom" size="lg" hideClose padded={false}>
+      <DialogContent
+        side={layout === "panel" ? "right" : "bottom"}
+        size={layout === "panel" ? "panel" : "lg"}
+        hideClose
+        padded={false}
+      >
         <DialogTitle className="sr-only">Record Details</DialogTitle>
         <DialogDescription className="sr-only">
           View details for {recordType} record for {userName}
@@ -242,7 +265,7 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
                   "flex h-12 w-12 items-center justify-center rounded-xl",
                   "border-accent-violet/20 border",
                   "bg-accent-violet/10 backdrop-blur-xl",
-                  "shadow-[0_0_15px_rgba(139,92,246,0.25)]"
+                  "shadow-accent-violet/25 shadow-sm"
                 )}
               >
                 {React.createElement(recordIcon, { className: "h-6 w-6 text-accent-violet" })}
@@ -271,7 +294,7 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
               <button
                 onClick={() => onOpenChange(false)}
                 aria-label="Close"
-                className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground flex h-11 w-11 items-center justify-center rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
+                className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground flex h-11 w-11 items-center justify-center rounded-xl opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none"
               >
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>
@@ -282,7 +305,7 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
           {/* Content */}
           <div className="no-scrollbar flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
             {/* Dedicated Description / Reason Spotlight Card */}
-            <div className="border-border/80 bg-muted/40 group hover:border-accent-violet/30 hover:bg-accent/30 relative overflow-hidden rounded-xl border p-4 transition-all duration-300">
+            <div className="border-border/80 bg-muted/40 group hover:border-accent-violet/30 hover:bg-accent/30 relative overflow-hidden rounded-xl border p-4 transition-colors duration-200">
               <div className="mb-2 flex items-center gap-2">
                 <div className="border-accent-violet/20 bg-accent-violet/10 flex h-7 w-7 items-center justify-center rounded-lg border">
                   <FileText className="text-accent-violet h-4 w-4" />
@@ -304,7 +327,12 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
             </div>
 
             {/* Grid of metadata fields */}
-            <div className="grid auto-rows-min grid-cols-1 gap-2 sm:grid-cols-2">
+            <div
+              className={cn(
+                "grid auto-rows-min grid-cols-1 gap-2",
+                layout !== "panel" && "sm:grid-cols-2"
+              )}
+            >
               {fields.map((field, index) => {
                 const Icon = field.icon;
                 const isLongText = LONG_TEXT_FIELD_LABELS.has(field.label);
@@ -316,7 +344,7 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
                       "group relative overflow-hidden rounded-xl",
                       "border-border border",
                       "bg-muted/40",
-                      "transition-all duration-300",
+                      "transition-colors duration-200",
                       "hover:border-accent-violet/30 hover:bg-accent"
                     )}
                   >
@@ -326,8 +354,8 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
                           "flex h-8 w-8 items-center justify-center rounded-lg",
                           "border-accent-violet/10 border",
                           "bg-accent-violet/10",
-                          "transition-all duration-300",
-                          "group-hover:bg-accent-violet/15 group-hover:scale-105"
+                          "transition-colors duration-200",
+                          "group-hover:bg-accent-violet/15"
                         )}
                       >
                         <Icon className="text-accent-violet h-4 w-4" />
@@ -357,6 +385,56 @@ export const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
                 );
               })}
             </div>
+
+            {siblings && siblings.items.length > 0 && (
+              <div className="border-border/80 bg-muted/40 rounded-xl border p-4">
+                <p className="text-muted-foreground mb-2.5 text-xs font-semibold tracking-wider uppercase">
+                  {siblings.title}
+                </p>
+                <div className="space-y-1.5">
+                  {siblings.items.map((item) =>
+                    item.onSelect ? (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={item.onSelect}
+                        disabled={item.active}
+                        className={cn(
+                          "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-colors",
+                          item.active
+                            ? "border-primary/40 bg-primary/10 text-foreground font-semibold"
+                            : "border-border/60 bg-card text-foreground hover:bg-accent/60 cursor-pointer"
+                        )}
+                      >
+                        <span className="truncate">{item.label}</span>
+                        {item.meta && (
+                          <span className="text-muted-foreground shrink-0 font-mono tabular-nums">
+                            {item.meta}
+                          </span>
+                        )}
+                      </button>
+                    ) : (
+                      <div
+                        key={item.id}
+                        className={cn(
+                          "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-xs",
+                          item.active
+                            ? "border-primary/40 bg-primary/10 text-foreground font-semibold"
+                            : "border-border/60 bg-card text-foreground"
+                        )}
+                      >
+                        <span className="truncate">{item.label}</span>
+                        {item.meta && (
+                          <span className="text-muted-foreground shrink-0 font-mono tabular-nums">
+                            {item.meta}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>

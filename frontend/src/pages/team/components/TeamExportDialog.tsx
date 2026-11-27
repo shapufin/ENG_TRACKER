@@ -27,6 +27,9 @@ import { reportService } from "@/services/reportService";
 interface TeamExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialStartDate?: string;
+  initialEndDate?: string;
+  initialStatus?: ExportStatus;
 }
 
 type ExportType = "ot-standby" | "leave";
@@ -36,13 +39,30 @@ type DateMode = "work_date" | "processing_period";
 /** TL-scoped export — no team/TL selector, unlike the HR export dialog.
  * `team_only` makes the backend scope to the caller's own team even when
  * they also hold HR (`apply_visibility_constraints`, apps/reports/filters.py). */
-export const TeamExportDialog: React.FC<TeamExportDialogProps> = ({ open, onOpenChange }) => {
+export const TeamExportDialog: React.FC<TeamExportDialogProps> = ({
+  open,
+  onOpenChange,
+  initialStartDate = "",
+  initialEndDate = "",
+  initialStatus = "approved",
+}) => {
+  const [prevOpen, setPrevOpen] = useState(open);
   const [exportType, setExportType] = useState<ExportType>("ot-standby");
-  const [status, setStatus] = useState<ExportStatus>("approved");
+  const [status, setStatus] = useState<ExportStatus>(initialStatus);
   const [dateMode, setDateMode] = useState<DateMode>("processing_period");
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
+  const [start, setStart] = useState(initialStartDate);
+  const [end, setEnd] = useState(initialEndDate);
   const [isExporting, setIsExporting] = useState(false);
+
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setStart(initialStartDate);
+      setEnd(initialEndDate);
+      setStatus(initialStatus);
+      setDateMode(initialStartDate || initialEndDate ? "work_date" : "processing_period");
+    }
+  }
 
   const handleExport = async () => {
     setIsExporting(true);

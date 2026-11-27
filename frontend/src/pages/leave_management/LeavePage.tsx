@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useLeaveQueries } from "@/hooks/useLeaveQueries";
 import { useAuth } from "@/context/AuthContext";
-import { Plus, FileDown, Download, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import type { LeaveRequest } from "@/types";
 import { RecordDetailModal } from "@/components/team/RecordDetailModal";
 import { usePhoneRecordDetail } from "@/components/team/usePhoneRecordDetail";
@@ -14,7 +14,7 @@ import { FormDialog } from "@/components/ui/FormDialog";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageShell } from "@/components/layout/PageShell";
 import { LoadingCard } from "@/components/ui/LoadingCard";
-import { exportData } from "@/utils/exportUtils";
+import { HoursLogExportButtons } from "@/pages/hours_logs/components/HoursLogExportButtons";
 import { useLeaveForm } from "./hooks/useLeaveForm";
 import { getRemainingDays } from "./hooks/leaveBalanceUtils";
 import { useLeaveColumns } from "./hooks/useLeaveColumns";
@@ -122,21 +122,17 @@ export const LeavePage: React.FC = () => {
     handleRejectClick
   );
 
-  const handleExportCSV = () => {
-    exportData(requests ?? [], "vacations", "csv", {
-      headers: ["ID", "User", "Type", "Start", "End", "Days", "Status", "Reason"],
-      rowMapper: (r: LeaveRequest) => [
-        String(r.id),
-        r.user_name || String(r.user),
-        leaveTypeLabel(r),
-        r.start_date,
-        r.end_date,
-        String(r.days_requested),
-        r.status,
-        r.reason || "",
-      ],
-    });
-  };
+  const leaveCsvHeaders = ["ID", "User", "Type", "Start", "End", "Days", "Status", "Reason"];
+  const leaveRowMapper = (r: LeaveRequest) => [
+    String(r.id),
+    r.user_name || String(r.user),
+    leaveTypeLabel(r),
+    r.start_date,
+    r.end_date,
+    String(r.days_requested),
+    r.status,
+    r.reason || "",
+  ];
 
   return (
     <PageShell
@@ -144,17 +140,12 @@ export const LeavePage: React.FC = () => {
       subtitle="Manage vacation leave requests and balances."
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleExportCSV}>
-            <FileDown className="h-3.5 w-3.5" /> CSV
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => exportData(requests ?? [], "vacations", "json")}
-          >
-            <Download className="h-3.5 w-3.5" /> JSON
-          </Button>
+          <HoursLogExportButtons
+            logs={requests ?? []}
+            filename="vacations"
+            csvHeaders={leaveCsvHeaders}
+            rowMapper={leaveRowMapper}
+          />
           <Button size="sm" className="gap-1.5" onClick={openCreate}>
             <Plus className="h-3.5 w-3.5" /> New Request
           </Button>

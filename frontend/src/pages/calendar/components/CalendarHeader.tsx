@@ -1,8 +1,13 @@
-import React, { useState } from "react";
+import React from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toneOutlineClass, toneSurfaceClass } from "@/components/ui/tone";
 import { WorkspaceSelector } from "@/components/calendar/WorkspaceSelector";
 import {
@@ -75,11 +80,9 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onRequestTimeOff,
   leading,
 }) => {
-  const [exportOpen, setExportOpen] = useState(false);
   const hasConflicts = conflictCount !== undefined && conflictCount > 0 && !!onOpenConflictsModal;
 
   const runExport = (kind: "csv" | "ical") => {
-    setExportOpen(false);
     const filename = `calendar-${currentBusinessDateISO()}`;
     if (kind === "csv") exportToCSV(events, filename);
     else exportToICal(events, filename);
@@ -185,8 +188,8 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           </Button>
         )}
 
-        <Popover open={exportOpen} onOpenChange={setExportOpen}>
-          <PopoverTrigger asChild>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="control-icon-sm"
@@ -195,28 +198,26 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             >
               <Download className="h-4 w-4" aria-hidden="true" />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-44 p-1">
-            <button
-              type="button"
-              onClick={() => runExport("csv")}
-              className="hover:bg-muted focus-visible:ring-ring flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium focus:outline-none focus-visible:ring-1"
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem
+              onSelect={() => runExport("csv")}
               aria-label="Export calendar as CSV"
+              className="text-xs"
             >
               <FileSpreadsheet className="h-3.5 w-3.5" aria-hidden="true" />
               CSV
-            </button>
-            <button
-              type="button"
-              onClick={() => runExport("ical")}
-              className="hover:bg-muted focus-visible:ring-ring flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-medium focus:outline-none focus-visible:ring-1"
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() => runExport("ical")}
               aria-label="Export calendar as iCal"
+              className="text-xs"
             >
               <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
               iCal
-            </button>
-          </PopoverContent>
-        </Popover>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <Button
           size="control-icon-sm"

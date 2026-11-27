@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { ClipboardList, Eye, MoreHorizontal, ScrollText, SearchX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,12 @@ import { ErrorCard } from "@/components/ui/ErrorCard";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { TABLE_HEAD_CELL_CLASS, TABLE_HEAD_ROW_CLASS } from "@/components/ui/tableStyles";
 import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { UserAvatar } from "@/components/calendar/UserAvatar";
 import { isForbidden } from "../hbpr/isForbidden";
 import { NoAccess } from "../hbpr/NoAccess";
@@ -56,11 +61,10 @@ const RowActions: React.FC<{
   actions: RecordActionId[];
   onPick: (action: RecordActionId) => void;
 }> = ({ title, actions, onPick }) => {
-  const [open, setOpen] = useState(false);
   if (actions.length === 0) return null;
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
@@ -69,28 +73,19 @@ const RowActions: React.FC<{
         >
           <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-52 p-1">
-        <ul>
-          {actions.map((action) => (
-            <li key={action}>
-              <button
-                type="button"
-                className={`hover:bg-accent focus-visible:bg-accent flex min-h-11 w-full items-center rounded-sm px-3 text-left text-sm focus-visible:outline-hidden sm:min-h-9 ${
-                  action === "delete" ? "text-tone-danger-text" : ""
-                }`}
-                onClick={() => {
-                  setOpen(false);
-                  onPick(action);
-                }}
-              >
-                {ACTION_LABELS[action]}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </PopoverContent>
-    </Popover>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        {actions.map((action) => (
+          <DropdownMenuItem
+            key={action}
+            className={action === "delete" ? "text-tone-danger-text" : undefined}
+            onSelect={() => onPick(action)}
+          >
+            {ACTION_LABELS[action]}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 

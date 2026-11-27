@@ -1,3 +1,4 @@
+import { CalendarRange } from "lucide-react";
 import { StandbyDateCell, StandbyHoursCell } from "@/components/standby/StandbyDayCells";
 import { useMemo } from "react";
 import { leaveDaysLabel } from "@/components/leave/leaveDuration";
@@ -7,10 +8,31 @@ import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { UserCell } from "@/components/admin/UserCell";
 import { TicketIdBadges } from "@/components/ui/TicketIdBadges";
 import { createViewApproveRejectActionsColumn } from "@/components/ui/tableColumnHelpers";
+import { toneSurfaceClass } from "@/components/ui/tone";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { OvertimeHoursBadge } from "@/pages/overtime/components/OvertimeHoursBadge";
+import type { DayGroupedOvertimeLog } from "@/lib/overtimeDayGroups";
+import type { StandbyRotationLog } from "@/lib/standbyDayGroups";
+import type { ClusteredLeaveRequest } from "@/lib/leaveRangeGroups";
 import type { OvertimeLog, StandbyLog, LeaveRequest } from "@/types";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
+
+function renderGroupStatus<
+  T extends {
+    status: string;
+    blocks?: readonly { status: string }[];
+    segments?: readonly { status: string }[];
+  },
+>(row: T) {
+  const children = row.blocks ?? row.segments;
+  if (children && children.length > 1) {
+    const pendingCount = children.filter((c) => c.status === "pending").length;
+    if (pendingCount > 0 && pendingCount < children.length) {
+      return <StatusBadge variant="pending" label={`${pendingCount}/${children.length} pending`} />;
+    }
+  }
+  return <StatusBadge variant={row.status as StatusVariant} />;
+}
 
 export const useTeamColumns = (
   onView: (record: OvertimeLog | StandbyLog | LeaveRequest) => void,
@@ -20,7 +42,8 @@ export const useTeamColumns = (
   sbApprove: { mutate: (id: number) => void; isPending: boolean },
   sbReject: { mutate: (payload: { id: number; reason: string }) => void; isPending: boolean },
   leaveApprove: { mutate: (id: number) => void; isPending: boolean },
-  leaveReject: { mutate: (payload: { id: number; reason: string }) => void; isPending: boolean }
+  leaveReject: { mutate: (payload: { id: number; reason: string }) => void; isPending: boolean },
+  isRangeMode: boolean = false
 ) => {
   const getOvertimeColumns = useMemo<AppColumnDef<OvertimeLog>[]>(
     () => [
@@ -50,6 +73,35 @@ export const useTeamColumns = (
         meta: { flex: true },
         cell: ({ row }) => <OvertimeHoursBadge log={row.original} />,
       },
+      ...(isRangeMode
+        ? [
+            {
+              id: "blocks",
+              header: "Blocks",
+              size: 165,
+              meta: { flex: true },
+              cell: ({ row }: { row: { original: DayGroupedOvertimeLog } }) => {
+                const blocks = row.original.blocks;
+                if (!blocks || blocks.length <= 1) {
+                  return <span className="text-muted-foreground text-xs">1 block</span>;
+                }
+                return (
+                  <div className="flex flex-wrap items-center gap-1">
+                    {blocks.map((b) => (
+                      <Badge
+                        key={b.id}
+                        variant="outline"
+                        className="font-mono text-xs tabular-nums"
+                      >
+                        {Number(b.hours)}h
+                      </Badge>
+                    ))}
+                  </div>
+                );
+              },
+            } satisfies AppColumnDef<OvertimeLog>,
+          ]
+        : []),
       {
         id: "payroll_period",
         header: "Payroll",
@@ -86,9 +138,9 @@ export const useTeamColumns = (
       {
         accessorKey: "status",
         header: "Status",
-        size: 95,
+        size: 115,
         meta: { flex: true },
-        cell: ({ row }) => <StatusBadge variant={row.original.status as StatusVariant} />,
+        cell: ({ row }) => renderGroupStatus(row.original as DayGroupedOvertimeLog),
       },
       {
         ...createViewApproveRejectActionsColumn<OvertimeLog>({
@@ -102,7 +154,7 @@ export const useTeamColumns = (
         size: 150,
       },
     ],
-    [onView, onReject, otApprove, otReject]
+    [onView, onReject, otApprove, otReject, isRangeMode]
   );
 
   const getStandbyColumns = useMemo<AppColumnDef<StandbyLog>[]>(
@@ -133,6 +185,35 @@ export const useTeamColumns = (
         meta: { flex: true },
         cell: StandbyHoursCell,
       },
+      ...(isRangeMode
+        ? [
+            {
+              id: "breakdown",
+              header: "Rotation",
+              size: 185,
+              meta: { flex: true },
+              cell: ({ row }: { row: { original: StandbyRotationLog } }) => {
+                const { day_count, date_end, breakdown } = row.original;
+                if (!day_count || day_count <= 1) {
+                  return <span className="text-muted-foreground text-xs">1 day</span>;
+                }
+                return (
+                  <div className="space-y-0.5 text-xs">
+                    <div className="font-medium tabular-nums">
+                      {day_count}d · {formatDateDDMMYYYY(row.original.date)}–
+                      {date_end ? formatDateDDMMYYYY(date_end) : ""}
+                    </div>
+                    {breakdown && (
+                      <div className="text-muted-foreground font-mono tabular-nums">
+                        {breakdown}
+                      </div>
+                    )}
+                  </div>
+                );
+              },
+            } satisfies AppColumnDef<StandbyLog>,
+          ]
+        : []),
       {
         id: "payroll_period",
         header: "Payroll",
@@ -153,9 +234,9 @@ export const useTeamColumns = (
       {
         accessorKey: "status",
         header: "Status",
-        size: 95,
+        size: 115,
         meta: { flex: true },
-        cell: ({ row }) => <StatusBadge variant={row.original.status as StatusVariant} />,
+        cell: ({ row }) => renderGroupStatus(row.original as StandbyRotationLog),
       },
       {
         ...createViewApproveRejectActionsColumn<StandbyLog>({
@@ -168,7 +249,7 @@ export const useTeamColumns = (
         size: 150,
       },
     ],
-    [onView, onReject, sbApprove, sbReject]
+    [onView, onReject, sbApprove, sbReject, isRangeMode]
   );
 
   const getLeaveColumns = useMemo<AppColumnDef<LeaveRequest>[]>(
@@ -206,6 +287,48 @@ export const useTeamColumns = (
         meta: { flex: true },
         cell: ({ row }) => leaveDaysLabel(row.original),
       },
+      ...(isRangeMode
+        ? [
+            {
+              id: "overlap",
+              header: "Overlap",
+              size: 195,
+              meta: { flex: true },
+              cell: ({ row }: { row: { original: ClusteredLeaveRequest } }) => {
+                const r = row.original;
+                if (!r.cluster_id) {
+                  return r.continues_next_month ? (
+                    <span className="text-muted-foreground text-xs">Continues next month</span>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">—</span>
+                  );
+                }
+                if (!r.is_cluster_head) {
+                  return <span className="text-muted-foreground text-xs">Same window</span>;
+                }
+                return (
+                  <div className="space-y-1 text-xs">
+                    <div className="flex items-center gap-1 font-medium">
+                      <CalendarRange className="text-primary h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        {r.cluster_size} overlapping ({r.cluster_total_days}d)
+                      </span>
+                    </div>
+                    {r.team_peaks?.map((p) => (
+                      <Badge
+                        key={p.team}
+                        variant="outline"
+                        className={`text-xs ${toneSurfaceClass.warning}`}
+                      >
+                        {p.team} ({p.count} off)
+                      </Badge>
+                    ))}
+                  </div>
+                );
+              },
+            } satisfies AppColumnDef<LeaveRequest>,
+          ]
+        : []),
       {
         accessorKey: "user_leave_balance",
         header: "Balance Left",
@@ -242,7 +365,7 @@ export const useTeamColumns = (
         size: 150,
       },
     ],
-    [onView, onReject, leaveApprove, leaveReject]
+    [onView, onReject, leaveApprove, leaveReject, isRangeMode]
   );
 
   return { getOvertimeColumns, getStandbyColumns, getLeaveColumns };

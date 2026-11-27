@@ -141,4 +141,19 @@ describe("RecordDetailModal", () => {
     render(<RecordDetailModal open={true} onOpenChange={vi.fn()} record={overtimeRecord} />);
     expect(screen.getByRole("dialog").className).toContain("max-md:bottom-0");
   });
+
+  it("opens as a right side panel with single-column fields when layout is panel", () => {
+    render(
+      <RecordDetailModal
+        open={true}
+        onOpenChange={vi.fn()}
+        record={overtimeRecord}
+        layout="panel"
+      />
+    );
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.className).toContain("inset-y-0");
+    expect(dialog.className).toContain("max-h-dvh");
+    expect(dialog.querySelector(".sm\\:grid-cols-2")).toBeNull();
+  });
 });
