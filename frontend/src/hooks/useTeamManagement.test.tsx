@@ -91,4 +91,50 @@ describe("useTeamManagement", () => {
     await waitFor(() => expect(result.current.overtimeLogs).toHaveLength(3));
     expect(result.current.overtimeLogs.map((r: any) => r.id)).toEqual([1, 2, 3]);
   });
+
+  it("fetches with page_size 5000", async () => {
+    vi.mocked(overtimeService.getTeamLogs).mockClear();
+    vi.mocked(overtimeService.getTeamLogs).mockResolvedValue({ results: [], next: null } as any);
+    vi.mocked(standbyService.getTeamLogs).mockResolvedValue({ results: [], next: null } as any);
+    vi.mocked(leaveService.getTeamLogs).mockResolvedValue({ results: [], next: null } as any);
+    vi.mocked(leaveService.getTeamBalances).mockResolvedValue([] as any);
+    vi.mocked(userService.getMyTeamMembers).mockResolvedValue([] as any);
+
+    const { result } = renderHook(() => useTeamManagement(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(overtimeService.getTeamLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ page_size: 5000 })
+    );
+  });
+
+  it("does not refetch on remount within 30 seconds", async () => {
+    vi.mocked(overtimeService.getTeamLogs).mockClear();
+    vi.mocked(standbyService.getTeamLogs).mockClear();
+    vi.mocked(leaveService.getTeamLogs).mockClear();
+    vi.mocked(leaveService.getTeamBalances).mockClear();
+    vi.mocked(userService.getMyTeamMembers).mockClear();
+    vi.mocked(overtimeService.getTeamLogs).mockResolvedValue({ results: [], next: null } as any);
+    vi.mocked(standbyService.getTeamLogs).mockResolvedValue({ results: [], next: null } as any);
+    vi.mocked(leaveService.getTeamLogs).mockResolvedValue({ results: [], next: null } as any);
+    vi.mocked(leaveService.getTeamBalances).mockResolvedValue([] as any);
+    vi.mocked(userService.getMyTeamMembers).mockResolvedValue([] as any);
+
+    const sharedClient = new QueryClient();
+    const sharedWrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={sharedClient}>{children}</QueryClientProvider>
+    );
+
+    const first = renderHook(() => useTeamManagement(), { wrapper: sharedWrapper });
+    await waitFor(() => expect(first.result.current.isLoading).toBe(false));
+    first.unmount();
+
+    const second = renderHook(() => useTeamManagement(), { wrapper: sharedWrapper });
+    await waitFor(() => expect(second.result.current.isLoading).toBe(false));
+
+    expect(overtimeService.getTeamLogs).toHaveBeenCalledTimes(1);
+    expect(standbyService.getTeamLogs).toHaveBeenCalledTimes(1);
+    expect(leaveService.getTeamLogs).toHaveBeenCalledTimes(1);
+    expect(leaveService.getTeamBalances).toHaveBeenCalledTimes(1);
+    expect(userService.getMyTeamMembers).toHaveBeenCalledTimes(1);
+  });
 });
