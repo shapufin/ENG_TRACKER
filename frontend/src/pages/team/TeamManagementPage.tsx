@@ -445,8 +445,8 @@ const TeamManagementPage: React.FC = () => {
     );
   }
 
-  const clearCollapsedSelection = (rowIds: number[]) => {
-    const idSet = new Set(rowIds.map(String));
+  const clearCollapsedSelection = (rowIds: string[]) => {
+    const idSet = new Set(rowIds);
     setRowSelection((prev) => {
       const next: RowSelectionState = {};
       for (const [k, v] of Object.entries(prev)) {
