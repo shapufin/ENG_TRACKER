@@ -42,13 +42,16 @@ export const SidebarProfileMenu: React.FC<SidebarProfileMenuProps> = ({
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { canShow: canInstall, install, dialog } = useInstallAction();
+  // The install dialog opens only after the menu has closed and released focus,
+  // otherwise the two focus traps fight each other.
+  const installPending = React.useRef(false);
   const displayName = getUserDisplayName(user);
   const initials = getInitials(displayName);
 
   const trigger = (
     <button
       type="button"
-      aria-label={collapsed ? `Account menu, ${displayName}` : "Account menu"}
+      aria-label={`Account menu, ${displayName}`}
       className={`hover:bg-accent focus-visible:ring-ring flex h-10 items-center gap-2.5 rounded-lg text-left transition-colors outline-none focus-visible:ring-2 ${collapsed ? "w-10 justify-center" : "w-full px-2"}`}
     >
       <span className="bg-primary/10 text-primary flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
@@ -77,7 +80,17 @@ export const SidebarProfileMenu: React.FC<SidebarProfileMenuProps> = ({
         ) : (
           <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
         )}
-        <DropdownMenuContent side="top" align="start" className="w-56">
+        <DropdownMenuContent
+          side="top"
+          align="start"
+          className="w-56"
+          onCloseAutoFocus={(e) => {
+            if (!installPending.current) return;
+            installPending.current = false;
+            e.preventDefault();
+            void install();
+          }}
+        >
           <DropdownMenuLabel>Theme</DropdownMenuLabel>
           {THEMES.map(({ value, label, Icon }) => (
             <DropdownMenuItem
@@ -95,7 +108,11 @@ export const SidebarProfileMenu: React.FC<SidebarProfileMenuProps> = ({
           ))}
           <DropdownMenuSeparator />
           {canInstall && (
-            <DropdownMenuItem onSelect={() => void install()}>
+            <DropdownMenuItem
+              onSelect={() => {
+                installPending.current = true;
+              }}
+            >
               <Download className="h-4 w-4" aria-hidden /> Install app
             </DropdownMenuItem>
           )}

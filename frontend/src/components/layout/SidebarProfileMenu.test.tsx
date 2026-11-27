@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { SidebarProfileMenu } from "./SidebarProfileMenu";
 
@@ -10,7 +10,7 @@ vi.mock("@/context/ThemeContext", () => ({
 vi.mock("@/hooks/useInstallPrompt", () => ({ useInstallPrompt: vi.fn() }));
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
-const mockInstall = (canShowInstallButton: boolean) =>
+const mockInstall = (canShowInstallButton: boolean, over: Record<string, unknown> = {}) =>
   vi.mocked(useInstallPrompt).mockReturnValue({
     isIOS: false,
     isFirefox: false,
@@ -20,6 +20,7 @@ const mockInstall = (canShowInstallButton: boolean) =>
     canShowInstallButton,
     promptInstall: vi.fn().mockResolvedValue(true),
     dismiss: vi.fn(),
+    ...over,
   });
 
 const user = { full_name: "Alice Smith", email: "alice@example.com" };
@@ -52,6 +53,7 @@ describe("SidebarProfileMenu", () => {
   it("footer is a single profile row with the name and no email", () => {
     renderMenu();
     expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Account menu, Alice Smith" })).toBeInTheDocument();
     expect(screen.getByText("Alice Smith")).toBeInTheDocument();
     expect(screen.queryByText("alice@example.com")).not.toBeInTheDocument();
   });
@@ -105,5 +107,35 @@ describe("SidebarProfileMenu", () => {
     renderMenu();
     openMenu();
     expect(screen.queryByRole("menuitem", { name: /Install app/ })).not.toBeInTheDocument();
+  });
+
+  it("installs directly when the browser offers the native prompt", async () => {
+    const promptInstall = vi.fn().mockResolvedValue(true);
+    mockInstall(true, { promptInstall });
+    renderMenu();
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: /Install app/ }));
+    await waitFor(() => expect(promptInstall).toHaveBeenCalledOnce());
+  });
+
+  it("shows iOS instructions in a dialog with the scroll contract", async () => {
+    mockInstall(true, { isIOS: true, isInstallable: false });
+    renderMenu();
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: /Install app/ }));
+    expect(await screen.findByText("Install Engineering Tracker")).toBeInTheDocument();
+    expect(screen.getByText("Add to Home Screen")).toBeInTheDocument();
+    const dlg = document.querySelector("[role='dialog']") as HTMLElement;
+    expect(dlg.className).toContain("flex-col");
+    expect(dlg.className).toContain("overflow-hidden");
+    expect(dlg.className).toContain("max-h-[90vh]");
+  });
+
+  it("shows Firefox guidance when not installable", async () => {
+    mockInstall(true, { isFirefox: true, isInstallable: false });
+    renderMenu();
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: /Install app/ }));
+    expect(await screen.findByText(/Install site as app/)).toBeInTheDocument();
   });
 });
