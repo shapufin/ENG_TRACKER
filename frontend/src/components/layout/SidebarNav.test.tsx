@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { SidebarNav } from "./SidebarNav";
 import { usePlugins } from "@/context/PluginContext";
 import type { NavItem } from "./hooks/useVisibleNavItems";
@@ -30,7 +30,9 @@ vi.mock("@/plugins", () => ({
   getPluginComponent: (plugin: string, component: string) =>
     plugin === "onboarding" && component === "OnboardingSidebarLink"
       ? () => <span>Onboarding Link</span>
-      : null,
+      : plugin === "hidden" && component === "NothingForThisViewer"
+        ? () => null
+        : null,
 }));
 
 const mockGetInjected = (slots: string[]) => {
@@ -184,8 +186,20 @@ describe("SidebarNav", () => {
       { path: "/dashboard", label: "Dashboard", icon: () => <span>icon</span>, section: "core" },
     ];
     render(<SidebarNav items={coreOnly} collapsed={false} onItemClick={onItemClick} />);
-    expect(screen.getByText("Leadership")).toBeInTheDocument();
     expect(await screen.findByText("Onboarding Link")).toBeInTheDocument();
+    expect(screen.getByText("Leadership")).toBeVisible();
+  });
+
+  it("renders no section header when every link in the section renders nothing (pure HR, Leadership)", async () => {
+    mockGetInjectedEntries([
+      { pluginName: "hidden", componentName: "NothingForThisViewer", section: "leadership" },
+    ]);
+    const coreOnly: NavItem[] = [
+      { path: "/dashboard", label: "Dashboard", icon: () => <span>icon</span>, section: "core" },
+    ];
+    render(<SidebarNav items={coreOnly} collapsed={false} onItemClick={onItemClick} />);
+    await waitFor(() => expect(screen.getByText("Leadership")).not.toBeVisible());
+    expect(screen.queryByRole("button", { name: "Leadership" })).not.toBeInTheDocument();
   });
 
   it("section header toggles aria-expanded", () => {
@@ -236,7 +250,11 @@ describe("SidebarNav", () => {
   it("wraps unsectioned plugin items in a Plugins section only when injected", () => {
     localStorage.clear();
     mockGetInjected(["sidebar-nav"]);
-    render(<SidebarNav items={items} collapsed={false} onItemClick={onItemClick} />);
+    render(
+      <SidebarNav items={items} collapsed={false} onItemClick={onItemClick}>
+        <li>plugin link</li>
+      </SidebarNav>
+    );
     expect(screen.getByRole("button", { name: "Plugins" })).toBeInTheDocument();
   });
 });

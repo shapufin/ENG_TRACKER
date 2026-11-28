@@ -12,7 +12,7 @@
 import { createHmac } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { expect, request, test, type CDPSession, type Page } from "@playwright/test";
-import { E2E_CREDENTIALS } from "./helpers";
+import { E2E_CREDENTIALS, logoutViaUI } from "./helpers";
 
 const APP = "http://localhost:5173";
 const API = "http://127.0.0.1:8000";
@@ -78,14 +78,7 @@ async function passwordStep(page: Page) {
 }
 
 async function logout(page: Page) {
-  await page.evaluate(() => {
-    const button = Array.from(document.querySelectorAll("button")).find((b) => b.textContent?.includes("Logout"));
-    if (!button) throw new Error("Logout button not found");
-    (button as HTMLButtonElement).click();
-  });
-  const confirm = page.getByRole("button", { name: "Log out anyway" });
-  if (await confirm.isVisible({ timeout: 1_500 }).catch(() => false)) await confirm.click();
-  await page.waitForURL(/\/login/);
+  await logoutViaUI(page);
 }
 
 test.describe("Passkeys", () => {

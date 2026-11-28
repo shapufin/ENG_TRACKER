@@ -30,7 +30,7 @@ describe("MobileHeaderActions", () => {
   it("offers the account menu with logout", () => {
     const { onLogout } = renderActions();
     fireEvent.click(screen.getByRole("button", { name: "Account menu" }));
-    fireEvent.click(screen.getByRole("button", { name: /logout/i }));
+    fireEvent.click(screen.getByRole("button", { name: /log out/i }));
     expect(onLogout).toHaveBeenCalledTimes(1);
   });
 });

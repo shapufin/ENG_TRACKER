@@ -179,30 +179,35 @@ export function captureApiRequests(page: Page, urlPattern: string): Request[] {
 }
 
 /**
- * Log out via the UI. The Logout button lives in the sidebar, which on
- * mobile is off-screen (translated) and on desktop may be below the fold
- * or covered by the OfflineIndicator banner. To handle all cases
- * robustly, we click the button via JavaScript (dispatching a real click
- * event that triggers the React onClick handler) rather than relying on
- * Playwright's viewport-based visibility checks. Waits for redirect to
- * /login.
+ * Log out via the UI. Logout lives in the sidebar profile row's account menu
+ * (a Radix dropdown: it opens on pointerdown or Enter, a JS click does
+ * nothing). On mobile the sidebar is a drawer, so "Open menu" comes first.
+ * Waits for redirect to /login.
  */
-export async function logoutViaUI(page: Page): Promise<void> {
-  // Wait for the Logout button to be attached to the DOM
-  await page.locator('button:has-text("Logout")').waitFor({ state: "attached", timeout: 10_000 });
+export async function openLogoutMenuItem(page: Page): Promise<void> {
+  const trigger = page.locator('button[aria-label^="Account menu,"]');
+  if (!(await trigger.isVisible().catch(() => false))) {
+    await page.getByRole("button", { name: "Open menu" }).click();
+  }
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("menuitem", { name: "Log out" }).click();
+}
 
-  // Click via JavaScript to bypass viewport/overlay interception issues.
-  // This dispatches a real click event that React's onClick handler receives.
-  await page.evaluate(() => {
-    const buttons = Array.from(document.querySelectorAll("button"));
-    const logoutBtn = buttons.find((b) => b.textContent?.includes("Logout"));
-    if (!logoutBtn) throw new Error("Logout button not found in DOM");
-    logoutBtn.click();
-  });
+export async function logoutViaUI(page: Page): Promise<void> {
+  await openLogoutMenuItem(page);
 
   // With unsent offline changes the app asks first (audit H1); a test that logs out on purpose confirms.
   const confirm = page.getByRole("button", { name: "Log out anyway" });
-  if (await confirm.isVisible({ timeout: 1_500 }).catch(() => false)) await confirm.click();
+  // The dialog opens once the menu has closed, so wait for it (isVisible does not wait).
+  if (
+    await confirm.waitFor({ state: "visible", timeout: 1_500 }).then(
+      () => true,
+      () => false
+    )
+  ) {
+    await confirm.click();
+  }
 
   await page.waitForURL(/\/login/, { timeout: 10_000 });
 }

@@ -38,7 +38,7 @@ describe("HeaderProfileMenu", () => {
     const onLogout = vi.fn();
     renderMenu({ onLogout });
     fireEvent.click(screen.getByRole("button", { name: "Account menu" }));
-    fireEvent.click(screen.getByText("Logout"));
+    fireEvent.click(screen.getByText("Log out"));
     expect(onLogout).toHaveBeenCalled();
   });
 

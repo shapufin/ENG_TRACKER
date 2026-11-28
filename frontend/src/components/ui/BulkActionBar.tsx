@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "./button";
 import { AnimatedNumber } from "./AnimatedNumber";
@@ -11,6 +11,8 @@ interface BulkAction {
   onClick: () => void;
   variant?: "default" | "destructive" | "outline" | "ghost";
   disabled?: boolean;
+  /** Why the action is unavailable; shown on hover even while disabled. */
+  title?: string;
 }
 
 interface BulkActionBarProps {
@@ -30,10 +32,27 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
   children,
 }) => {
   const transition = useMotionTransition({ duration: DURATION.base });
+  const barRef = useRef<HTMLDivElement>(null);
+  const visible = selectedCount > 0;
+  // Fixed bottom notices (install banner) rise above the bar while it is shown.
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    if (!visible || !bar) return;
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty("--bulk-bar-h", `${bar.offsetHeight + 16}px`);
+    publish();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(publish);
+    observer?.observe(bar);
+    return () => {
+      observer?.disconnect();
+      root.style.removeProperty("--bulk-bar-h");
+    };
+  }, [visible]);
   return (
     <AnimatePresence>
       {selectedCount > 0 && (
         <motion.div
+          ref={barRef}
           initial="hidden"
           animate="visible"
           exit="exit"
@@ -70,17 +89,18 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
             <div className="flex flex-wrap items-center gap-2">
               {children}
               {actions.map((action, idx) => (
-                <Button
-                  key={idx}
-                  size="sm"
-                  variant={action.variant || "default"}
-                  onClick={action.onClick}
-                  className="gap-1.5"
-                  disabled={action.disabled}
-                >
-                  <action.icon className="h-3.5 w-3.5" aria-hidden="true" />
-                  {action.label}
-                </Button>
+                <span key={idx} title={action.title} className="inline-flex">
+                  <Button
+                    size="sm"
+                    variant={action.variant || "default"}
+                    onClick={action.onClick}
+                    className="gap-1.5"
+                    disabled={action.disabled}
+                  >
+                    <action.icon className="h-3.5 w-3.5" aria-hidden="true" />
+                    {action.label}
+                  </Button>
+                </span>
               ))}
               <Button size="sm" variant="outline" onClick={onClear} className="gap-1.5">
                 <X className="h-3.5 w-3.5" aria-hidden="true" />

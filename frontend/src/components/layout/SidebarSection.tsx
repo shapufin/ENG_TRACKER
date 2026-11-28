@@ -1,4 +1,4 @@
-import React, { useId } from "react";
+import React, { useId, useLayoutEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 interface SidebarSectionProps {
@@ -17,7 +17,8 @@ interface SidebarSectionProps {
  * so plugin-injected links keep their active state and can reopen the section.
  *
  * A section whose links all render nothing for the viewer (e.g. Leadership
- * for pure HR) leaves an empty body and hides its header too.
+ * for pure HR) leaves an empty body and hides its header too (observed in JS,
+ * since plugin links mount lazily and CSS `:has()` is not reliable everywhere).
  */
 export const SidebarSection: React.FC<SidebarSectionProps> = ({
   id,
@@ -28,6 +29,18 @@ export const SidebarSection: React.FC<SidebarSectionProps> = ({
   children,
 }) => {
   const bodyId = useId();
+  const bodyRef = useRef<HTMLUListElement>(null);
+  const [empty, setEmpty] = useState(false);
+
+  useLayoutEffect(() => {
+    const body = bodyRef.current;
+    if (!body) return;
+    const update = () => setEmpty(body.childElementCount === 0);
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(body, { childList: true });
+    return () => observer.disconnect();
+  }, [collapsed]);
 
   if (collapsed) {
     return (
@@ -39,7 +52,7 @@ export const SidebarSection: React.FC<SidebarSectionProps> = ({
   }
 
   return (
-    <li data-sidebar-section={id} className="[&:has(>ul:empty)]:hidden">
+    <li data-sidebar-section={id} hidden={empty}>
       <button
         type="button"
         aria-expanded={open}
@@ -53,7 +66,7 @@ export const SidebarSection: React.FC<SidebarSectionProps> = ({
           className={`h-3.5 w-3.5 shrink-0 transition-transform motion-reduce:transition-none ${open ? "" : "-rotate-90"}`}
         />
       </button>
-      <ul id={bodyId} hidden={!open} className="space-y-0.5 pb-1">
+      <ul ref={bodyRef} id={bodyId} hidden={!open} className="space-y-0.5 pb-1">
         {children}
       </ul>
     </li>

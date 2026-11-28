@@ -125,7 +125,7 @@ describe("useInstallPrompt", () => {
   it("does not crash when window.matchMedia is unavailable (jsdom/SSR)", () => {
     // jsdom does not implement matchMedia. The hook must degrade gracefully
     // instead of throwing — Sidebar/AdminSidebar tests render the hook via
-    // SidebarInstallButton without mocking matchMedia.
+    // SidebarProfileMenu (useInstallAction) without mocking matchMedia.
     vi.stubGlobal("matchMedia", undefined);
     const { result } = renderHook(() => useInstallPrompt());
 

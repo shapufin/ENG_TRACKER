@@ -43,9 +43,9 @@ export const SidebarProfileMenu: React.FC<SidebarProfileMenuProps> = ({
   const { theme, setTheme } = useTheme();
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const { canShow: canInstall, install, dialog } = useInstallAction(triggerRef);
-  // The install dialog opens only after the menu has closed and released focus,
-  // otherwise the two focus traps fight each other.
-  const installPending = React.useRef(false);
+  // Install and the logout confirmation open dialogs; they run only after the
+  // menu has closed and released focus, otherwise the two focus traps fight.
+  const pendingAction = React.useRef<(() => void) | null>(null);
   const displayName = getUserDisplayName(user);
   const initials = getInitials(displayName);
 
@@ -87,10 +87,11 @@ export const SidebarProfileMenu: React.FC<SidebarProfileMenuProps> = ({
           align="start"
           className="w-56"
           onCloseAutoFocus={(e) => {
-            if (!installPending.current) return;
-            installPending.current = false;
+            const action = pendingAction.current;
+            if (!action) return;
+            pendingAction.current = null;
             e.preventDefault();
-            void install();
+            action();
           }}
         >
           <DropdownMenuLabel>Theme</DropdownMenuLabel>
@@ -112,7 +113,7 @@ export const SidebarProfileMenu: React.FC<SidebarProfileMenuProps> = ({
           {canInstall && (
             <DropdownMenuItem
               onSelect={() => {
-                installPending.current = true;
+                pendingAction.current = () => void install();
               }}
             >
               <Download className="h-4 w-4" aria-hidden /> Install app
@@ -121,7 +122,12 @@ export const SidebarProfileMenu: React.FC<SidebarProfileMenuProps> = ({
           <DropdownMenuItem onSelect={() => navigate("/settings")}>
             <Settings className="h-4 w-4" aria-hidden /> Settings
           </DropdownMenuItem>
-          <DropdownMenuItem className="text-destructive" onSelect={onLogout}>
+          <DropdownMenuItem
+            className="text-destructive"
+            onSelect={() => {
+              pendingAction.current = onLogout;
+            }}
+          >
             <LogOut className="h-4 w-4" aria-hidden /> Log out
           </DropdownMenuItem>
         </DropdownMenuContent>

@@ -596,6 +596,7 @@ const TeamManagementPage: React.FC = () => {
             {selectedCount > 0 && (
               <TeamBulkOperationsPanel
                 selectedCount={selectedCount}
+                pendingSelectedCount={selectedPendingRecordIds(activeRows, rowSelection).length}
                 onClear={() => setRowSelection({})}
                 onApprove={() => handleBulkAction("approve", selectedCount)}
                 onReject={() => handleBulkAction("reject", selectedCount)}

@@ -59,3 +59,12 @@ describe("BulkActionBar surface", () => {
     expect(badge.textContent).toMatch(/^\d+$/);
   });
 });
+
+describe("BulkActionBar bottom-notice clearance", () => {
+  it("publishes --bulk-bar-h while shown and removes it on unmount", () => {
+    const { unmount } = renderBar();
+    expect(document.documentElement.style.getPropertyValue("--bulk-bar-h")).toMatch(/px$/);
+    unmount();
+    expect(document.documentElement.style.getPropertyValue("--bulk-bar-h")).toBe("");
+  });
+});

@@ -40,9 +40,11 @@ describe("InstallAppNotice", () => {
 
     const notice = screen.getByRole("status");
     expect(notice).not.toHaveClass("top-0");
-    expect(notice).toHaveClass("md:bottom-4", "md:right-4", "md:left-auto", "md:w-96");
+    expect(notice).toHaveClass("md:bottom-[calc(1rem+var(--bulk-bar-h,0px))]", "md:right-4", "md:left-auto", "md:w-96");
     // Sits above the phone tab bar whenever one is mounted.
     expect(notice.className).toContain("var(--bottom-nav-h");
+    // Rises above the floating bulk-action bar (it publishes --bulk-bar-h while mounted).
+    expect(notice.className).toContain("var(--bulk-bar-h");
   });
 
   it("shows iOS installation instructions", async () => {

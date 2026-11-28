@@ -1,6 +1,8 @@
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { SidebarProfileMenu } from "./SidebarProfileMenu";
 
 const setTheme = vi.fn();
@@ -31,7 +33,9 @@ const renderMenu = (props: Partial<React.ComponentProps<typeof SidebarProfileMen
       <Routes>
         <Route
           path="/"
-          element={<SidebarProfileMenu user={user} collapsed={false} onLogout={vi.fn()} {...props} />}
+          element={
+            <SidebarProfileMenu user={user} collapsed={false} onLogout={vi.fn()} {...props} />
+          }
         />
         <Route path="/settings" element={<div>Settings page</div>} />
       </Routes>
@@ -81,12 +85,41 @@ describe("SidebarProfileMenu", () => {
     expect(setTheme).toHaveBeenCalledWith("light");
   });
 
-  it("log out from the menu runs the same logout handler", () => {
+  it("log out from the menu runs the same logout handler", async () => {
     const onLogout = vi.fn();
     renderMenu({ onLogout });
     openMenu();
     fireEvent.click(screen.getByRole("menuitem", { name: /Log out/ }));
-    expect(onLogout).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(onLogout).toHaveBeenCalledTimes(1));
+  });
+
+  it("logout runs only after the menu has closed, so its confirm dialog can take focus", async () => {
+    const Host = () => {
+      const [open, setOpen] = React.useState(false);
+      return (
+        <>
+          <SidebarProfileMenu user={user} collapsed={false} onLogout={() => setOpen(true)} />
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogContent>
+              <DialogTitle>Unsent changes</DialogTitle>
+              <DialogDescription>Lost if you log out</DialogDescription>
+              <button type="button">Log out anyway</button>
+            </DialogContent>
+          </Dialog>
+        </>
+      );
+    };
+    render(
+      <MemoryRouter>
+        <Host />
+      </MemoryRouter>
+    );
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: /Log out/ }));
+    const confirm = await screen.findByRole("button", { name: "Log out anyway" });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    confirm.focus();
+    expect(document.activeElement).toBe(confirm);
   });
 
   it("settings item navigates to /settings", () => {
