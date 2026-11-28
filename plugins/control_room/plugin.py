@@ -67,6 +67,7 @@ class ControlRoomPlugin(BasePlugin):
                 {
                     "slot": "sidebar-nav",
                     "component": "ControlRoomSidebarItem",
+                    "section": "leadership",
                 },
                 {
                     "slot": "admin-sidebar-nav",

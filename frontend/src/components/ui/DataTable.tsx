@@ -15,6 +15,7 @@ import {
   TABLE_ACTIONS_CELL_CLASS,
   TABLE_ACTIONS_HEAD_CLASS,
   TABLE_BODY_CELL_CLASS,
+  TABLE_CELL_FIT_PX_CLASS,
   TABLE_HEAD_CELL_CHECKBOX_CLASS,
   TABLE_HEAD_CELL_CLASS,
   TABLE_HEAD_ROW_CLASS,
@@ -39,11 +40,31 @@ import { ColumnVisibilityMenu } from "./ColumnVisibilityMenu";
 import { EmptyState } from "./EmptyState";
 import { RowActionsPill } from "./RowActionsPill";
 import { DataTableCards, MOBILE_CARD_QUERY, type DataTableCardSpec } from "./DataTableCards";
-import { readStoredColumnVisibility, writeStoredColumnVisibility } from "./columnVisibilityStorage";
+import {
+  clearStoredColumnVisibility,
+  defaultColumnOverride,
+  readStoredColumnOverride,
+  writeStoredColumnOverride,
+  writeStoredColumnVisibility,
+} from "./columnVisibilityStorage";
+import { computeAutoVisibility, resolveFitColumnId, type FitColumn } from "./columnFit";
+import { useContainerWidth } from "./useContainerWidth";
 
 /** The actions column is never user-hideable; drop any persisted or emitted `actions` key. */
 const withoutActions = (visibility: ColumnVisibilityState): ColumnVisibilityState =>
   Object.fromEntries(Object.entries(visibility).filter(([id]) => id !== "actions"));
+
+/** Rendered width of the selection checkbox column (`w-10` plus cell padding: 48-53px measured). */
+const SELECTION_COLUMN_WIDTH = 52;
+/** TanStack's default column size, for defs that set none. */
+const DEFAULT_COLUMN_SIZE = 150;
+
+/** A column that absorbs the table's spare width instead of holding a fixed one. */
+const isFlexColumn = (id: string, flex: boolean | undefined) => id === "description" || !!flex;
+
+/** Full text for a truncated cell's tooltip; non-text values get none. */
+const cellTitle = (value: unknown) =>
+  typeof value === "string" || typeof value === "number" ? String(value) : undefined;
 
 /** Search and paging owned by the server: `data` is one already-filtered page
  * (`pageSize` rows at most), so the table neither filters nor slices it. */
@@ -121,30 +142,107 @@ export const DataTable = function DataTable<TData extends RowData>({
   const [showLeftShadow, setShowLeftShadow] = React.useState(false);
   const [showRightShadow, setShowRightShadow] = React.useState(false);
 
-  // Initialize column visibility from localStorage or external prop
+  // The user's own column choices: explicit Columns-menu toggles (persisted as a
+  // v2 override under `storageKey`) plus the hidden entries of
+  // `defaultColumnVisibility` and of a legacy v1 map. A `true` here pins a column
+  // against auto-fit, so only an explicit toggle may write one. A controlled
+  // `columnVisibility` prop is taken as-is: its caller owns that rule.
   const [internalColumnVisibility, setInternalColumnVisibility] = React.useState<
     Record<string, boolean>
-  >(() => readStoredColumnVisibility(storageKey, defaultColumnVisibility));
+  >(() => readStoredColumnOverride(storageKey, defaultColumnVisibility));
 
-  const columnVisibility = React.useMemo(
+  const userVisibility = React.useMemo(
     () => withoutActions(externalColumnVisibility ?? internalColumnVisibility),
     [externalColumnVisibility, internalColumnVisibility]
   );
 
+  // Fine pointers get the floating pill; coarse pointers (and environments without matchMedia) keep the column.
+  const showCards = useMediaQuery(MOBILE_CARD_QUERY) && Boolean(mobileCard);
+  const isFinePointer = useMediaQuery("(pointer: fine)");
+  const actionsInPill =
+    isFinePointer && columns.some((c) => c.id === "actions" && c.meta?.actionsDisplay !== "column");
+
+  // Fit to width: only tables that rank their columns (`meta.priority`) auto-hide.
+  // The scroll container is measured, not the table, so hiding a column cannot
+  // feed back into the measure. Unmeasured (null) shows every column.
+  // Approximation: the table is `table-auto`, so a rendered column is as wide as
+  // its content needs (at least its min-content); the fit compares the summed
+  // `size` hints with the container, not the real rendered widths. A table whose
+  // content is wider than its hints still scrolls rather than clipping.
+  const fitsToWidth = columns.some((c) => c.meta?.priority !== undefined);
+  const [containerWidth, measureScrollRef] = useContainerWidth();
+  const setScrollRef = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      scrollRef.current = element;
+      measureScrollRef(element);
+    },
+    [measureScrollRef]
+  );
+  const autoVisibility = React.useMemo<ColumnVisibilityState>(() => {
+    if (!fitsToWidth || containerWidth === null) return {};
+    const fitColumns = columns.flatMap((column): FitColumn[] => {
+      const id = resolveFitColumnId(column);
+      if (!id || userVisibility[id] === false) return [];
+      if (id === "actions" && actionsInPill) return [];
+      // A column the user switched on, and the actions column, are never auto-hidden.
+      const priority = id === "actions" || userVisibility[id] ? 1 : (column.meta?.priority ?? 1);
+      return [{ id, size: column.size ?? DEFAULT_COLUMN_SIZE, priority }];
+    });
+    const available = containerWidth - (enableRowSelection ? SELECTION_COLUMN_WIDTH : 0);
+    return computeAutoVisibility(fitColumns, available);
+  }, [fitsToWidth, containerWidth, columns, userVisibility, actionsInPill, enableRowSelection]);
+
+  const columnVisibility = React.useMemo(
+    () => withoutActions({ ...autoVisibility, ...userVisibility }),
+    [autoVisibility, userVisibility]
+  );
+
+  const commitUserVisibility = React.useCallback(
+    (next: ColumnVisibilityState) => {
+      if (onColumnVisibilityChange) {
+        onColumnVisibilityChange(next);
+      } else {
+        setInternalColumnVisibility(next);
+      }
+    },
+    [onColumnVisibilityChange]
+  );
+
   const handleColumnVisibilityChange = React.useCallback(
     (updaterOrValue: Updater<ColumnVisibilityState>) => {
-      const newVisibility = withoutActions(
-        typeof updaterOrValue === "function" ? updaterOrValue(columnVisibility) : updaterOrValue
+      const next =
+        typeof updaterOrValue === "function" ? updaterOrValue(columnVisibility) : updaterOrValue;
+      // Persist only what the user changed, so auto-hidden columns stay automatic.
+      const changed = Object.fromEntries(
+        Object.entries(next).filter(([id, visible]) => visible !== (columnVisibility[id] ?? true))
       );
-      if (onColumnVisibilityChange) {
-        onColumnVisibilityChange(newVisibility);
-      } else {
-        setInternalColumnVisibility(newVisibility);
+      const newVisibility = withoutActions({ ...userVisibility, ...changed });
+      commitUserVisibility(newVisibility);
+      // A controlled table (`onColumnVisibilityChange`) persists through its owner.
+      // Otherwise only an auto-fit table needs the v2 "explicit choice" meaning;
+      // every other table keeps writing the v1 map it always wrote.
+      if (!onColumnVisibilityChange) {
+        (fitsToWidth ? writeStoredColumnOverride : writeStoredColumnVisibility)(
+          storageKey,
+          newVisibility
+        );
       }
-      writeStoredColumnVisibility(storageKey, newVisibility);
     },
-    [onColumnVisibilityChange, storageKey, columnVisibility]
+    [
+      commitUserVisibility,
+      onColumnVisibilityChange,
+      storageKey,
+      columnVisibility,
+      userVisibility,
+      fitsToWidth,
+    ]
   );
+
+  // Reset drops the user's choices: the page default plus auto-fit again.
+  const resetColumnVisibility = React.useCallback(() => {
+    commitUserVisibility(defaultColumnOverride(defaultColumnVisibility));
+    clearStoredColumnVisibility(storageKey);
+  }, [commitUserVisibility, defaultColumnVisibility, storageKey]);
 
   // Key on the joined value: an inline array literal is a fresh identity each render.
   const searchKey = Array.isArray(searchColumn) ? searchColumn.join(" ") : (searchColumn ?? "");
@@ -211,12 +309,6 @@ export const DataTable = function DataTable<TData extends RowData>({
   }, [table, pageSize]);
 
   const rows = table.getRowModel().rows;
-
-  // Fine pointers get the floating pill; coarse pointers (and environments without matchMedia) keep the column.
-  const showCards = useMediaQuery(MOBILE_CARD_QUERY) && Boolean(mobileCard);
-  const isFinePointer = useMediaQuery("(pointer: fine)");
-  const actionsInPill =
-    isFinePointer && columns.some((c) => c.id === "actions" && c.meta?.actionsDisplay !== "column");
 
   // Entry-anchored like the mockup, clamped to the table's scroll container
   // (which clips the pill BEFORE the viewport — the card edge is ~50px inside
@@ -305,8 +397,11 @@ export const DataTable = function DataTable<TData extends RowData>({
                 key={cell.id}
                 className={cn(
                   TABLE_BODY_CELL_CLASS,
-                  cell.column.id === "actions" && TABLE_ACTIONS_CELL_CLASS
+                  cell.column.id === "actions" ? TABLE_ACTIONS_CELL_CLASS : TABLE_CELL_FIT_PX_CLASS
                 )}
+                title={
+                  cell.column.columnDef.meta?.truncate ? cellTitle(cell.getValue()) : undefined
+                }
                 // The actions column is content-sized. `maxWidth` must stay off
                 // it: TanStack's default 150px cap made a decision column
                 // (`meta.actionsDisplay: "column"`, e.g. Approve/Reject or
@@ -318,7 +413,7 @@ export const DataTable = function DataTable<TData extends RowData>({
                   cell.column.columnDef.size
                     ? cell.column.id === "actions"
                       ? { width: cell.column.columnDef.size }
-                      : cell.column.id === "description" || cell.column.columnDef.meta?.flex
+                      : isFlexColumn(cell.column.id, cell.column.columnDef.meta?.flex)
                         ? { minWidth: cell.column.columnDef.size }
                         : {
                             width: cell.column.columnDef.size,
@@ -327,7 +422,19 @@ export const DataTable = function DataTable<TData extends RowData>({
                     : undefined
                 }
               >
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                {cell.column.columnDef.meta?.truncate ? (
+                  // Under `table-auto` a td's max-width is not a hard cap, but a
+                  // block child's max-width caps its min-content contribution, so
+                  // long text ellipsises at the size hint instead of widening the table.
+                  <span
+                    className="block truncate"
+                    style={{ maxWidth: cell.column.columnDef.size ?? DEFAULT_COLUMN_SIZE }}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </span>
+                ) : (
+                  flexRender(cell.column.columnDef.cell, cell.getContext())
+                )}
               </td>
             )
           )}
@@ -385,6 +492,8 @@ export const DataTable = function DataTable<TData extends RowData>({
 
   const totalCols = columns.length + (enableRowSelection ? 1 : 0);
 
+  const showColumnsMenu = enableColumnVisibility || fitsToWidth;
+
   const totalRows = server ? server.total : table.getFilteredRowModel().rows.length;
   const pageCount = server ? Math.max(1, Math.ceil(server.total / pageSize)) : table.getPageCount();
   const pageIndex = server ? server.page - 1 : table.state.pagination.pageIndex;
@@ -395,7 +504,7 @@ export const DataTable = function DataTable<TData extends RowData>({
 
   return (
     <div className="space-y-4">
-      {(searchPaths.length > 0 || enableColumnVisibility || toolbarActions) && (
+      {(searchPaths.length > 0 || showColumnsMenu || toolbarActions) && (
         <FilterToolbar className="pb-1">
           {searchPaths.length > 0 && (
             <FilterToolbar.Search>
@@ -408,11 +517,12 @@ export const DataTable = function DataTable<TData extends RowData>({
             </FilterToolbar.Search>
           )}
           {toolbarActions}
-          {enableColumnVisibility && (
+          {showColumnsMenu && (
             <ColumnVisibilityMenu
               columns={columns}
               visibility={columnVisibility}
               onVisibilityChange={(v) => handleColumnVisibilityChange(v)}
+              onReset={resetColumnVisibility}
             />
           )}
         </FilterToolbar>
@@ -439,8 +549,11 @@ export const DataTable = function DataTable<TData extends RowData>({
             {showRightShadow && (
               <div className="from-card pointer-events-none absolute inset-y-0 right-0 z-10 w-8 rounded-r-md bg-linear-to-l to-transparent" />
             )}
-            <div ref={scrollRef} className="overflow-x-auto">
-              <table className="text-dense w-full min-w-max">
+            <div ref={setScrollRef} className="overflow-x-auto">
+              {/* `table-auto` (no `min-w-max`): every cell keeps its min-content, so
+              nothing spills; the table scrolls only when that truly exceeds the
+              container. Column `size` stays a width hint on the cells. */}
+              <table className="text-dense w-full">
                 <thead>
                   <tr className={TABLE_HEAD_ROW_CLASS}>
                     {enableRowSelection && (
@@ -464,14 +577,18 @@ export const DataTable = function DataTable<TData extends RowData>({
                             key={header.id}
                             className={cn(
                               TABLE_HEAD_CELL_CLASS,
-                              header.column.id === "actions" && TABLE_ACTIONS_HEAD_CLASS
+                              header.column.id === "actions"
+                                ? TABLE_ACTIONS_HEAD_CLASS
+                                : TABLE_CELL_FIT_PX_CLASS
                             )}
                             style={
                               header.column.columnDef.size
                                 ? header.column.id === "actions"
                                   ? { width: header.column.columnDef.size }
-                                  : header.column.id === "description" ||
-                                      header.column.columnDef.meta?.flex
+                                  : isFlexColumn(
+                                        header.column.id,
+                                        header.column.columnDef.meta?.flex
+                                      )
                                     ? { minWidth: header.column.columnDef.size }
                                     : {
                                         width: header.column.columnDef.size,

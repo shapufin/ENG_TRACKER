@@ -74,6 +74,10 @@ declare module "@tanstack/table-core" {
     actionsDisplay?: "pill" | "column";
     /** When true, cell allows content/table to stretch flexibly (minWidth: size, without maxWidth cap). */
     flex?: boolean;
+    /** Auto-hide order when the table is narrower than its columns: 3 hides first, then 2. Unset = 1, never auto-hidden. Any column with a priority turns on fit-to-width and the Columns menu. */
+    priority?: 1 | 2 | 3;
+    /** Clip the cell to its column width with an ellipsis; the full text is in `title`. */
+    truncate?: boolean;
   }
 }
 /* eslint-enable @typescript-eslint/no-unused-vars */

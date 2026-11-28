@@ -1,11 +1,11 @@
-import React, { useCallback, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import React, { memo, useCallback, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DataTable } from "@/components/ui/DataTable";
 import {
-  readStoredColumnVisibility,
-  writeStoredColumnVisibility,
+  readStoredColumnOverride,
+  writeStoredColumnOverride,
 } from "@/components/ui/columnVisibilityStorage";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { toneTextClass } from "@/components/ui/tone";
@@ -52,8 +52,87 @@ interface TeamGroupedTablesProps<T extends GroupableRow> {
   onRowSelectionChange?: OnChangeFn<RowSelectionState>;
   buildSections?: (rows: T[]) => MonthlyTableSection<T>[];
   getRowClassName?: (row: T) => string;
-  onSectionCollapse?: (rowIds: number[]) => void;
+  /** Called with the row ids (`getRowId` strings) of a month section when it collapses. */
+  onSectionCollapse?: (rowIds: string[]) => void;
 }
+
+const getRowIdString = (row: GroupableRow) => row.id.toString();
+
+interface MonthSectionProps<T extends GroupableRow> {
+  section: MonthlyTableSection<T>;
+  collapsed: boolean;
+  onToggle: (key: string, isCollapsed: boolean, rowIds: string[]) => void;
+  columnsBuilder: (currentRows: T[]) => AppColumnDef<T>[];
+  mobileCard?: DataTableCardSpec;
+  getRowClassName?: (row: T) => string;
+  tableProps: Record<string, unknown>;
+}
+
+const MonthSectionInner = <T extends GroupableRow>({
+  section,
+  collapsed,
+  onToggle,
+  columnsBuilder,
+  mobileCard,
+  getRowClassName,
+  tableProps,
+}: MonthSectionProps<T>) => {
+  const enterTransition = useMotionTransition({ duration: DURATION.fast, ease: EASE.standard });
+  const columns = useMemo(() => columnsBuilder(section.rows), [columnsBuilder, section.rows]);
+  const bodyId = `team-month-section-${section.key}`;
+  return (
+    <GlassCard className="overflow-hidden p-0">
+      <button
+        type="button"
+        aria-expanded={!collapsed}
+        aria-controls={bodyId}
+        onClick={() =>
+          onToggle(
+            section.key,
+            collapsed,
+            section.rows.map((r) => getRowIdString(r))
+          )
+        }
+        className="border-border/60 bg-muted/30 hover:bg-muted/50 flex w-full cursor-pointer flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5 text-left text-xs tabular-nums transition-colors"
+      >
+        <span className="text-foreground flex items-center gap-2 font-semibold">
+          {collapsed ? (
+            <ChevronRight className="text-muted-foreground h-4 w-4" />
+          ) : (
+            <ChevronDown className="text-muted-foreground h-4 w-4" />
+          )}
+          {section.title}
+        </span>
+        <span className="text-muted-foreground flex flex-wrap items-center gap-2">
+          {section.summary && <span>{section.summary}</span>}
+          {section.pendingLabel && (
+            <span className={`font-medium ${toneTextClass.warning}`}>{section.pendingLabel}</span>
+          )}
+        </span>
+      </button>
+      {!collapsed && (
+        <motion.div
+          id={bodyId}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={enterTransition}
+          className="p-4"
+        >
+          <DataTable
+            data={section.rows}
+            columns={columns}
+            getRowId={getRowIdString}
+            mobileCard={mobileCard}
+            getRowClassName={getRowClassName}
+            {...tableProps}
+          />
+        </motion.div>
+      )}
+    </GlassCard>
+  );
+};
+
+const MonthSection = memo(MonthSectionInner) as typeof MonthSectionInner;
 
 // fallow-ignore-next-line complexity
 export const TeamGroupedTables = <T extends GroupableRow>({
@@ -74,51 +153,69 @@ export const TeamGroupedTables = <T extends GroupableRow>({
   onSectionCollapse,
 }: TeamGroupedTablesProps<T>) => {
   const [prevStorageKey, setPrevStorageKey] = useState(storageKey);
+  // The user's explicit Columns-menu choices (v2): a `true` pins a column against auto-fit.
   const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() =>
-    readStoredColumnVisibility(storageKey, defaultColumnVisibility)
+    readStoredColumnOverride(storageKey, defaultColumnVisibility)
   );
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
-  const collapseTransition = useMotionTransition({
-    duration: DURATION.fast,
-    ease: EASE.standard,
-  });
+  // Explicit user choices only; absent key = default (newest month open, older months closed).
+  const [collapseOverrides, setCollapseOverrides] = useState<Record<string, boolean>>({});
 
   if (prevStorageKey !== storageKey) {
     setPrevStorageKey(storageKey);
-    setColumnVisibility(readStoredColumnVisibility(storageKey, defaultColumnVisibility));
+    setColumnVisibility(readStoredColumnOverride(storageKey, defaultColumnVisibility));
   }
 
   const handleColumnVisibilityChange = useCallback(
     (next: Record<string, boolean>) => {
       setColumnVisibility(next);
-      writeStoredColumnVisibility(storageKey, next);
+      writeStoredColumnOverride(storageKey, next);
     },
     [storageKey]
   );
 
-  const toggleSection = (key: string, sectionRowIds: number[]) => {
-    const nextCollapsed = !collapsedSections[key];
-    setCollapsedSections((prev) => ({ ...prev, [key]: nextCollapsed }));
-    if (nextCollapsed && onSectionCollapse && sectionRowIds.length > 0) {
-      onSectionCollapse(sectionRowIds);
-    }
-  };
+  const monthlySections = useMemo(
+    () => (memberGroupMode === "range" && buildSections ? buildSections(rows) : []),
+    [memberGroupMode, buildSections, rows]
+  );
 
-  const visibilityProps = enableColumnVisibility
-    ? {
-        enableColumnVisibility: true,
-        storageKey,
-        columnVisibility,
-        onColumnVisibilityChange: handleColumnVisibilityChange,
+  const toggleSection = useCallback(
+    (key: string, isCollapsed: boolean, sectionRowIds: string[]) => {
+      setCollapseOverrides((prev) => ({ ...prev, [key]: !isCollapsed }));
+      if (!isCollapsed && onSectionCollapse && sectionRowIds.length > 0) {
+        onSectionCollapse(sectionRowIds);
       }
-    : {};
-  const selectionProps = enableRowSelection
-    ? {
-        enableRowSelection: true,
-        rowSelection,
-        onRowSelectionChange,
-      }
-    : {};
+    },
+    [onSectionCollapse]
+  );
+
+  const visibilityProps = useMemo(
+    () =>
+      enableColumnVisibility
+        ? {
+            enableColumnVisibility: true,
+            storageKey,
+            columnVisibility,
+            onColumnVisibilityChange: handleColumnVisibilityChange,
+          }
+        : {},
+    [enableColumnVisibility, storageKey, columnVisibility, handleColumnVisibilityChange]
+  );
+  const selectionProps = useMemo(
+    () =>
+      enableRowSelection
+        ? {
+            enableRowSelection: true,
+            rowSelection,
+            onRowSelectionChange,
+          }
+        : {},
+    [enableRowSelection, rowSelection, onRowSelectionChange]
+  );
+
+  const tableProps = useMemo(
+    () => ({ ...visibilityProps, ...selectionProps }),
+    [visibilityProps, selectionProps]
+  );
 
   const buildGroupSections = useCallback(
     (data: T[]): GroupSection<T>[] => {
@@ -166,68 +263,20 @@ export const TeamGroupedTables = <T extends GroupableRow>({
   }
 
   if (memberGroupMode === "range" && buildSections) {
-    const monthlySections = buildSections(rows);
     return (
       <div className="space-y-4">
-        {monthlySections.map((section) => {
-          const isCollapsed = Boolean(collapsedSections[section.key]);
-          const bodyId = `team-month-section-${section.key}`;
-          return (
-            <GlassCard key={section.key} className="overflow-hidden p-0">
-              <button
-                type="button"
-                aria-expanded={!isCollapsed}
-                aria-controls={bodyId}
-                onClick={() =>
-                  toggleSection(
-                    section.key,
-                    section.rows.map((r) => r.id)
-                  )
-                }
-                className="border-border/60 bg-muted/30 hover:bg-muted/50 flex w-full cursor-pointer flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5 text-left text-xs tabular-nums transition-colors"
-              >
-                <span className="text-foreground flex items-center gap-2 font-semibold">
-                  {isCollapsed ? (
-                    <ChevronRight className="text-muted-foreground h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="text-muted-foreground h-4 w-4" />
-                  )}
-                  {section.title}
-                </span>
-                <span className="text-muted-foreground flex flex-wrap items-center gap-2">
-                  {section.summary && <span>{section.summary}</span>}
-                  {section.pendingLabel && (
-                    <span className={`font-medium ${toneTextClass.warning}`}>
-                      {section.pendingLabel}
-                    </span>
-                  )}
-                </span>
-              </button>
-              <AnimatePresence initial={false}>
-                {!isCollapsed && (
-                  <motion.div
-                    id={bodyId}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={collapseTransition}
-                    className="p-4"
-                  >
-                    <DataTable
-                      data={section.rows}
-                      columns={columnsBuilder(section.rows)}
-                      getRowId={(row) => row.id.toString()}
-                      mobileCard={mobileCard}
-                      getRowClassName={getRowClassName}
-                      {...visibilityProps}
-                      {...selectionProps}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </GlassCard>
-          );
-        })}
+        {monthlySections.map((section, index) => (
+          <MonthSection
+            key={section.key}
+            section={section}
+            collapsed={collapseOverrides[section.key] ?? index !== 0}
+            onToggle={toggleSection}
+            columnsBuilder={columnsBuilder}
+            mobileCard={mobileCard}
+            getRowClassName={getRowClassName}
+            tableProps={tableProps}
+          />
+        ))}
       </div>
     );
   }

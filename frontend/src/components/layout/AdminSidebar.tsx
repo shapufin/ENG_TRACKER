@@ -1,16 +1,14 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { PluginSlot } from "@/components/plugins/PluginSlot";
 import { usePlugins } from "@/context/PluginContext";
 import { useSiteBranding } from "@/hooks/useSiteBranding";
-import { ChevronLeft, ChevronRight, LogOut, Search, Shield, X } from "lucide-react";
-import { SidebarUserProfile } from "./SidebarUserProfile";
-import { SidebarInstallButton } from "./SidebarInstallButton";
+import { ChevronLeft, ChevronRight, Search, Shield, X } from "lucide-react";
+import { SidebarProfileMenu } from "./SidebarProfileMenu";
 import { useMobileSidebarFocus } from "./useMobileSidebarFocus";
-import { SidebarSectionLabel } from "./SidebarSectionLabel";
+import { SidebarSection } from "./SidebarSection";
+import { useDomActiveSection, useSidebarGroups } from "@/hooks/useSidebarGroups";
 import { SidebarNavLink } from "./SidebarNavLink";
 import type { AdminNavItem } from "./hooks/useAdminNavItems";
 import { useMotionTransition } from "@/lib/motion";
@@ -75,6 +73,16 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       ? location.pathname === item.path
       : location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
 
+  const navRef = React.useRef<HTMLElement>(null);
+  const domActive = useDomActiveSection(
+    navRef,
+    location.pathname,
+    getInjectedComponents("admin-sidebar-nav").length +
+      getInjectedComponents("admin-sidebar-nav-system").length
+  );
+  const activeGroup = items.find(isActive)?.group ?? domActive;
+  const { isOpen, toggle } = useSidebarGroups("admin", activeGroup);
+
   const renderItem = (item: AdminNavItem) => (
     <SidebarNavLink
       key={item.path}
@@ -109,28 +117,26 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       className={`border-border/60 bg-surface-sunken fixed inset-y-0 left-0 z-50 flex flex-col border-r backdrop-blur-xl md:static ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
     >
       <div
-        className={`border-border/30 flex items-center border-b p-4 ${collapsed ? "flex-col gap-2" : "justify-between"}`}
+        className={`border-border/30 flex items-center border-b px-3 py-2 ${collapsed ? "flex-col gap-2" : "justify-between"}`}
       >
         <div
-          className={`flex min-w-0 items-center gap-2.5 text-lg font-bold ${collapsed ? "justify-center" : ""}`}
+          className={`flex min-w-0 items-center gap-2.5 text-base font-bold ${collapsed ? "justify-center" : ""}`}
         >
           {branding?.logo_url && !logoFailed ? (
             <img
               src={branding.logo_url}
               alt=""
-              className="shadow-primary/30 h-8 w-8 shrink-0 rounded-xl object-contain shadow-md"
+              className="shadow-primary/30 h-7 w-7 shrink-0 rounded-lg object-contain shadow-md"
               onError={() => setFailedLogoUrl(branding?.logo_url ?? null)}
             />
           ) : (
-            <div className="from-primary to-info shadow-primary/30 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-tr text-white shadow-md">
-              <Shield className="h-5 w-5" />
+            <div className="from-primary to-info shadow-primary/30 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-linear-to-tr text-white shadow-md">
+              <Shield className="h-4 w-4" />
             </div>
           )}
           {!collapsed && (
             <div className="min-w-0 leading-tight">
-              <span className="block truncate text-base">
-                {branding?.site_name || "Admin Panel"}
-              </span>
+              <span className="block truncate text-sm">{branding?.site_name || "Admin Panel"}</span>
               <div className="text-foreground font-mono text-xs font-semibold tracking-wider uppercase">
                 Enterprise
               </div>
@@ -138,6 +144,17 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           )}
         </div>
         <div className={`flex items-center gap-1 ${collapsed ? "flex-col" : ""}`}>
+          {onOpenPalette && (
+            <button
+              type="button"
+              onClick={onOpenPalette}
+              aria-label="Search pages"
+              title={`Search pages (${PALETTE_SHORTCUT.replace(" ", "+")})`}
+              className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-8 w-8 items-center justify-center rounded-md"
+            >
+              <Search className="h-4 w-4" aria-hidden />
+            </button>
+          )}
           <PluginSlot slot="sidebar" />
           <button
             ref={closeButtonRef}
@@ -157,27 +174,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </div>
       </div>
 
-      {onOpenPalette && (
-        <div className={`px-3 pt-3 ${collapsed ? "flex justify-center" : ""}`}>
-          <button
-            type="button"
-            onClick={onOpenPalette}
-            aria-label="Search pages"
-            title={`Search pages (${PALETTE_SHORTCUT.replace(" ", "+")})`}
-            className={`border-border bg-card text-muted-foreground hover:text-foreground flex h-9 items-center gap-2 rounded-lg border text-sm transition-colors ${collapsed ? "w-9 justify-center" : "w-full px-3"}`}
-          >
-            <Search className="h-4 w-4 shrink-0" aria-hidden />
-            {!collapsed && (
-              <>
-                <span className="flex-1 text-left">Search pages</span>
-                <kbd className="font-mono text-xs">{PALETTE_SHORTCUT}</kbd>
-              </>
-            )}
-          </button>
-        </div>
-      )}
-      <nav className="flex-1 overflow-y-auto p-3" aria-label="Admin navigation">
-        <ul className="space-y-1">
+      <nav ref={navRef} className="flex-1 overflow-y-auto p-3" aria-label="Admin navigation">
+        <ul className="space-y-0.5">
           {ADMIN_NAV_GROUPS.map((group) => {
             const groupItems = items.filter((item) => item.group === group);
             const isExtensions = group === "Extensions";
@@ -189,32 +187,25 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             if (!groupHasItems) return null;
 
             return (
-              <React.Fragment key={group}>
-                {!collapsed && <SidebarSectionLabel label={group} />}
+              <SidebarSection
+                key={group}
+                id={group}
+                label={group}
+                open={isOpen(group)}
+                onToggle={() => toggle(group)}
+                collapsed={collapsed}
+              >
                 {groupItems.map(renderItem)}
                 {isExtensions && <PluginSlot slot="admin-sidebar-nav" />}
                 {isSystem && <PluginSlot slot="admin-sidebar-nav-system" />}
-              </React.Fragment>
+              </SidebarSection>
             );
           })}
         </ul>
       </nav>
 
-      <div className="border-border/30 space-y-3 border-t px-3 pt-3 pb-[calc(0.75rem+var(--safe-area-bottom))]">
-        <ThemeToggle isCollapsed={collapsed} />
-        <SidebarInstallButton collapsed={collapsed} />
-        <SidebarUserProfile user={user} collapsed={collapsed} />
-        <div className={`flex gap-2 ${collapsed ? "flex-col items-center" : ""}`}>
-          <Button
-            variant="outline"
-            size="sm"
-            className={`gap-2 ${collapsed ? "w-10 justify-center p-0" : "flex-1"}`}
-            onClick={onLogout}
-          >
-            <LogOut className="h-4 w-4 shrink-0" />
-            {!collapsed && "Logout"}
-          </Button>
-        </div>
+      <div className="border-border/30 border-t px-3 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))]">
+        <SidebarProfileMenu user={user} collapsed={collapsed} onLogout={onLogout} />
       </div>
     </motion.aside>
   );

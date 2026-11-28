@@ -1,6 +1,6 @@
 import { useState } from "react";
+import type React from "react";
 import { Download, Share, Info } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogBody,
@@ -11,27 +11,14 @@ import {
 } from "@/components/ui/dialog";
 import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
-interface SidebarInstallButtonProps {
-  collapsed: boolean;
-}
-
-/**
- * Persistent install entry point in the sidebar footer.
- *
- * - Chrome/Edge: triggers the native beforeinstallprompt.
- * - iOS Safari: shows "Share → Add to Home Screen" instructions.
- * - Firefox/other: shows guidance to use Chrome/Edge or the browser's
- *   own "Install site as app" menu option if available.
- * - Hidden entirely when already in standalone mode (app is installed).
- */
-export function SidebarInstallButton({ collapsed }: SidebarInstallButtonProps) {
+/** Install flow shared by the button and the profile-menu item. `dialog` must be
+ * rendered outside any menu content, which unmounts when the menu closes. */
+export function useInstallAction(returnFocusRef?: React.RefObject<HTMLElement | null>) {
   const { isIOS, isFirefox, isInstallable, canShowInstallButton, promptInstall } =
     useInstallPrompt();
   const [showDialog, setShowDialog] = useState(false);
 
-  if (!canShowInstallButton) return null;
-
-  const handleClick = async () => {
+  const install = async () => {
     if (isInstallable) {
       await promptInstall();
     } else {
@@ -39,21 +26,18 @@ export function SidebarInstallButton({ collapsed }: SidebarInstallButtonProps) {
     }
   };
 
-  return (
+  const dialog = (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        className={`gap-2 ${collapsed ? "w-10 justify-center p-0" : "w-full"}`}
-        onClick={handleClick}
-        aria-label="Install app"
-      >
-        <Download className="h-4 w-4 shrink-0" />
-        {!collapsed && "Install app"}
-      </Button>
-
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent size="sm">
+        <DialogContent
+          size="sm"
+          onCloseAutoFocus={(e) => {
+            // The dialog has no trigger of its own (it opens from a closed menu).
+            if (!returnFocusRef?.current) return;
+            e.preventDefault();
+            returnFocusRef.current.focus();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Download className="h-5 w-5" />
@@ -120,4 +104,6 @@ export function SidebarInstallButton({ collapsed }: SidebarInstallButtonProps) {
       </Dialog>
     </>
   );
+
+  return { canShow: canShowInstallButton, install, dialog };
 }

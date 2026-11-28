@@ -3,7 +3,8 @@ import { useLocation } from "react-router-dom";
 import { usePlugins } from "@/context/PluginContext";
 import { PluginSlot } from "@/components/plugins/PluginSlot";
 import { SidebarNavLink } from "./SidebarNavLink";
-import { SidebarSectionLabel } from "./SidebarSectionLabel";
+import { SidebarSection } from "./SidebarSection";
+import { useDomActiveSection, useSidebarGroups } from "@/hooks/useSidebarGroups";
 import { NAV_SECTION_LABELS, NAV_SECTION_ORDER } from "./hooks/useVisibleNavItems";
 import type { NavItem } from "./hooks/useVisibleNavItems";
 
@@ -46,10 +47,18 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
     hasInjectedItems: injectedSidebarNav.some((item) => item.section === section),
   })).filter((group) => group.items.length > 0 || group.hasInjectedItems);
 
+  const isItemActive = (item: NavItem) =>
+    item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path);
+
+  // The section holding the current route stays open; plugin-injected links
+  // are not in `items`, so their section is read from the DOM.
+  const navRef = React.useRef<HTMLElement>(null);
+  const domActive = useDomActiveSection(navRef, location.pathname, injectedSidebarNav.length);
+  const activeSection = flowItems.find(isItemActive)?.section ?? domActive;
+  const { isOpen, toggle } = useSidebarGroups("app", activeSection);
+
   const renderItem = (item: NavItem) => {
-    const isActive = item.exact
-      ? location.pathname === item.path
-      : location.pathname.startsWith(item.path);
+    const isActive = isItemActive(item);
     return (
       <SidebarNavLink
         key={item.path}
@@ -65,19 +74,39 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   };
 
   return (
-    <nav className="flex-1 overflow-y-auto p-3" aria-label="Main navigation">
+    <nav ref={navRef} className="flex-1 overflow-y-auto p-3" aria-label="Main navigation">
       <ul className="space-y-0.5">
         {groups.map(({ section, items }) => (
-          <React.Fragment key={section}>
-            {!collapsed && <SidebarSectionLabel label={NAV_SECTION_LABELS[section]} />}
+          <SidebarSection
+            key={section}
+            id={section}
+            label={NAV_SECTION_LABELS[section]}
+            open={isOpen(section)}
+            onToggle={() => toggle(section)}
+            collapsed={collapsed}
+          >
             {items.map(renderItem)}
             <PluginSlot slot="sidebar-nav" section={section} />
-          </React.Fragment>
+          </SidebarSection>
         ))}
-        {hasPluginNav && !collapsed && <SidebarSectionLabel label="Plugins" />}
-        {children}
+        {hasPluginNav ? (
+          <SidebarSection
+            id="plugins"
+            label="Plugins"
+            open={isOpen("plugins")}
+            onToggle={() => toggle("plugins")}
+            collapsed={collapsed}
+          >
+            {children}
+          </SidebarSection>
+        ) : (
+          children
+        )}
         {pinnedItems.length > 0 && (
-          <li aria-hidden="true" className={collapsed ? "" : "mt-2 border-t border-border/50 pt-2"} />
+          <li
+            aria-hidden="true"
+            className={collapsed ? "" : "border-border/50 mt-2 border-t pt-2"}
+          />
         )}
         {pinnedItems.map(renderItem)}
       </ul>

@@ -90,3 +90,13 @@ class PluginRegistryConsistencyTest(SimpleTestCase):
                         f"getPluginComponent(\"{plugin_name}\", \"{component}\") resolves to "
                         f"null at runtime. Check it wasn't misplaced under another plugin's key."
                     )
+
+    def test_every_sidebar_nav_slot_declares_a_section(self):
+        """An item without a `section` falls into the generic "Plugins" bucket."""
+        valid = {'core', 'leadership', 'hr', 'skills-kpi', 'system'}
+        for plugin_name, plugin in plugin_registry.get_all_plugins().items():
+            for slot in plugin.get_frontend_metadata().get('injection_slots', []):
+                if slot['slot'] != 'sidebar-nav':
+                    continue
+                with self.subTest(plugin=plugin_name, component=slot['component']):
+                    self.assertIn(slot.get('section'), valid)

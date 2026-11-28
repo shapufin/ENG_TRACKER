@@ -7,7 +7,8 @@ import { handleApiError } from "@/lib/error-handler";
 import { useInvalidateVacationData } from "@/hooks/useInvalidateVacationData";
 import { toast } from "sonner";
 
-const TEAM_PAGE_SIZE = 1000;
+const TEAM_PAGE_SIZE = 5000;
+const TEAM_STALE_MS = 30_000;
 const MAX_TEAM_PAGES = 20;
 
 async function fetchAllTeamPages<T>(
@@ -44,8 +45,7 @@ export const useTeamManagement = () => {
   const { data: overtimeLogs, isLoading: otLoading } = useQuery({
     queryKey: ["team", "overtime", "logs", "all"],
     queryFn: () => fetchAllTeamPages(overtimeService.getTeamLogs),
-    refetchOnMount: true,
-    staleTime: 0,
+    staleTime: TEAM_STALE_MS,
     refetchOnWindowFocus: false,
   });
 
@@ -53,8 +53,7 @@ export const useTeamManagement = () => {
   const { data: standbyLogs, isLoading: sbLoading } = useQuery({
     queryKey: ["team", "standby", "logs", "all"],
     queryFn: () => fetchAllTeamPages(standbyService.getTeamLogs),
-    refetchOnMount: true,
-    staleTime: 0,
+    staleTime: TEAM_STALE_MS,
     refetchOnWindowFocus: false,
   });
 
@@ -62,8 +61,7 @@ export const useTeamManagement = () => {
   const { data: leaveRequests, isLoading: leaveLoading } = useQuery({
     queryKey: ["team", "leave", "requests", "all"],
     queryFn: () => fetchAllTeamPages(leaveService.getTeamLogs),
-    refetchOnMount: true,
-    staleTime: 0,
+    staleTime: TEAM_STALE_MS,
     refetchOnWindowFocus: false,
   });
 
@@ -71,8 +69,7 @@ export const useTeamManagement = () => {
   const { data: teamMembers } = useQuery({
     queryKey: ["team", "members"],
     queryFn: () => userService.getMyTeamMembers(),
-    refetchOnMount: true,
-    staleTime: 0,
+    staleTime: TEAM_STALE_MS,
     refetchOnWindowFocus: false,
   });
 
@@ -80,8 +77,7 @@ export const useTeamManagement = () => {
   const { data: teamBalances } = useQuery({
     queryKey: ["team", "balances"],
     queryFn: () => leaveService.getTeamBalances(),
-    refetchOnMount: true,
-    staleTime: 0,
+    staleTime: TEAM_STALE_MS,
     refetchOnWindowFocus: false,
   });
 

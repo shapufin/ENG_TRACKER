@@ -1,12 +1,9 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { PluginSlot } from "@/components/plugins/PluginSlot";
-import { LogOut, Clock, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Clock, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { SidebarNav } from "./SidebarNav";
-import { SidebarUserProfile } from "./SidebarUserProfile";
-import { SidebarInstallButton } from "./SidebarInstallButton";
+import { SidebarProfileMenu } from "./SidebarProfileMenu";
 import { SidebarCollapsedContext } from "./SidebarContext";
 import { useMotionTransition } from "@/lib/motion";
 import { useMobileSidebarFocus } from "./useMobileSidebarFocus";
@@ -73,21 +70,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       className={`border-border/60 bg-surface-sunken fixed inset-y-0 left-0 z-50 flex flex-col border-r backdrop-blur-xl md:static ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
     >
       <div
-        className={`border-border/30 flex items-center border-b p-4 ${collapsed ? "flex-col gap-2" : "justify-between"}`}
+        className={`border-border/30 flex items-center border-b px-3 py-2 ${collapsed ? "flex-col gap-2" : "justify-between"}`}
       >
         <div
-          className={`flex items-center gap-2.5 text-lg font-bold ${collapsed ? "justify-center" : ""}`}
+          className={`flex items-center gap-2.5 text-base font-bold ${collapsed ? "justify-center" : ""}`}
         >
           {branding?.logo_url && !logoFailed ? (
             <img
               src={branding.logo_url}
               alt=""
-              className="shadow-primary/30 h-8 w-8 rounded-xl object-contain shadow-md"
+              className="shadow-primary/30 h-7 w-7 rounded-lg object-contain shadow-md"
               onError={() => setFailedLogoUrl(branding?.logo_url ?? null)}
             />
           ) : (
-            <div className="from-primary to-info shadow-primary/30 flex h-8 w-8 items-center justify-center rounded-xl bg-linear-to-tr text-white shadow-md">
-              <Clock className="h-5 w-5" />
+            <div className="from-primary to-info shadow-primary/30 flex h-7 w-7 items-center justify-center rounded-lg bg-linear-to-tr text-white shadow-md">
+              <Clock className="h-4 w-4" />
             </div>
           )}
           {!collapsed && (
@@ -132,19 +129,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </SidebarNav>
       </SidebarCollapsedContext.Provider>
 
-      <div className="border-border/30 space-y-3 border-t px-3 pt-3 pb-[calc(0.75rem+var(--safe-area-bottom))]">
-        <ThemeToggle isCollapsed={collapsed} />
-        <SidebarInstallButton collapsed={collapsed} />
-        <SidebarUserProfile user={user} collapsed={collapsed} />
-        <Button
-          variant="outline"
-          size="sm"
-          className={`w-full gap-2 ${collapsed ? "md:w-10 md:justify-center md:p-0" : ""}`}
-          onClick={onLogout}
-        >
-          <LogOut className="h-4 w-4" />
-          {!collapsed && "Logout"}
-        </Button>
+      <div className="border-border/30 border-t px-3 pt-2 pb-[calc(0.5rem+var(--safe-area-bottom))]">
+        <SidebarProfileMenu user={user} collapsed={collapsed} onLogout={onLogout} />
       </div>
     </motion.aside>
   );

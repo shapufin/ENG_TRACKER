@@ -29,6 +29,8 @@ export const useHbprAssignmentColumns = (
     () => [
       {
         id: "hbpr",
+        meta: { priority: 1 },
+        size: 200,
         accessorFn: (row) => row.hbpr_detail.name,
         header: "HR Business Partner",
         cell: ({ row }) => (
@@ -40,6 +42,8 @@ export const useHbprAssignmentColumns = (
       },
       {
         id: "albanian_tl",
+        meta: { priority: 1 },
+        size: 200,
         accessorFn: (row) => row.albanian_tl_detail.name,
         header: "Line Manager",
         cell: ({ row }) => (
@@ -51,6 +55,8 @@ export const useHbprAssignmentColumns = (
       },
       {
         id: "cadence",
+        meta: { priority: 2 },
+        size: 130,
         accessorKey: "cadence",
         header: "Cadence",
         cell: ({ row }) => (
@@ -70,6 +76,8 @@ export const useHbprAssignmentColumns = (
       },
       {
         id: "cadence_status",
+        meta: { priority: 1 },
+        size: 120,
         accessorKey: "cadence_status",
         header: "Status",
         cell: ({ row }) => (
@@ -80,6 +88,8 @@ export const useHbprAssignmentColumns = (
       },
       {
         id: "next_due_on",
+        meta: { priority: 1 },
+        size: 110,
         accessorKey: "next_due_on",
         header: "Next due",
         cell: ({ row }) => (
@@ -90,6 +100,8 @@ export const useHbprAssignmentColumns = (
       },
       {
         id: "effective_from",
+        meta: { priority: 3 },
+        size: 120,
         accessorKey: "effective_from",
         header: "Effective from",
         cell: ({ row }) => (
@@ -100,6 +112,8 @@ export const useHbprAssignmentColumns = (
       },
       {
         id: "effective_to",
+        meta: { priority: 3 },
+        size: 120,
         accessorKey: "effective_to",
         header: "Effective to",
         cell: ({ row }) => (
@@ -110,6 +124,8 @@ export const useHbprAssignmentColumns = (
       },
       {
         id: "evidence_count",
+        meta: { priority: 3 },
+        size: 100,
         accessorKey: "evidence_count",
         header: "Log entries",
         cell: ({ row }) =>
@@ -123,6 +139,8 @@ export const useHbprAssignmentColumns = (
       },
       {
         id: "actions",
+        meta: { priority: 1 },
+        size: 96,
         header: () => <span className="sr-only">Actions</span>,
         cell: ({ row }) => {
           if (!row.original.is_current) return null;

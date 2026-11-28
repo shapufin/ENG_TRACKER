@@ -92,6 +92,7 @@ class OrganigramaPlugin(BasePlugin):
                 {
                     "slot": "sidebar-nav",
                     "component": "OrganigramaSidebarItem",
+                    "section": "core",
                 },
             ],
         })

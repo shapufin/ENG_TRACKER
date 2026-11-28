@@ -125,6 +125,7 @@ export const useUserColumns = (
     const base: AppColumnDef<UserProfile>[] = [
       {
         id: "username",
+        meta: { priority: 1 },
         accessorKey: "user.username",
         header: "Username",
         // Explicit widths throughout: TanStack's 150px default for an unsized
@@ -154,6 +155,7 @@ export const useUserColumns = (
       },
       {
         id: "code",
+        meta: { priority: 3 },
         accessorKey: "code",
         header: "Code",
         size: 96,
@@ -166,6 +168,7 @@ export const useUserColumns = (
       },
       {
         id: "email",
+        meta: { priority: 3 },
         accessorKey: "user.email",
         header: "Email",
         size: 200,
@@ -186,6 +189,7 @@ export const useUserColumns = (
         : [
             {
               id: "team",
+              meta: { priority: 2 },
               accessorKey: "team_name",
               header: "Teams",
               size: 130,
@@ -214,9 +218,10 @@ export const useUserColumns = (
         ? [
             {
               id: "cr_teams",
+              meta: { priority: 2 },
               accessorKey: "cr_teams",
               header: "CR Teams",
-              size: 96,
+              size: 110,
               cell: ({ row }: { row: { original: UserProfile } }) =>
                 renderCRScopeTeamsCell({
                   profile: row.original,
@@ -230,6 +235,7 @@ export const useUserColumns = (
       // permission/calendar scope). Always visible to all admins.
       {
         id: "techs",
+        meta: { priority: 2 },
         accessorKey: "techs",
         header: "Tech",
         size: 130,
@@ -264,17 +270,19 @@ export const useUserColumns = (
       },
       {
         id: "hire_date",
+        meta: { priority: 3 },
         accessorKey: "hire_date",
         header: "Hire Date",
-        size: 104,
+        size: 110,
         cell: ({ row }) => (
           <span className="text-sm tabular-nums">{formatDateDDMMYYYY(row.original.hire_date)}</span>
         ),
       },
       {
         id: "tl_role",
+        meta: { priority: 2 },
         header: "TL Role",
-        size: 90,
+        size: 130,
         cell: ({ row }) => renderTLRoleCell({ profile: row.original }),
       },
     ];
@@ -284,6 +292,7 @@ export const useUserColumns = (
     if (crActive) {
       base.push({
         id: "cr_access",
+        meta: { priority: 2 },
         header: "CR",
         size: 56,
         cell: ({ row }) =>
@@ -294,6 +303,7 @@ export const useUserColumns = (
     base.push(
       {
         id: "it_tl_assigned",
+        meta: { priority: 3 },
         accessorKey: "italian_tl_name",
         header: "Manager (Assigned)",
         size: 145,
@@ -306,6 +316,7 @@ export const useUserColumns = (
       },
       {
         id: "al_tl_assigned",
+        meta: { priority: 3 },
         accessorKey: "albanian_tl_name",
         header: "Line Manager (Assigned)",
         size: 150,
@@ -318,6 +329,7 @@ export const useUserColumns = (
       },
       {
         id: "actions",
+        meta: { priority: 1 },
         // No `size`: the column is sized by its icons (2026-10-10 refinement).
         // The previous reserved `size: 120` was ~4x the width the buttons need
         // and pushed Manager/Line Manager off-screen on a 1440px viewport.

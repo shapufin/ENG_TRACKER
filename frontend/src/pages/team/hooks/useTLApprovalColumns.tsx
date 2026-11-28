@@ -12,6 +12,21 @@ import { OvertimeHoursBadge } from "@/pages/overtime/components/OvertimeHoursBad
 import type { OvertimeLog, StandbyLog, LeaveRequest } from "@/types";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 
+/** Auto-fit rank of the shared leave base columns (they carry no priority of their own). */
+const LEAVE_BASE_PRIORITY: Record<string, 1 | 2 | 3> = {
+  user_name: 1,
+  request_type: 2,
+  start_date: 1,
+  end_date: 1,
+  days_requested: 1,
+  status: 1,
+};
+
+const withLeavePriority = (column: AppColumnDef<LeaveRequest>): AppColumnDef<LeaveRequest> => {
+  const id = (column as { accessorKey?: string }).accessorKey ?? "";
+  return { ...column, id, meta: { ...column.meta, priority: LEAVE_BASE_PRIORITY[id] ?? 1 } };
+};
+
 type Tab = "overtime" | "standby" | "leave";
 
 interface UseTLApprovalColumnsOptions {
@@ -28,33 +43,47 @@ export const useTLApprovalColumns = ({
   const overtimeColumns: AppColumnDef<OvertimeLog>[] = useMemo(
     () => [
       {
+        id: "user_name",
         accessorKey: "user_name",
+        meta: { priority: 1 },
         header: "User",
         size: 150,
         cell: ({ row }) => <UserCell name={row.original.user_name} />,
       },
-      { accessorKey: "client_name", header: "Client", size: 110 },
+      {
+        id: "client_name",
+        accessorKey: "client_name",
+        header: "Client",
+        size: 110,
+        meta: { priority: 2 },
+      },
       {
         id: "ticket_references",
+        meta: { priority: 3 },
         header: "Ticket ID",
         size: 130,
         accessorFn: (row) => row.ticket_references?.join(", ") ?? "",
         cell: ({ row }) => <TicketIdBadges references={row.original.ticket_references} />,
       },
       {
+        id: "date",
         accessorKey: "date",
+        meta: { priority: 1 },
         header: "Date",
-        size: 108,
+        size: 110,
         cell: (info) => formatDateDDMMYYYY(info.getValue() as string),
       },
       {
+        id: "hours",
         accessorKey: "hours",
+        meta: { priority: 1 },
         header: "Hours",
         size: 130,
         cell: ({ row }) => <OvertimeHoursBadge log={row.original} />,
       },
       {
         id: "payroll_period",
+        meta: { priority: 3 },
         header: "Payroll",
         size: 110,
         cell: ({ row }) =>
@@ -71,7 +100,9 @@ export const useTLApprovalColumns = ({
           ),
       },
       {
+        id: "description",
         accessorKey: "description",
+        meta: { priority: 3, truncate: true },
         header: "Description",
         // Free-text column: the flexible width, truncated with a tooltip/popover.
         // Hidden by default (see TLApprovalTabPanel) so 8 columns fit 1440px.
@@ -79,16 +110,18 @@ export const useTLApprovalColumns = ({
         cell: ({ row }) => <DescriptionColumn value={row.original.description} />,
       },
       {
+        id: "status",
         accessorKey: "status",
+        meta: { priority: 1 },
         header: "Status",
-        size: 122,
+        size: 115,
         cell: (info) => (
           <StatusBadge variant={info.getValue() as "pending" | "approved" | "rejected"} />
         ),
       },
       {
         id: "actions",
-        meta: { actionsDisplay: "column" },
+        meta: { priority: 1, actionsDisplay: "column" },
         header: "Actions",
         // Sized to the widest row (View + Approve + Reject).
         size: 259,
@@ -112,25 +145,32 @@ export const useTLApprovalColumns = ({
   const standbyColumns: AppColumnDef<StandbyLog>[] = useMemo(
     () => [
       {
+        id: "user_name",
         accessorKey: "user_name",
+        meta: { priority: 1 },
         header: "User",
         size: 150,
         cell: ({ row }) => <UserCell name={row.original.user_name} />,
       },
       {
+        id: "date",
         accessorKey: "date",
+        meta: { priority: 1 },
         header: "Date",
-        size: 108,
+        size: 110,
         cell: StandbyDateCell,
       },
       {
+        id: "hours",
         accessorKey: "hours",
+        meta: { priority: 1 },
         header: "Hours",
         size: 150,
         cell: StandbyHoursCell,
       },
       {
         id: "payroll_period",
+        meta: { priority: 3 },
         header: "Payroll",
         size: 130,
         cell: ({ row }) =>
@@ -146,22 +186,26 @@ export const useTLApprovalColumns = ({
           ),
       },
       {
+        id: "description",
         accessorKey: "description",
+        meta: { priority: 3, truncate: true },
         header: "Description",
         size: 120,
         cell: ({ row }) => <DescriptionColumn value={row.original.description} />,
       },
       {
+        id: "status",
         accessorKey: "status",
+        meta: { priority: 1 },
         header: "Status",
-        size: 122,
+        size: 115,
         cell: (info) => (
           <StatusBadge variant={info.getValue() as "pending" | "approved" | "rejected"} />
         ),
       },
       {
         id: "actions",
-        meta: { actionsDisplay: "column" },
+        meta: { priority: 1, actionsDisplay: "column" },
         header: "Actions",
         size: 259,
         cell: (info: { row: { original: StandbyLog } }) => {
@@ -183,16 +227,18 @@ export const useTLApprovalColumns = ({
 
   const leaveColumns: AppColumnDef<LeaveRequest>[] = useMemo(
     () => [
-      ...leaveRequestBaseColumns<LeaveRequest>(),
+      ...leaveRequestBaseColumns<LeaveRequest>().map(withLeavePriority),
       {
+        id: "reason",
         accessorKey: "reason",
+        meta: { priority: 3, truncate: true },
         header: "Reason",
         size: 120,
         cell: ({ row }) => <DescriptionColumn value={row.original.reason} />,
       },
       {
         id: "actions",
-        meta: { actionsDisplay: "column" },
+        meta: { priority: 1, actionsDisplay: "column" },
         header: "Actions",
         size: 259,
         cell: (info: { row: { original: LeaveRequest } }) => {

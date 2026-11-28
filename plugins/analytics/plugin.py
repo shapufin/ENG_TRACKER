@@ -66,7 +66,8 @@ class AnalyticsPlugin(BasePlugin):
             "injection_slots": [
                 {
                     "slot": "sidebar-nav",
-                    "component": "AnalyticsSidebarItem"
+                    "component": "AnalyticsSidebarItem",
+                    "section": "leadership",
                 },
                 {
                     "slot": "admin-sidebar-nav",

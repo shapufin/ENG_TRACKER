@@ -84,7 +84,7 @@ export const HeaderProfileMenu: React.FC<HeaderProfileMenuProps> = ({
             onClick={onLogout}
             className="text-destructive hover:bg-accent flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm"
           >
-            <LogOut className="h-4 w-4" /> Logout
+            <LogOut className="h-4 w-4" /> Log out
           </button>
         </div>
       </PopoverContent>

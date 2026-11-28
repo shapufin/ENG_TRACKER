@@ -38,6 +38,39 @@ describe("TeamBulkOperationsPanel", () => {
     expect(bar.className).not.toContain("hover:-translate-y-1");
   });
 
+  it("disables Approve and Reject, with the reason, when no selected row is pending", () => {
+    render(
+      <TeamBulkOperationsPanel
+        selectedCount={2}
+        pendingSelectedCount={0}
+        onClear={() => {}}
+        onApprove={() => {}}
+        onReject={() => {}}
+        onDelete={() => {}}
+        canManage
+      />
+    );
+    expect(screen.getByRole("button", { name: /approve/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /reject/i })).toBeDisabled();
+    expect(screen.getAllByTitle("None of the selected records is pending.")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: /delete/i })).toBeEnabled();
+  });
+
+  it("keeps Approve enabled when at least one selected row is pending", () => {
+    render(
+      <TeamBulkOperationsPanel
+        selectedCount={2}
+        pendingSelectedCount={1}
+        onClear={() => {}}
+        onApprove={() => {}}
+        onReject={() => {}}
+        onDelete={() => {}}
+        canManage
+      />
+    );
+    expect(screen.getByRole("button", { name: /approve/i })).toBeEnabled();
+  });
+
   it("labels every action button accessibly", () => {
     renderPanel();
 

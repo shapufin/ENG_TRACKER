@@ -15,11 +15,8 @@ vi.mock("@/components/plugins/PluginSlot", () => ({
     return null;
   },
 }));
-vi.mock("@/components/ui/ThemeToggle", () => ({
-  ThemeToggle: () => <div>Theme toggle</div>,
-}));
-vi.mock("./SidebarUserProfile", () => ({
-  SidebarUserProfile: () => <div>User profile</div>,
+vi.mock("./SidebarProfileMenu", () => ({
+  SidebarProfileMenu: () => <div>Profile row</div>,
 }));
 vi.mock("@/context/PluginContext", () => ({
   usePlugins: vi.fn(() => ({ getInjectedComponents: () => [] })),
@@ -65,17 +62,28 @@ describe("AdminSidebar", () => {
     vi.mocked(dashboardService.getBranding).mockReset().mockRejectedValue(new Error("not mocked"));
   });
 
-  it("renders static section labels with flat items (no flyout buttons)", () => {
+  it("renders collapsible section headers with flat items", () => {
     mockGetInjected(["admin-sidebar-nav"]);
     renderSidebar();
 
-    // Groups are static labels, not collapsible flyout triggers.
-    expect(screen.getByText("People")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "People" })).not.toBeInTheDocument();
+    // Groups are inline collapsible headers, not flyout triggers.
+    expect(screen.getByRole("button", { name: "People" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("Extensions")).toBeInTheDocument();
 
     // Items render flat (no flyout hiding). SidebarNavLink uses menuitem role.
     expect(screen.getByRole("menuitem", { name: "Data Import" })).toBeInTheDocument();
+  });
+
+  it("section header toggles aria-expanded and hides the group's links", () => {
+    localStorage.clear();
+    renderSidebar();
+    const header = screen.getByRole("button", { name: "System" });
+    expect(header).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(header);
+    expect(header).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("Data Import")).not.toBeVisible();
+    fireEvent.click(header);
+    expect(screen.getByText("Data Import")).toBeVisible();
   });
 
   it("renders plugin nav items under the Extensions section only", () => {
@@ -123,7 +131,7 @@ describe("AdminSidebar", () => {
     const name = screen.getByText("Admin Panel");
     const classes = name.className.split(/\s+/);
     expect(classes).toContain("truncate");
-    expect(classes).toContain("text-base");
+    expect(classes).toContain("text-sm");
     expect(classes).not.toContain("md:inline");
     expect(name.parentElement?.className.split(/\s+/)).toContain("min-w-0");
   });
@@ -248,6 +256,13 @@ describe("AdminSidebar palette trigger", () => {
       </MemoryRouter>
     );
 
+  it("puts the search trigger in the header row, not as a separate bar", () => {
+    renderTrigger(vi.fn());
+    const header = document.querySelector(".border-b.border-border\\/30");
+    expect(header?.contains(screen.getByRole("button", { name: /search pages/i }))).toBe(true);
+    expect(screen.queryByText("Search pages")).not.toBeInTheDocument();
+  });
+
   it("renders no trigger unless onOpenPalette is provided", () => {
     renderTrigger();
     expect(screen.queryByRole("button", { name: /search pages/i })).not.toBeInTheDocument();
@@ -264,7 +279,7 @@ describe("AdminSidebar palette trigger", () => {
     expect(open).toHaveBeenCalledTimes(2);
   });
 
-  it("shows the Mac shortcut on Apple platforms", async () => {
+  it("shows the Mac shortcut in the trigger tooltip on Apple platforms", async () => {
     vi.resetModules();
     vi.spyOn(globalThis.navigator, "platform", "get").mockReturnValue("MacIntel");
     const { AdminSidebar: MacSidebar } = await import("./AdminSidebar");
@@ -281,7 +296,10 @@ describe("AdminSidebar palette trigger", () => {
         />
       </MemoryRouter>
     );
-    expect(screen.getByText("⌘ K")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /search pages/i })).toHaveAttribute(
+      "title",
+      "Search pages (⌘+K)"
+    );
     vi.restoreAllMocks();
   });
 });

@@ -14,6 +14,7 @@ import {
   injectQueuedMutation,
   loginAsUser,
   logoutViaUI,
+  openLogoutMenuItem,
   waitForQueueEmpty,
 } from "./helpers";
 
@@ -288,12 +289,7 @@ test.describe("Authenticated offline queue integration", () => {
       description: "Overtime (pending)",
     });
 
-    await page.evaluate(() => {
-      const logoutBtn = Array.from(document.querySelectorAll("button")).find((b) =>
-        b.textContent?.includes("Logout")
-      );
-      logoutBtn?.click();
-    });
+    await openLogoutMenuItem(page);
     const dialog = page.getByRole("dialog", { name: /unsent change/i });
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText("1 unsent change");

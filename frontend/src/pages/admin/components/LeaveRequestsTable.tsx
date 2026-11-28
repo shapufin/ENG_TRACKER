@@ -171,6 +171,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
     () => [
       {
         id: "user_name",
+        meta: { priority: 1 },
         accessorKey: "user_name",
         header: "User",
         size: 150,
@@ -183,6 +184,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
       },
       {
         id: "type",
+        meta: { priority: 2 },
         accessorKey: "type",
         header: "Type",
         size: 104,
@@ -199,6 +201,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
       },
       {
         id: "dates",
+        meta: { priority: 1 },
         accessorKey: "dates",
         header: "Period",
         size: 210,
@@ -214,6 +217,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
       },
       {
         id: "days",
+        meta: { priority: 1 },
         accessorKey: "days",
         header: "Days",
         size: 86,
@@ -226,6 +230,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
       },
       {
         id: "user_leave_balance",
+        meta: { priority: 2 },
         accessorKey: "user_leave_balance",
         header: "Balance Left",
         size: 128,
@@ -233,15 +238,17 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
       },
       {
         id: "reason",
+        meta: { priority: 3, truncate: true },
         accessorKey: "reason",
         header: "Reason",
         // Free-text column: the one flexible width, truncated with a tooltip.
-        // Hidden by default (see defaultColumnVisibility) so the table fits 1440px.
+        // Priority 3: the first column to auto-hide when the table is too narrow.
         size: 130,
         cell: ({ row }) => <DescriptionColumn value={row.original.reason} />,
       },
       {
         id: "status",
+        meta: { priority: 1 },
         accessorKey: "status",
         header: "Status",
         size: 127,
@@ -250,7 +257,7 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
       },
       {
         id: "actions",
-        meta: { actionsDisplay: "column" },
+        meta: { priority: 1, actionsDisplay: "column" },
         header: "Actions",
         // Sized to the widest row (Approve + Reject + delete icon).
         size: 210,
@@ -282,10 +289,6 @@ export const LeaveRequestsTable: React.FC<LeaveRequestsTableProps> = ({
         enableColumnVisibility
         toolbarActions={toolbar}
         storageKey="table-visibility-leave-requests"
-        // 8 columns do not fit a 1440px admin viewport at readable widths; the
-        // free-text Reason column is hidden by default and stays one click away
-        // in the Columns menu (never dropped).
-        defaultColumnVisibility={{ reason: false }}
         getRowId={(row) => row.id.toString()}
         mobileCard={LEAVE_REQUEST_CARD}
       />

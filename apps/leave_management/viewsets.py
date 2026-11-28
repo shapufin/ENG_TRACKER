@@ -488,8 +488,12 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
                 # PersonalOnlyFilterMixin behavior for their main list).
                 queryset = self.queryset.filter(user=user)
 
+        return queryset.prefetch_related(self._current_balances_prefetch())
+
+    def _current_balances_prefetch(self):
+        """Current-year vacation balances of each row's user, read by the serializer in one query."""
         current_year = timezone.now().year
-        balances_prefetch = Prefetch(
+        return Prefetch(
             'user__leave_balances',
             queryset=LeaveBalance.objects.filter(
                 year=current_year,
@@ -501,7 +505,6 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
             ),
             to_attr='prefetched_leave_balances'
         )
-        return queryset.prefetch_related(balances_prefetch)
 
     @action(detail=False, methods=['get'])
     def team_logs(self, request):
@@ -513,7 +516,11 @@ class LeaveRequestViewSet(HbprBlockedMixin, SuperuserPermissionMixin, HRReadOnly
 
         # workspace_ids is optional for team_logs; when omitted, all team members' entries are returned
         # Get base queryset
-        queryset = LeaveRequest.objects.all().select_related('user', 'approved_by').prefetch_related('user__profile__team_memberships__team')
+        queryset = (
+            LeaveRequest.objects.all()
+            .select_related('user', 'approved_by', 'balance')
+            .prefetch_related('user__profile__team_memberships__team', self._current_balances_prefetch())
+        )
 
         queryset = self._filter_team_leader_queryset(queryset, user)
 

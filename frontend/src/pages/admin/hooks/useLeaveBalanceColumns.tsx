@@ -36,12 +36,14 @@ const numCol = (
   id: "total_days" | "used_days" | "pending_days" | "available_days" | "effective_available_days",
   header: string,
   size: number,
+  priority: 1 | 2 | 3,
   bold = false
 ): AppColumnDef<LeaveBalance> => ({
   id,
   accessorKey: id,
   header,
   size,
+  meta: { priority },
   cell: ({ row }) => (
     <span className={cn(NUM_CELL, bold && "font-semibold")}>{num(row.original[id])}</span>
   ),
@@ -62,34 +64,38 @@ export const useLeaveBalanceColumns = (
     () => [
       {
         id: "user_name",
+        meta: { priority: 1 },
         accessorKey: "user_name",
         header: "Employee",
-        size: 130,
+        size: 150,
         cell: ({ row }) => <UserCell name={row.original.user_name} />,
       },
       {
         id: "leave_type",
+        meta: { priority: 2 },
         accessorKey: "leave_type",
         header: "Type",
         size: 82,
         cell: ({ row }) => <span className="capitalize">{row.original.leave_type}</span>,
       },
-      { id: "year", accessorKey: "year", header: "Year", size: 73 },
-      numCol("total_days", "Total", 78),
-      numCol("used_days", "Used", 82),
+      { id: "year", accessorKey: "year", header: "Year", size: 73, meta: { priority: 2 } },
+      numCol("total_days", "Total", 78, 2),
+      numCol("used_days", "Used", 82, 1),
       {
         id: "utilization",
+        meta: { priority: 3 },
         header: "Utilization",
         // Fixed: the bar is `w-24` (96px) plus the cell's px-4 gutter.
         size: 128,
         enableSorting: false,
         cell: ({ row }) => utilizationBar(row.original.used_days, row.original.total_days),
       },
-      numCol("pending_days", "Pending", 100),
-      numCol("available_days", "Available", 104, true),
-      numCol("effective_available_days", "Effective", 105),
+      numCol("pending_days", "Pending", 100, 2),
+      numCol("available_days", "Available", 104, 1, true),
+      numCol("effective_available_days", "Effective", 105, 2),
       {
         id: "is_carry_over",
+        meta: { priority: 3 },
         accessorKey: "is_carry_over",
         header: "Carry-over",
         size: 118,
@@ -97,9 +103,10 @@ export const useLeaveBalanceColumns = (
       },
       {
         id: "expires_at",
+        meta: { priority: 3 },
         accessorKey: "expires_at",
         header: "Expires",
-        size: 95,
+        size: 105,
         cell: ({ row }) => (
           <span
             className={cn(
@@ -113,6 +120,7 @@ export const useLeaveBalanceColumns = (
       },
       {
         id: "actions",
+        meta: { priority: 1 },
         header: "Actions",
         size: 100,
         cell: ({ row }) => (

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { useState } from "react";
 import { createCrudActionsColumn, pillOffsetForEntry } from "./tableColumnHelpers";
 import { DataTable } from "./DataTable";
@@ -739,5 +739,202 @@ describe("pillOffsetForEntry", () => {
     expect(
       pillOffsetForEntry(300, { left: -500, width: 1390 }, 444, 1440, { left: 314, right: 1390 })
     ).toBe(`${314 + 230 - -500 - 1390}px`);
+  });
+});
+
+describe("DataTable fits its container", () => {
+  interface Wide {
+    id: number;
+    name: string;
+    team: string;
+    email: string;
+    notes: string;
+  }
+  const wideColumns: AppColumnDef<Wide>[] = [
+    { accessorKey: "name", header: "Name", size: 200 },
+    { id: "team", accessorKey: "team", header: "Team", size: 150, meta: { priority: 2 } },
+    { id: "email", accessorKey: "email", header: "Email", size: 150, meta: { priority: 3 } },
+    { accessorKey: "notes", header: "Notes", size: 120, meta: { truncate: true } },
+  ];
+  const wideRows: Wide[] = [
+    {
+      id: 1,
+      name: "Alice",
+      team: "Core",
+      email: "alice@test.com",
+      notes: "A long note that is much wider than its 120px size hint",
+    },
+  ];
+
+  type Callback = (entries: { contentRect: { width: number } }[]) => void;
+  let callbacks: Callback[] = [];
+  const resizeTo = (width: number) =>
+    act(() => {
+      for (const cb of callbacks) cb([{ contentRect: { width } }]);
+    });
+
+  beforeEach(() => {
+    callbacks = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(cb: Callback) {
+          callbacks.push(cb);
+        }
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      }
+    );
+    // Width updates are coalesced per animation frame; run the frame at once.
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+      cb(0);
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", () => {});
+  });
+
+  it("table is w-full table-auto: no min-w-max, no table-fixed, no inline min width", () => {
+    const { container } = render(<DataTable columns={wideColumns} data={wideRows} />);
+    const table = container.querySelector("table")!;
+    expect(table.className).toContain("w-full");
+    expect(table.className).not.toContain("min-w-max");
+    expect(table.className).not.toContain("table-fixed");
+    expect(table.style.minWidth).toBe("");
+    expect(container.querySelector("colgroup")).toBeNull();
+    // Before the first measure every column shows; sizes stay width hints on the cells.
+    expect(container.querySelectorAll("thead th")).toHaveLength(4);
+    expect(screen.getByRole("columnheader", { name: "Name" })).toHaveStyle({ width: "200px" });
+  });
+
+  it("auto-hides the lowest priority column that does not fit and offers the Columns menu", () => {
+    const { container } = render(<DataTable columns={wideColumns} data={wideRows} />);
+    resizeTo(500);
+    expect(screen.queryByRole("columnheader", { name: "Email" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Team" })).toBeInTheDocument();
+    expect(container.querySelectorAll("thead th")).toHaveLength(3);
+    expect(screen.getByRole("button", { name: /Columns \(3\/4\)/ })).toBeInTheDocument();
+  });
+
+  it("reserves the rendered width of the selection column (about 52px) in the fit", () => {
+    render(<DataTable columns={wideColumns} data={wideRows} enableRowSelection />);
+    resizeTo(520);
+    // 620 - email 150 = 470 > 520 - 52: Team goes too (a 40px reserve would keep it).
+    expect(screen.queryByRole("columnheader", { name: "Team" })).not.toBeInTheDocument();
+  });
+
+  it("menu shows Columns (n/m)", () => {
+    render(<DataTable columns={wideColumns} data={wideRows} />);
+    resizeTo(330);
+    expect(screen.getByRole("button", { name: /Columns \(2\/4\)/ })).toBeInTheDocument();
+  });
+
+  it("user override beats auto visibility after resize", () => {
+    render(<DataTable columns={wideColumns} data={wideRows} storageKey="fit-override" />);
+    resizeTo(500);
+    fireEvent.click(screen.getByRole("button", { name: /Columns \(3\/4\)/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Email" }));
+    expect(screen.getByText("alice@test.com")).toBeInTheDocument();
+    resizeTo(300);
+    expect(screen.getByText("alice@test.com")).toBeInTheDocument();
+    // Only the user's own choice is persisted, never the auto-hidden columns.
+    expect(JSON.parse(localStorage.getItem("fit-override")!)).toEqual({
+      _version: 2,
+      email: true,
+    });
+  });
+
+  it("a legacy all-true stored map does not pin: the priority 3 column still auto-hides", () => {
+    // The old Reset wrote every column as true under _version 1.
+    localStorage.setItem(
+      "fit-legacy",
+      JSON.stringify({ _version: 1, name: true, team: true, email: true, notes: true })
+    );
+    render(<DataTable columns={wideColumns} data={wideRows} storageKey="fit-legacy" />);
+    resizeTo(500);
+    expect(screen.queryByRole("columnheader", { name: "Email" })).not.toBeInTheDocument();
+  });
+
+  it("a legacy hidden column stays hidden", () => {
+    localStorage.setItem("fit-legacy-hidden", JSON.stringify({ _version: 1, team: false }));
+    render(<DataTable columns={wideColumns} data={wideRows} storageKey="fit-legacy-hidden" />);
+    resizeTo(2000);
+    expect(screen.queryByRole("columnheader", { name: "Team" })).not.toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Email" })).toBeInTheDocument();
+  });
+
+  it("a true entry in defaultColumnVisibility does not pin: the column still auto-hides", () => {
+    render(
+      <DataTable
+        columns={wideColumns}
+        data={wideRows}
+        storageKey="fit-default"
+        defaultColumnVisibility={{ email: true, notes: false }}
+      />
+    );
+    resizeTo(400);
+    expect(screen.queryByRole("columnheader", { name: "Email" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Notes" })).not.toBeInTheDocument();
+  });
+
+  it("an explicit menu show keeps the column after the table shrinks", () => {
+    render(<DataTable columns={wideColumns} data={wideRows} storageKey="fit-explicit" />);
+    resizeTo(500);
+    fireEvent.click(screen.getByRole("button", { name: /Columns \(3\/4\)/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Email" }));
+    resizeTo(100);
+    // The Columns dialog is still open (the table is aria-hidden), so check cell text.
+    expect(screen.getByText("alice@test.com")).toBeInTheDocument();
+    expect(screen.queryByText("Core")).not.toBeInTheDocument();
+  });
+
+  it("reset to default restores auto", () => {
+    render(<DataTable columns={wideColumns} data={wideRows} storageKey="fit-reset" />);
+    resizeTo(500);
+    fireEvent.click(screen.getByRole("button", { name: /Columns \(3\/4\)/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Email" }));
+    expect(screen.getByText("alice@test.com")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Reset to default/i }));
+    expect(screen.queryByText("alice@test.com")).not.toBeInTheDocument();
+    expect(localStorage.getItem("fit-reset")).toBeNull();
+  });
+
+  it("a table without priorities never auto-hides and gets no Columns menu", () => {
+    render(<DataTable columns={columns} data={[{ id: 1, name: "Alice", email: "a@test.com" }]} />);
+    resizeTo(10);
+    expect(screen.getByText("a@test.com")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Columns/ })).not.toBeInTheDocument();
+  });
+
+  it("truncate cell renders title with the full text", () => {
+    render(<DataTable columns={wideColumns} data={wideRows} />);
+    const note = wideRows[0].notes;
+    expect(screen.getByText(note).closest("td")).toHaveAttribute("title", note);
+  });
+
+  it("a long truncate cell cannot widen the table beyond its size hint", () => {
+    // jsdom does no layout, so this pins the CSS that does the work in a browser:
+    // under table-auto a block child's max-width caps the cell's min-content
+    // contribution, and `truncate` (overflow hidden + nowrap + ellipsis) clips the
+    // rest, so the column stays at its 120px hint.
+    render(<DataTable columns={wideColumns} data={wideRows} />);
+    const inner = screen.getByText(wideRows[0].notes);
+    expect(inner.tagName).toBe("SPAN");
+    expect(inner.className).toContain("block");
+    expect(inner.className).toContain("truncate");
+    expect(inner).toHaveStyle({ maxWidth: "120px" });
+    expect(inner.closest("td")).toHaveStyle({ maxWidth: "120px" });
+  });
+
+  it("warns in dev when a priority column has no explicit id", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const noId: AppColumnDef<Wide>[] = [
+      { accessorKey: "name", header: "Name" },
+      { accessorKey: "team", header: "Team", meta: { priority: 3 } },
+    ];
+    render(<DataTable columns={noId} data={wideRows} />);
+    resizeTo(100);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('"team"'));
+    warn.mockRestore();
   });
 });

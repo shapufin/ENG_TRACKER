@@ -1,4 +1,3 @@
-import { CalendarRange } from "lucide-react";
 import { StandbyDateCell, StandbyHoursCell } from "@/components/standby/StandbyDayCells";
 import { useMemo } from "react";
 import { leaveDaysLabel } from "@/components/leave/leaveDuration";
@@ -8,12 +7,10 @@ import { StatusBadge, type StatusVariant } from "@/components/ui/StatusBadge";
 import { UserCell } from "@/components/admin/UserCell";
 import { TicketIdBadges } from "@/components/ui/TicketIdBadges";
 import { createViewApproveRejectActionsColumn } from "@/components/ui/tableColumnHelpers";
-import { toneSurfaceClass } from "@/components/ui/tone";
 import { formatDateDDMMYYYY } from "@/lib/date-format-utils";
 import { OvertimeHoursBadge } from "@/pages/overtime/components/OvertimeHoursBadge";
 import type { DayGroupedOvertimeLog } from "@/lib/overtimeDayGroups";
 import type { StandbyRotationLog } from "@/lib/standbyDayGroups";
-import type { ClusteredLeaveRequest } from "@/lib/leaveRangeGroups";
 import type { OvertimeLog, StandbyLog, LeaveRequest } from "@/types";
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 
@@ -48,10 +45,11 @@ export const useTeamColumns = (
   const getOvertimeColumns = useMemo<AppColumnDef<OvertimeLog>[]>(
     () => [
       {
+        id: "user_name",
         accessorKey: "user_name",
         header: "Employee",
         size: 170,
-        meta: { flex: true },
+        meta: { priority: 1, flex: true },
         cell: ({ row }) => (
           <UserCell
             name={row.original.user_full_name || row.original.user_name}
@@ -60,17 +58,19 @@ export const useTeamColumns = (
         ),
       },
       {
+        id: "date",
         accessorKey: "date",
         header: "Date",
-        size: 95,
-        meta: { flex: true },
+        size: 110,
+        meta: { priority: 1, flex: true },
         cell: ({ row }) => formatDateDDMMYYYY(row.original.date),
       },
       {
+        id: "hours",
         accessorKey: "hours",
         header: "Hours",
-        size: 130,
-        meta: { flex: true },
+        size: 150,
+        meta: { priority: 1, flex: true },
         cell: ({ row }) => <OvertimeHoursBadge log={row.original} />,
       },
       ...(isRangeMode
@@ -79,7 +79,7 @@ export const useTeamColumns = (
               id: "blocks",
               header: "Blocks",
               size: 165,
-              meta: { flex: true },
+              meta: { priority: 3, flex: true },
               cell: ({ row }: { row: { original: DayGroupedOvertimeLog } }) => {
                 const blocks = row.original.blocks;
                 if (!blocks || blocks.length <= 1) {
@@ -106,7 +106,7 @@ export const useTeamColumns = (
         id: "payroll_period",
         header: "Payroll",
         size: 150,
-        meta: { flex: true },
+        meta: { priority: 3, flex: true },
         cell: ({ row }) =>
           row.original.is_carried_over ? (
             <Badge
@@ -121,25 +121,27 @@ export const useTeamColumns = (
           ),
       },
       {
+        id: "client_name",
         accessorKey: "client_name",
         header: "Client",
         size: 120,
-        meta: { flex: true },
+        meta: { priority: 2, flex: true },
         cell: ({ row }) => row.original.client_name || "-",
       },
       {
         id: "ticket_references",
         header: "Ticket ID",
         size: 130,
-        meta: { flex: true },
+        meta: { priority: 3, flex: true },
         accessorFn: (row) => row.ticket_references?.join(", ") ?? "",
         cell: ({ row }) => <TicketIdBadges references={row.original.ticket_references} />,
       },
       {
+        id: "status",
         accessorKey: "status",
         header: "Status",
-        size: 115,
-        meta: { flex: true },
+        size: 140,
+        meta: { priority: 1, flex: true },
         cell: ({ row }) => renderGroupStatus(row.original as DayGroupedOvertimeLog),
       },
       {
@@ -152,6 +154,7 @@ export const useTeamColumns = (
         }),
         // Widest row: view + approve + reject icons.
         size: 150,
+        meta: { actionsDisplay: "column", priority: 1 },
       },
     ],
     [onView, onReject, otApprove, otReject, isRangeMode]
@@ -160,10 +163,11 @@ export const useTeamColumns = (
   const getStandbyColumns = useMemo<AppColumnDef<StandbyLog>[]>(
     () => [
       {
+        id: "user_name",
         accessorKey: "user_name",
         header: "Employee",
         size: 170,
-        meta: { flex: true },
+        meta: { priority: 1, flex: true },
         cell: ({ row }) => (
           <UserCell
             name={row.original.user_full_name || row.original.user_name}
@@ -172,17 +176,19 @@ export const useTeamColumns = (
         ),
       },
       {
+        id: "date",
         accessorKey: "date",
         header: "Date",
-        size: 95,
-        meta: { flex: true },
+        size: 110,
+        meta: { priority: 1, flex: true },
         cell: StandbyDateCell,
       },
       {
+        id: "hours",
         accessorKey: "hours",
         header: "Hours",
-        size: 120,
-        meta: { flex: true },
+        size: 165,
+        meta: { priority: 1, flex: true },
         cell: StandbyHoursCell,
       },
       ...(isRangeMode
@@ -191,7 +197,7 @@ export const useTeamColumns = (
               id: "breakdown",
               header: "Rotation",
               size: 185,
-              meta: { flex: true },
+              meta: { priority: 2, flex: true },
               cell: ({ row }: { row: { original: StandbyRotationLog } }) => {
                 const { day_count, date_end, breakdown } = row.original;
                 if (!day_count || day_count <= 1) {
@@ -218,7 +224,7 @@ export const useTeamColumns = (
         id: "payroll_period",
         header: "Payroll",
         size: 130,
-        meta: { flex: true },
+        meta: { priority: 3, flex: true },
         cell: ({ row }) =>
           row.original.is_carried_over ? (
             <Badge
@@ -232,10 +238,11 @@ export const useTeamColumns = (
           ),
       },
       {
+        id: "status",
         accessorKey: "status",
         header: "Status",
-        size: 115,
-        meta: { flex: true },
+        size: 140,
+        meta: { priority: 1, flex: true },
         cell: ({ row }) => renderGroupStatus(row.original as StandbyRotationLog),
       },
       {
@@ -247,6 +254,7 @@ export const useTeamColumns = (
           rejectPending: sbReject.isPending,
         }),
         size: 150,
+        meta: { actionsDisplay: "column", priority: 1 },
       },
     ],
     [onView, onReject, sbApprove, sbReject, isRangeMode]
@@ -255,10 +263,11 @@ export const useTeamColumns = (
   const getLeaveColumns = useMemo<AppColumnDef<LeaveRequest>[]>(
     () => [
       {
+        id: "user_name",
         accessorKey: "user_name",
         header: "Employee",
         size: 170,
-        meta: { flex: true },
+        meta: { priority: 1, flex: true },
         cell: ({ row }) => (
           <UserCell
             name={row.original.user_full_name || row.original.user_name}
@@ -267,80 +276,43 @@ export const useTeamColumns = (
         ),
       },
       {
+        id: "start_date",
         accessorKey: "start_date",
         header: "Start Date",
-        size: 105,
-        meta: { flex: true },
+        size: 110,
+        meta: { priority: 1, flex: true },
         cell: ({ row }) => formatDateDDMMYYYY(row.original.start_date),
       },
       {
+        id: "end_date",
         accessorKey: "end_date",
         header: "End Date",
-        size: 105,
-        meta: { flex: true },
+        size: 110,
+        meta: { priority: 1, flex: true },
         cell: ({ row }) => formatDateDDMMYYYY(row.original.end_date),
       },
       {
+        id: "days_requested",
         accessorKey: "days_requested",
         header: "Days",
         size: 85,
-        meta: { flex: true },
+        meta: { priority: 1, flex: true },
         cell: ({ row }) => leaveDaysLabel(row.original),
       },
-      ...(isRangeMode
-        ? [
-            {
-              id: "overlap",
-              header: "Overlap",
-              size: 195,
-              meta: { flex: true },
-              cell: ({ row }: { row: { original: ClusteredLeaveRequest } }) => {
-                const r = row.original;
-                if (!r.cluster_id) {
-                  return r.continues_next_month ? (
-                    <span className="text-muted-foreground text-xs">Continues next month</span>
-                  ) : (
-                    <span className="text-muted-foreground text-xs">—</span>
-                  );
-                }
-                if (!r.is_cluster_head) {
-                  return <span className="text-muted-foreground text-xs">Same window</span>;
-                }
-                return (
-                  <div className="space-y-1 text-xs">
-                    <div className="flex items-center gap-1 font-medium">
-                      <CalendarRange className="text-primary h-3.5 w-3.5 shrink-0" />
-                      <span>
-                        {r.cluster_size} overlapping ({r.cluster_total_days}d)
-                      </span>
-                    </div>
-                    {r.team_peaks?.map((p) => (
-                      <Badge
-                        key={p.team}
-                        variant="outline"
-                        className={`text-xs ${toneSurfaceClass.warning}`}
-                      >
-                        {p.team} ({p.count} off)
-                      </Badge>
-                    ))}
-                  </div>
-                );
-              },
-            } satisfies AppColumnDef<LeaveRequest>,
-          ]
-        : []),
       {
+        id: "user_leave_balance",
         accessorKey: "user_leave_balance",
         header: "Balance Left",
-        size: 115,
-        meta: { flex: true },
+        size: 130,
+        meta: { priority: 2, flex: true },
         cell: ({ row }) => <LeaveBalanceBadge balance={row.original.user_leave_balance} />,
       },
       {
+        id: "request_type",
         accessorKey: "request_type",
         header: "Type",
         size: 104,
-        meta: { flex: true },
+        meta: { priority: 2, flex: true },
         cell: ({ row }) => (
           <Badge variant={row.original.request_type === "vacation" ? "default" : "secondary"}>
             {row.original.request_type === "vacation" ? "Vacation" : "Sick Leave"}
@@ -348,10 +320,11 @@ export const useTeamColumns = (
         ),
       },
       {
+        id: "status",
         accessorKey: "status",
         header: "Status",
-        size: 95,
-        meta: { flex: true },
+        size: 140,
+        meta: { priority: 1, flex: true },
         cell: ({ row }) => <StatusBadge variant={row.original.status as StatusVariant} />,
       },
       {
@@ -363,9 +336,10 @@ export const useTeamColumns = (
           rejectPending: leaveReject.isPending,
         }),
         size: 150,
+        meta: { actionsDisplay: "column", priority: 1 },
       },
     ],
-    [onView, onReject, leaveApprove, leaveReject, isRangeMode]
+    [onView, onReject, leaveApprove, leaveReject]
   );
 
   return { getOvertimeColumns, getStandbyColumns, getLeaveColumns };

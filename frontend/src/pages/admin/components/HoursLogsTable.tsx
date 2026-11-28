@@ -125,6 +125,7 @@ export const HoursLogsTable = <T extends HoursLog>({
     () => [
       {
         id: "user_name",
+        meta: { priority: 1 },
         accessorKey: "user_name",
         header: "User",
         size: 175,
@@ -134,14 +135,16 @@ export const HoursLogsTable = <T extends HoursLog>({
       },
       {
         id: "date",
+        meta: { priority: 1 },
         accessorKey: "date",
         header: "Date",
-        size: 102,
+        size: 110,
         cell: ({ row }) => formatDateDDMMYYYY(row.original.date),
       },
       ...extraColumns,
       {
         id: "hours",
+        meta: { priority: 1 },
         accessorKey: "hours",
         header: "Hours",
         size: 145,
@@ -156,13 +159,15 @@ export const HoursLogsTable = <T extends HoursLog>({
       },
       {
         id: "description",
+        meta: { priority: 3, truncate: true },
         accessorKey: "description",
         header: "Description",
-        size: 180,
+        size: 160,
         cell: ({ row }) => <DescriptionColumn value={row.original.description} />,
       },
       {
         id: "status",
+        meta: { priority: 1 },
         accessorKey: "status",
         header: "Status",
         size: 112,
@@ -170,7 +175,7 @@ export const HoursLogsTable = <T extends HoursLog>({
       },
       {
         id: "actions",
-        meta: { actionsDisplay: "column" },
+        meta: { priority: 1, actionsDisplay: "column" },
         header: "Actions",
         size: 112,
         cell: ({ row }) => (

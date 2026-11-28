@@ -513,7 +513,7 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        queryset = StandbyLog.objects.all().select_related('user', 'approved_by', 'pattern').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level').filter(status='pending')
+        queryset = StandbyLog.objects.all().select_related('user', 'approved_by', 'pattern').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level', 'clients').filter(status='pending')
 
         try:
             queryset = self._filter_owned_by_leader(queryset, user)
@@ -579,7 +579,7 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        queryset = StandbyLog.objects.all().select_related('user', 'approved_by', 'pattern').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level')
+        queryset = StandbyLog.objects.all().select_related('user', 'approved_by', 'pattern').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level', 'clients')
 
         queryset = self._filter_owned_by_leader(queryset, user)
 
@@ -619,7 +619,7 @@ class StandbyLogViewSet(HbprBlockedMixin, HrOnlyBlockedMixin, IdempotentCreateMi
                 status=status.HTTP_403_FORBIDDEN
             )
 
-        queryset = StandbyLog.objects.all().select_related('user', 'approved_by', 'pattern').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level')
+        queryset = StandbyLog.objects.all().select_related('user', 'approved_by', 'pattern').prefetch_related('user__profile__team_memberships__team', 'user__profile__tech_assignments__tech', 'user__profile__tech_assignments__level', 'clients')
 
         # Apply filters from query params
         from core.utils.admin_logs import filter_admin_logs, optional_iso_date, status_counts

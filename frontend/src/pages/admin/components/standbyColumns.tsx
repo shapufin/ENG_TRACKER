@@ -5,6 +5,7 @@ import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 export const timeRangeColumn: AppColumnDef<StandbyLog> = {
   id: "time_range",
+  meta: { priority: 2 },
   accessorKey: "time_range",
   header: "Time",
   size: 138,

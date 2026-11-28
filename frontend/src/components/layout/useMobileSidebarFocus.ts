@@ -29,6 +29,8 @@ export function useMobileSidebarFocus({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        // An open account menu (portalled) consumes Escape first.
+        if (document.querySelector('[role="menu"]')) return;
         event.preventDefault();
         onClose();
         return;
