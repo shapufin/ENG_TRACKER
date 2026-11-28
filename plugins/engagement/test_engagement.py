@@ -619,3 +619,15 @@ class EngagementPdfExportTests(TestCase):
         self.assertEqual(wb['Trend'].page_setup.orientation, 'landscape')
         self.assertEqual(len(wb['Trend']._charts), 2)
         self.assertEqual(len(wb['Monthly Volume']._charts), 1)
+
+    def test_aggregate_rows_deduplicates_shared_members_within_month(self):
+        r1 = TLApprovalMetric(
+            leader=self.leader, team=self.team, team_name='A', team_code='A',
+            month=self.july, team_size=2, member_ids=[10, 20], metrics={},
+        )
+        r2 = TLApprovalMetric(
+            leader=self.leader, team=self.team, team_name='B', team_code='B',
+            month=self.july, team_size=2, member_ids=[20, 30], metrics={},
+        )
+        agg = aggregate_rows([r1, r2])
+        self.assertEqual(agg['team_size'], 3)
