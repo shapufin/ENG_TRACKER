@@ -53,9 +53,19 @@ export interface DetailedUserReport {
   full_name: string;
   team: string | null;
   leave_balance?: number;
-  overtime?: { total_hours: number; approved_hours: number; entries: number };
-  standby?: { total_hours: number; approved_hours: number; entries: number };
-  leave?: { total_days: number; approved_days: number; entries: number };
+  overtime?: {
+    total_hours: number;
+    approved_hours: number;
+    pending_hours?: number;
+    entries: number;
+  };
+  standby?: {
+    total_hours: number;
+    approved_hours: number;
+    pending_hours?: number;
+    entries: number;
+  };
+  leave?: { total_days: number; approved_days: number; pending_days?: number; entries: number };
 }
 
 export interface DetailedReport {

@@ -66,6 +66,7 @@ interface MonthSectionProps<T extends GroupableRow> {
   mobileCard?: DataTableCardSpec;
   getRowClassName?: (row: T) => string;
   tableProps: Record<string, unknown>;
+  showColumnsMenu: boolean;
 }
 
 const MonthSectionInner = <T extends GroupableRow>({
@@ -76,6 +77,7 @@ const MonthSectionInner = <T extends GroupableRow>({
   mobileCard,
   getRowClassName,
   tableProps,
+  showColumnsMenu,
 }: MonthSectionProps<T>) => {
   const enterTransition = useMotionTransition({ duration: DURATION.fast, ease: EASE.standard });
   const columns = useMemo(() => columnsBuilder(section.rows), [columnsBuilder, section.rows]);
@@ -121,6 +123,7 @@ const MonthSectionInner = <T extends GroupableRow>({
         >
           <DataTable
             embedded
+            showColumnsMenu={showColumnsMenu}
             data={section.rows}
             columns={columns}
             getRowId={getRowIdString}
@@ -265,6 +268,9 @@ export const TeamGroupedTables = <T extends GroupableRow>({
   }
 
   if (memberGroupMode === "range" && buildSections) {
+    const firstExpandedKey = monthlySections.find(
+      (section, index) => !(collapseOverrides[section.key] ?? index !== 0)
+    )?.key;
     return (
       <div className="space-y-2">
         {monthlySections.map((section, index) => (
@@ -277,6 +283,7 @@ export const TeamGroupedTables = <T extends GroupableRow>({
             mobileCard={mobileCard}
             getRowClassName={getRowClassName}
             tableProps={tableProps}
+            showColumnsMenu={section.key === firstExpandedKey}
           />
         ))}
       </div>
@@ -303,7 +310,7 @@ export const TeamGroupedTables = <T extends GroupableRow>({
   const sections = buildGroupSections(rows);
   return (
     <div className="space-y-4">
-      {sections.map((section) => {
+      {sections.map((section, index) => {
         const uniqueMembers = new Set(section.rows.map((row) => row.user)).size;
         const memberLabel = `${uniqueMembers} ${uniqueMembers === 1 ? "member" : "members"}`;
         const entryLabel = `${section.rows.length} ${section.rows.length === 1 ? "entry" : "entries"}`;
@@ -330,6 +337,7 @@ export const TeamGroupedTables = <T extends GroupableRow>({
             </div>
             <DataTable
               embedded
+              showColumnsMenu={index === 0}
               data={section.rows}
               columns={columnsBuilder(section.rows)}
               getRowId={(row) => row.id.toString()}

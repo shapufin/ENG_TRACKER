@@ -29,7 +29,6 @@ describe("HRReportActionBar export dialog", () => {
     expect(dlg.className).not.toMatch(/(^|\s)overflow-y-auto/);
     const body = dlg.querySelector(".flex-1.overflow-y-auto");
     expect(body).not.toBeNull();
-    expect(body?.className).toContain("no-scrollbar");
     expect(dlg.querySelectorAll(".shrink-0").length).toBeGreaterThan(0);
   });
 

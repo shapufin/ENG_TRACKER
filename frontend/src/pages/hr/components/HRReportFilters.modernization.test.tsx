@@ -18,8 +18,6 @@ describe("HRReportFilters modernization", () => {
         onTeamChange={() => {}}
         selectedWorkspace="all"
         onWorkspaceChange={() => {}}
-        isLoading={false}
-        onGenerate={() => {}}
         onResetFilters={() => {}}
       />
     );

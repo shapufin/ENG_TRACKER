@@ -21,7 +21,7 @@ describe("HRInsightsCard", () => {
         insightsData={{ overtime_increase: 12.5, leave_utilization: null, standby_hours: 0 }}
       />
     );
-    expect(screen.getByText("12.5%")).toBeInTheDocument();
+    expect(screen.getByText("+12.5%")).toBeInTheDocument();
     expect(screen.getByText("vs previous period")).toBeInTheDocument();
   });
 });

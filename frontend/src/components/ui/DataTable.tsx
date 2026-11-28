@@ -110,6 +110,8 @@ interface DataTableProps<TData extends RowData> {
   mobileCard?: DataTableCardSpec;
   /** Omit outer bordered rounded container when nested flush inside an accordion or card. */
   embedded?: boolean;
+  /** Set false to hide the Columns visibility menu even when fitsToWidth or enableColumnVisibility is active. */
+  showColumnsMenu?: boolean;
 }
 
 // fallow-ignore-next-line complexity
@@ -138,6 +140,7 @@ export const DataTable = function DataTable<TData extends RowData>({
   getRowId,
   toolbarActions,
   embedded = false,
+  showColumnsMenu: showColumnsMenuProp = true,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = React.useState(initialSearch ?? "");
@@ -495,7 +498,7 @@ export const DataTable = function DataTable<TData extends RowData>({
 
   const totalCols = columns.length + (enableRowSelection ? 1 : 0);
 
-  const showColumnsMenu = enableColumnVisibility || fitsToWidth;
+  const showColumnsMenu = showColumnsMenuProp && (enableColumnVisibility || fitsToWidth);
 
   const totalRows = server ? server.total : table.getFilteredRowModel().rows.length;
   const pageCount = server ? Math.max(1, Math.ceil(server.total / pageSize)) : table.getPageCount();
@@ -508,7 +511,7 @@ export const DataTable = function DataTable<TData extends RowData>({
   return (
     <div className="space-y-4">
       {(searchPaths.length > 0 || showColumnsMenu || toolbarActions) && (
-        <FilterToolbar className="pb-1">
+        <FilterToolbar className={cn("pb-1", embedded && "px-4 pt-3")}>
           {searchPaths.length > 0 && (
             <FilterToolbar.Search>
               <SearchField

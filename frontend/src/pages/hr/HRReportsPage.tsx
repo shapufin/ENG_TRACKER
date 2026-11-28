@@ -1,8 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useRef, useState } from "react";
 import { useHRReportManagement } from "@/hooks/useHRReportManagement";
 import { reportService } from "@/services/reportService";
 import { PageShell } from "@/components/layout/PageShell";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 import { currentBusinessMonthKey, getMonthEndISO, toLocalISODate } from "@/lib/date-format-utils";
 
 import { handleApiError } from "@/lib/error-handler";
@@ -128,6 +129,42 @@ export const HRReportsPage: React.FC = () => {
     <PageShell
       title="HR Intelligence & Reports"
       subtitle="Strategic organizational insights and detailed personnel activity metrics."
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <HRReportActionBar
+            exportDialogOpen={exportDialogOpen}
+            onExportDialogOpenChange={setExportDialogOpen}
+            exportType={exportType}
+            onExportTypeChange={setExportType}
+            exportStatus={exportStatus}
+            onExportStatusChange={setExportStatus}
+            exportLoading={exportLoading}
+            onExport={() => downloadDetailedExport(exportType, exportStatus)}
+            start={start}
+            end={end}
+            selectedItalianTL={selectedItalianTL}
+            selectedAlbanianTL={selectedAlbanianTL}
+            selectedTeam={selectedTeam}
+            selectedWorkspace={selectedWorkspace}
+            teams={teams}
+            workspaces={workspaces}
+            italianTLs={italianTLs}
+            albanianTLs={albanianTLs}
+          />
+          <Button
+            size="control"
+            onClick={handleGenerate}
+            disabled={isLoading}
+            className="gap-2 whitespace-nowrap"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+              aria-hidden="true"
+            />
+            Generate
+          </Button>
+        </div>
+      }
     >
       <div className="space-y-6">
         <HRReportFilters
@@ -147,8 +184,6 @@ export const HRReportsPage: React.FC = () => {
           albanianTLs={albanianTLs}
           teams={teams}
           workspaces={workspaces}
-          isLoading={isLoading}
-          onGenerate={handleGenerate}
           onResetFilters={() => {
             setSelectedItalianTL("all");
             setSelectedAlbanianTL("all");
@@ -164,7 +199,6 @@ export const HRReportsPage: React.FC = () => {
           trendData={trendData}
           detailedData={detailedData}
           leaveList={leaveList}
-          teams={teams}
           selectedLeaderId={
             selectedItalianTL === "all" || selectedItalianTL === "none"
               ? null
@@ -173,27 +207,6 @@ export const HRReportsPage: React.FC = () => {
           onSelectLeader={selectLeader}
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
-          actionBar={
-            <HRReportActionBar
-              exportDialogOpen={exportDialogOpen}
-              onExportDialogOpenChange={setExportDialogOpen}
-              exportType={exportType}
-              onExportTypeChange={setExportType}
-              exportStatus={exportStatus}
-              onExportStatusChange={setExportStatus}
-              exportLoading={exportLoading}
-              onExport={() => downloadDetailedExport(exportType, exportStatus)}
-              start={start}
-              end={end}
-              selectedItalianTL={selectedItalianTL}
-              selectedAlbanianTL={selectedAlbanianTL}
-              selectedTeam={selectedTeam}
-              selectedWorkspace={selectedWorkspace}
-              teams={teams}
-              italianTLs={italianTLs}
-              albanianTLs={albanianTLs}
-            />
-          }
         />
       </div>
     </PageShell>

@@ -350,3 +350,17 @@ class AnalyticsExportIntegrityTests(ExportIntegrityBase):
         self.assertEqual(daily[date(2026, 6, 15)], 0.5)                  # ana's half day
         self.assertEqual(daily[date(2026, 6, 10)], 0)                    # a public holiday takes no leave day
         self.assertEqual(daily[date(2026, 6, 8)], 1)
+
+    def test_detailed_user_report_pending_excludes_rejected(self):
+        response = self.api.get(
+            '/api/reports/detailed/',
+            {'start_date': '2026-06-01', 'end_date': '2026-06-30', 'report_type': 'combined', 'group_by': 'user'},
+        )
+        self.assertEqual(response.status_code, 200)
+        by_user = {u['username']: u for u in response.data['users']}
+        bora = by_user['ei_bora']
+        # bora in June: 2h approved + 2h pending + 3h rejected -> pending_hours must be 2, not 5
+        self.assertEqual(float(bora['overtime']['approved_hours']), 2.0)
+        self.assertEqual(float(bora['overtime']['pending_hours']), 2.0)
+        ana = by_user['ei_ana']
+        self.assertEqual(float(ana['leave']['pending_days']), 2.0)

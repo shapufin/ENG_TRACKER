@@ -31,36 +31,49 @@ export const HRTeamLeaderBarList: React.FC<HRTeamLeaderBarListProps> = ({
   const reduceMotion = useReducedMotion();
 
   return (
-    <GlassCard className="p-5">
-      <CardHeader className="p-0 pb-4">
-        <CardTitle className="text-base">Hours by Team Leader</CardTitle>
+    <GlassCard className="flex h-full flex-col p-5">
+      <CardHeader className="flex flex-row items-start justify-between gap-2 p-0 pb-4">
+        <div>
+          <CardTitle className="text-base">Hours by Team Leader</CardTitle>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            Ranked standby &amp; overtime share · click a leader to filter
+          </p>
+        </div>
+        <span className="text-foreground font-mono text-sm font-bold tabular-nums">
+          {grandTotal.toFixed(1)}h
+        </span>
       </CardHeader>
-      <CardContent className="space-y-3 p-0">
+      <CardContent className="flex-1 space-y-2.5 p-0">
         <motion.div
           initial={reduceMotion ? false : "hidden"}
           animate="visible"
           variants={staggerContainer}
+          className="space-y-2"
         >
           {sorted.map((leader, index) => {
+            const pct = grandTotal > 0 ? Math.round((leader.total_hours / grandTotal) * 100) : 0;
             const body = (
               <>
-                <div className="mb-1 flex items-center justify-between text-xs">
-                  <span className="text-foreground font-semibold">{leader.name}</span>
+                <div className="mb-1.5 flex items-center justify-between text-xs">
+                  <span className="text-foreground flex items-center gap-2 font-semibold">
+                    <span className="text-muted-foreground font-mono font-normal">
+                      #{leader.rank ?? index + 1}
+                    </span>
+                    <span>{leader.name}</span>
+                  </span>
                   <span className="text-foreground font-mono font-bold tabular-nums">
                     {leader.total_hours.toFixed(1)}h
                     {grandTotal > 0 && (
-                      <span className="text-muted-foreground ml-2 font-normal">
-                        {Math.round((leader.total_hours / grandTotal) * 100)}%
-                      </span>
+                      <span className="text-muted-foreground ml-2 font-normal">{pct}%</span>
                     )}
                   </span>
                 </div>
-                <div className="bg-input-bg h-2.5 w-full overflow-hidden rounded-full">
+                <div className="bg-surface-sunken h-2 w-full overflow-hidden rounded-full">
                   <div
                     className={
                       index === 0
                         ? "bg-primary h-full rounded-full"
-                        : "bg-primary/50 h-full rounded-full"
+                        : "bg-primary/55 h-full rounded-full"
                     }
                     style={{
                       width: `${Math.min(100, Math.round((leader.total_hours / maxHours) * 100))}%`,
@@ -77,14 +90,14 @@ export const HRTeamLeaderBarList: React.FC<HRTeamLeaderBarListProps> = ({
                     aria-pressed={selectedId === leader.id}
                     onClick={() => onSelect(leader.id)}
                     className={cn(
-                      "hover:bg-muted focus-visible:ring-focus block w-full cursor-pointer rounded-lg p-1 text-left transition-colors focus-visible:ring-2 focus-visible:outline-hidden",
+                      "hover:bg-muted/60 focus-visible:ring-focus block w-full cursor-pointer rounded-lg p-1.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-hidden",
                       selectedId === leader.id && "bg-primary/10"
                     )}
                   >
                     {body}
                   </button>
                 ) : (
-                  <div className="p-1">{body}</div>
+                  <div className="p-1.5">{body}</div>
                 )}
               </motion.div>
             );

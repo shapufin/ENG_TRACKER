@@ -1,9 +1,7 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
-import { Calendar, Users, FileSpreadsheet } from "lucide-react";
 import { ActiveFilterChips, type ActiveFilterChip } from "@/components/ui/ActiveFilterChips";
 import { FilterSelect } from "./FilterSelect";
 import type { TeamLeaderOption } from "@/hooks/useHRReportManagement";
@@ -25,8 +23,6 @@ interface HRReportFiltersProps {
   albanianTLs?: TeamLeaderOption[];
   teams?: { id: number; name: string; code: string; members_count: number }[];
   workspaces?: { id: number; name: string; user_count: number }[];
-  isLoading: boolean;
-  onGenerate: () => void;
   /** Puts Manager, Line Manager, Team and Workspace back to All (dates stay). */
   onResetFilters: () => void;
 }
@@ -48,8 +44,6 @@ export const HRReportFilters: React.FC<HRReportFiltersProps> = ({
   albanianTLs,
   teams,
   workspaces,
-  isLoading,
-  onGenerate,
   onResetFilters,
 }) => {
   const nameOf = (value: string, noneName: string, find: () => string | undefined) =>
@@ -95,11 +89,9 @@ export const HRReportFilters: React.FC<HRReportFiltersProps> = ({
 
   return (
     <GlassCard className="space-y-3 p-4">
-      <div className="grid items-end gap-3 md:grid-cols-2 lg:grid-cols-12">
-        <div className="space-y-2 lg:col-span-3">
-          <Label className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
-            <Calendar className="h-3 w-3" /> Date Range
-          </Label>
+      <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(225px,1.25fr)_repeat(4,minmax(0,1fr))]">
+        <div className="space-y-1.5">
+          <Label className="text-muted-foreground text-xs font-medium">Date range</Label>
           <DateRangePicker
             from={start}
             to={end}
@@ -110,66 +102,44 @@ export const HRReportFilters: React.FC<HRReportFiltersProps> = ({
             placeholder="Select date range"
           />
         </div>
-        <div className="lg:col-span-2">
-          <FilterSelect
-            label="Manager"
-            icon={<Users className="h-3 w-3" />}
-            value={selectedItalianTL}
-            onChange={onItalianTLChange}
-            placeholder="All Managers"
-            allLabel="All Managers"
-            noneLabel="None (No Filter)"
-            options={italianTLs}
-            renderOption={(tl) => `${tl.full_name} (${tl.member_count})`}
-          />
-        </div>
-        <div className="lg:col-span-2">
-          <FilterSelect
-            label="Line Manager"
-            icon={<Users className="h-3 w-3" />}
-            value={selectedAlbanianTL}
-            onChange={onAlbanianTLChange}
-            placeholder="All Line Managers"
-            allLabel="All Line Managers"
-            noneLabel="None (No Filter)"
-            options={albanianTLs}
-            renderOption={(tl) => `${tl.full_name} (${tl.member_count})`}
-          />
-        </div>
-        <div className="lg:col-span-2">
-          <FilterSelect
-            label="Team"
-            icon={<Users className="h-3 w-3" />}
-            value={selectedTeam}
-            onChange={onTeamChange}
-            placeholder="All Teams"
-            allLabel="All Teams"
-            options={teams}
-            renderOption={(team) => `${team.name} (${team.code}) - ${team.members_count} members`}
-          />
-        </div>
-        <div className="lg:col-span-2">
-          <FilterSelect
-            label="Workspace"
-            icon={<Calendar className="h-3 w-3" />}
-            value={selectedWorkspace}
-            onChange={onWorkspaceChange}
-            placeholder="All Workspaces"
-            allLabel="All Workspaces"
-            options={workspaces}
-            renderOption={(ws) => `${ws.name} - ${ws.user_count} users`}
-          />
-        </div>
-        <div className="lg:col-span-1">
-          <Button
-            size="control"
-            className="w-full px-2 whitespace-nowrap"
-            onClick={onGenerate}
-            disabled={isLoading}
-          >
-            <FileSpreadsheet className="mr-2 h-4 w-4" /> Generate
-          </Button>
-        </div>
+        <FilterSelect
+          label="Manager"
+          value={selectedItalianTL}
+          onChange={onItalianTLChange}
+          placeholder="All Managers"
+          allLabel="All Managers"
+          noneLabel="None (No Filter)"
+          options={italianTLs}
+          renderOption={(tl) => `${tl.full_name} (${tl.member_count})`}
+        />
+        <FilterSelect
+          label="Line Manager"
+          value={selectedAlbanianTL}
+          onChange={onAlbanianTLChange}
+          placeholder="All Line Managers"
+          allLabel="All Line Managers"
+          noneLabel="None (No Filter)"
+          options={albanianTLs}
+          renderOption={(tl) => `${tl.full_name} (${tl.member_count})`}
+        />
+        <FilterSelect
+          label="Team"
+          value={selectedTeam}
+          onChange={onTeamChange}
+          placeholder="All Teams"
+          allLabel="All Teams"
+          options={teams}
+          renderOption={(team) => `${team.name} (${team.code}) - ${team.members_count} members`}
+        />
+        <FilterSelect
+          label="Workspace"
+          value={selectedWorkspace}
+          onChange={onWorkspaceChange}
+          placeholder="All Workspaces"
+          allLabel="All Workspaces"
+          options={workspaces}
+          renderOption={(ws) => `${ws.name} - ${ws.user_count} users`}
+        />
       </div>
       <ActiveFilterChips chips={chips} onReset={onResetFilters} />
     </GlassCard>
