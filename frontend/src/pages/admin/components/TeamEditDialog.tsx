@@ -61,7 +61,7 @@ export const TeamEditDialog: React.FC<TeamEditDialogProps> = ({
             Calendar Group
           </Label>
           <Select value={formValue || "none"} onValueChange={onFormChange}>
-            <SelectTrigger id="team-edit-group" className="px-3">
+            <SelectTrigger id="team-edit-group">
               <SelectValue placeholder="No shared group" />
             </SelectTrigger>
             <SelectContent>

@@ -108,6 +108,8 @@ interface DataTableProps<TData extends RowData> {
   toolbarActions?: React.ReactNode;
   /** Opt-in phone layout: below 768px each row renders as a card built from these column ids. */
   mobileCard?: DataTableCardSpec;
+  /** Omit outer bordered rounded container when nested flush inside an accordion or card. */
+  embedded?: boolean;
 }
 
 // fallow-ignore-next-line complexity
@@ -135,6 +137,7 @@ export const DataTable = function DataTable<TData extends RowData>({
   mobileCard,
   getRowId,
   toolbarActions,
+  embedded = false,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = React.useState(initialSearch ?? "");
@@ -530,7 +533,13 @@ export const DataTable = function DataTable<TData extends RowData>({
 
       {/* Bordered table card: scroll region + attached result footer, so the
       count never floats detached below the table. */}
-      <div className="border-border/70 bg-background/20 overflow-hidden rounded-xl border">
+      <div
+        className={
+          embedded
+            ? "overflow-hidden"
+            : "border-border/70 bg-background/20 overflow-hidden rounded-xl border"
+        }
+      >
         {showCards && mobileCard ? (
           <DataTableCards
             rows={rows}

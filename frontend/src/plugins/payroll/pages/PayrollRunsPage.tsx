@@ -206,14 +206,14 @@ export const PayrollRunsPage: React.FC = () => {
         />
       </div>
 
-      <GlassCard className="p-6">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
+      <GlassCard className="overflow-hidden p-0">
+        <div className="border-border/60 flex flex-wrap items-center gap-2 border-b px-6 py-4">
           <Label htmlFor="payroll-year">Year</Label>
           <Select
             value={selectedYear ? String(selectedYear) : ""}
             onValueChange={(value) => setYearOverride(Number(value))}
           >
-            <SelectTrigger id="payroll-year" className="w-32 px-3" aria-label="Payroll year">
+            <SelectTrigger id="payroll-year" className="w-32" aria-label="Payroll year">
               <SelectValue placeholder="Year" />
             </SelectTrigger>
             <SelectContent>
@@ -226,6 +226,7 @@ export const PayrollRunsPage: React.FC = () => {
           </Select>
         </div>
         <DataTable
+          embedded
           columns={columns}
           data={runs ?? []}
           getRowId={(row) => String(row.id)}

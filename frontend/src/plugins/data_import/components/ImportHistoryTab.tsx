@@ -76,12 +76,13 @@ export const ImportHistoryTab: React.FC<ImportHistoryTabProps> = ({ batches, tar
 
   return (
     <>
-      <GlassCard>
-        <CardHeader>
+      <GlassCard className="overflow-hidden">
+        <CardHeader className="border-border/60 border-b px-6 py-4">
           <CardTitle>Import History</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <DataTable
+            embedded
             columns={columns}
             data={batches}
             pageSize={10}

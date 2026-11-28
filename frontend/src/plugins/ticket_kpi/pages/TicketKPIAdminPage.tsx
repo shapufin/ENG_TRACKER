@@ -38,11 +38,11 @@ export const TicketKPIAdminPage: React.FC = () => {
     <PageShell title="Ticket KPI Admin" subtitle="Manage export profiles and generate reports.">
       <div className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="bg-muted">
+          <TabsList>
             <TabsTrigger value="profiles">
               <Settings className="mr-2 h-4 w-4" /> Profiles
               {profiles && profiles.length > 0 && (
-                <Badge variant="secondary" className="ml-2 text-xs">
+                <Badge variant="secondary" className="ml-2 px-1.5 py-0 text-xs tabular-nums">
                   {profiles.length}
                 </Badge>
               )}

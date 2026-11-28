@@ -191,18 +191,17 @@ export const TeamBreakdownTable: React.FC<TeamBreakdownTableProps> = ({ rows }) 
         <h3 className="text-sm font-semibold tracking-tight">Engagement by team</h3>
         <p className="text-muted-foreground text-xs">{rows.length} team(s)</p>
       </div>
-      <div className="p-4">
-        <DataTable
-          columns={columns}
-          data={rows}
-          mobileCard={{
-            title: "team",
-            hero: "score",
-            status: "status",
-            meta: ["leader", "size", "approval", "breaches", "pending", "resubmissions"],
-          }}
-        />
-      </div>
+      <DataTable
+        embedded
+        columns={columns}
+        data={rows}
+        mobileCard={{
+          title: "team",
+          hero: "score",
+          status: "status",
+          meta: ["leader", "size", "approval", "breaches", "pending", "resubmissions"],
+        }}
+      />
     </GlassCard>
   );
 };

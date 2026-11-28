@@ -502,8 +502,8 @@ export const PayrollCalendarPage: React.FC = () => {
 
           {/* Holiday list table */}
           {selectedCalendar && (
-            <GlassCard className="p-6">
-              <div className="mb-4 flex items-center justify-between">
+            <GlassCard className="overflow-hidden p-0">
+              <div className="border-border/60 flex items-center justify-between border-b px-6 py-4">
                 <SectionHeading
                   title={`Holidays — ${MONTH_NAMES[selectedMonth - 1]} ${selectedCalendar.year}`}
                 />
@@ -515,13 +515,14 @@ export const PayrollCalendarPage: React.FC = () => {
               </div>
               {monthHolidays.length > 0 ? (
                 <DataTable
+                  embedded
                   columns={holidayColumns}
                   data={monthHolidays}
                   getRowId={(row) => String(row.id)}
                   emptyMessage="No holidays this month."
                 />
               ) : (
-                <p className="text-muted-foreground py-6 text-center">No holidays this month.</p>
+                <p className="text-muted-foreground p-6 text-center">No holidays this month.</p>
               )}
             </GlassCard>
           )}

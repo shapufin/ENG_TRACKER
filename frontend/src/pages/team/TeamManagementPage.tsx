@@ -559,7 +559,7 @@ const TeamManagementPage: React.FC = () => {
                 <TabsTrigger value="overtime" className="flex items-center gap-2">
                   <Clock className="hidden h-4 w-4 sm:inline" /> Overtime
                   {filteredOvertime.length > 0 && (
-                    <Badge variant="secondary" className="ml-1">
+                    <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs tabular-nums">
                       {filteredOvertime.length}
                     </Badge>
                   )}
@@ -567,7 +567,7 @@ const TeamManagementPage: React.FC = () => {
                 <TabsTrigger value="standby" className="flex items-center gap-2">
                   <Users className="hidden h-4 w-4 sm:inline" /> Standby
                   {filteredStandby.length > 0 && (
-                    <Badge variant="secondary" className="ml-1">
+                    <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs tabular-nums">
                       {filteredStandby.length}
                     </Badge>
                   )}
@@ -575,7 +575,7 @@ const TeamManagementPage: React.FC = () => {
                 <TabsTrigger value="leave" className="flex items-center gap-2">
                   <CalendarIcon className="hidden h-4 w-4 sm:inline" /> Leave
                   {filteredLeaves.length > 0 && (
-                    <Badge variant="secondary" className="ml-1">
+                    <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs tabular-nums">
                       {filteredLeaves.length}
                     </Badge>
                   )}

@@ -132,9 +132,11 @@ export const ArchiveContents: React.FC<ArchiveContentsProps> = ({
           ))}
         </ul>
       </GlassCard>
-      <GlassCard delay={0} className="p-4">
-        <h3 className="mb-3 text-sm font-medium">{entry.year} files</h3>
-        <DataTable columns={fileColumns} data={entry.files} />
+      <GlassCard delay={0} className="overflow-hidden p-0">
+        <div className="border-border/60 border-b px-4 py-3">
+          <h3 className="text-sm font-medium">{entry.year} files</h3>
+        </div>
+        <DataTable embedded columns={fileColumns} data={entry.files} />
       </GlassCard>
     </>
   );

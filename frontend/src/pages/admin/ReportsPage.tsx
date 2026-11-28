@@ -195,7 +195,7 @@ export const ReportsPage: React.FC = () => {
                     />
                   </TabsContent>
                   {groupBy === "user" && (
-                    <GlassCard className="border-border/70 overflow-hidden p-0 shadow-xl">
+                    <GlassCard className="overflow-hidden p-0">
                       <CardHeader className="bg-muted/30 border-b p-6">
                         <CardTitle className="text-lg">Detailed Personnel Breakdown</CardTitle>
                         <CardDescription>

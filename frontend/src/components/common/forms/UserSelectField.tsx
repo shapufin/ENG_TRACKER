@@ -29,7 +29,7 @@ export const UserSelectField: React.FC<UserSelectFieldProps> = ({ value, users, 
       User
     </Label>
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger id="user-select-field" className="px-3">
+      <SelectTrigger id="user-select-field">
         <SelectValue placeholder="Self (current user)" />
       </SelectTrigger>
       <SelectContent>

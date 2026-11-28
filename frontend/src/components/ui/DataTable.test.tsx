@@ -937,4 +937,12 @@ describe("DataTable fits its container", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('"team"'));
     warn.mockRestore();
   });
+
+  it("omits the outer bordered container when embedded is true", () => {
+    const { container } = render(<DataTable embedded columns={wideColumns} data={wideRows} />);
+    const tableWrapper = container.querySelector("table")?.closest("div")
+      ?.parentElement?.parentElement;
+    expect(tableWrapper?.className).not.toContain("border");
+    expect(tableWrapper?.className).not.toContain("rounded-xl");
+  });
 });

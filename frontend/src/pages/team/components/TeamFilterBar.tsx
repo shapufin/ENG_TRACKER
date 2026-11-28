@@ -12,7 +12,7 @@ import {
 import { GlassCard } from "@/components/ui/GlassCard";
 import { DateRangePicker } from "@/components/ui/DateRangePicker";
 import { Button } from "@/components/ui/button";
-import { Filter, Users, Calendar, RotateCcw } from "lucide-react";
+import { Filter, Users, RotateCcw } from "lucide-react";
 
 export type TeamGroupingMode = "range" | "none" | "team" | "italian_tl";
 
@@ -99,7 +99,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
             onFilterStatusChange(v as "all" | "pending" | "approved" | "rejected")
           }
         >
-          <SelectTrigger controlSize="lg" className="w-full px-3 sm:w-[155px]">
+          <SelectTrigger controlSize="lg" className="w-full sm:w-[155px]">
             <div className="flex items-center gap-2">
               <Filter className="text-muted-foreground h-4 w-4" />
               <SelectValue placeholder="Status" />
@@ -122,7 +122,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
         </Select>
         {availableTeams.length > 0 && (
           <Select value={filterTeam} onValueChange={onFilterTeamChange}>
-            <SelectTrigger controlSize="lg" className="w-full px-3 sm:w-[160px]">
+            <SelectTrigger controlSize="lg" className="w-full sm:w-[160px]">
               <div className="flex items-center gap-2 text-left">
                 <Users className="text-muted-foreground h-4 w-4" />
                 <SelectValue placeholder="All Teams" />
@@ -138,20 +138,18 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
             </SelectContent>
           </Select>
         )}
-        <div className="flex flex-wrap items-center gap-2">
-          <Calendar className="text-muted-foreground h-4 w-4" />
-          <DateRangePicker
-            id="team-date-range"
-            from={dateFrom}
-            to={dateTo}
-            onChange={({ from, to }) => {
-              onDateFromChange(from);
-              onDateToChange(to);
-            }}
-            placeholder="Filter by date"
-            className="w-full min-w-[220px] sm:w-auto"
-          />
-        </div>
+        <DateRangePicker
+          id="team-date-range"
+          controlSize="lg"
+          from={dateFrom}
+          to={dateTo}
+          onChange={({ from, to }) => {
+            onDateFromChange(from);
+            onDateToChange(to);
+          }}
+          placeholder="Filter by date"
+          className="w-full min-w-[220px] sm:w-auto"
+        />
       </FilterToolbar>
 
       {hasActiveFilters && onResetFilters && (

@@ -10,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 
 interface LeaveBalanceFormDialogProps {
   open: boolean;
@@ -79,7 +78,7 @@ export const LeaveBalanceFormDialog: React.FC<LeaveBalanceFormDialogProps> = ({
           <Select value={form.user} onValueChange={(v) => updateField("user", v)}>
             <SelectTrigger
               id="leave-balance-user"
-              className={cn("px-3", formErrors.user ? "border-destructive" : "")}
+              className={formErrors.user ? "border-destructive" : undefined}
             >
               <SelectValue placeholder="Select user" />
             </SelectTrigger>
@@ -98,7 +97,7 @@ export const LeaveBalanceFormDialog: React.FC<LeaveBalanceFormDialogProps> = ({
           <Select value={form.leave_type} onValueChange={(v) => updateField("leave_type", v)}>
             <SelectTrigger
               id="leave-balance-type"
-              className={cn("px-3", formErrors.leave_type ? "border-destructive" : "")}
+              className={formErrors.leave_type ? "border-destructive" : undefined}
             >
               <SelectValue placeholder="Select type" />
             </SelectTrigger>

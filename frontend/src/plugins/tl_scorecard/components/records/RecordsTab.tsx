@@ -221,6 +221,7 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
             <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
               <Button
                 variant="outline"
+                size="control"
                 className="shrink-0"
                 aria-label="Export visible records (CSV)"
                 title="Export visible records (CSV)"
@@ -238,7 +239,7 @@ export const RecordsTab: React.FC<{ onCreateRecord?: (kind: RecordKind) => void 
                 Export CSV
               </Button>
               {onCreateRecord && (
-                <Button onClick={() => onCreateRecord(kind)} className="shrink-0">
+                <Button size="control" onClick={() => onCreateRecord(kind)} className="shrink-0">
                   <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
                   {CREATE_LABELS[kind]}
                 </Button>

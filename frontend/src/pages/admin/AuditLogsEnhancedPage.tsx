@@ -170,17 +170,19 @@ export const AuditLogsEnhancedPage: React.FC = () => {
               onSearchQueryChange={setSearchQuery}
             />
           </div>
-          <div className="p-4">
+          <div>
             {isLoading ? (
-              <div role="status" aria-label="Loading audit logs" className="space-y-3">
+              <div role="status" aria-label="Loading audit logs" className="space-y-3 p-4">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="bg-muted h-9 animate-pulse rounded" />
                 ))}
               </div>
             ) : logs.length === 0 ? (
-              <EmptyState icon={Clock} title="No audit logs found" />
+              <div className="p-4">
+                <EmptyState icon={Clock} title="No audit logs found" />
+              </div>
             ) : (
-              <DataTable columns={columns} data={logs} mobileCard={AUDIT_LOG_CARD} />
+              <DataTable embedded columns={columns} data={logs} mobileCard={AUDIT_LOG_CARD} />
             )}
           </div>
         </GlassCard>
