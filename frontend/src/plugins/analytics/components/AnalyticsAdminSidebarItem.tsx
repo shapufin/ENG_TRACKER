@@ -40,7 +40,7 @@ const AnalyticsAdminSidebarItem: React.FC = () => {
         {isActive && (
           <motion.div
             layoutId={LAYOUT_ID.adminPluginSidebarActive}
-            className="absolute inset-y-1 left-0 w-[3px] rounded-full bg-primary"
+            className="bg-primary absolute inset-y-1 left-0 w-[3px] rounded-full"
             transition={activeBarTransition}
           />
         )}

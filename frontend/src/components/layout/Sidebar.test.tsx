@@ -130,7 +130,10 @@ describe("Sidebar", () => {
 
   it("renders the site name and logo once branding resolves, replacing the static fallback", async () => {
     vi.mocked(dashboardService.getBranding).mockResolvedValue({
-      id: 1, site_name: "Acme Tracker", logo: "branding/logo.png", logo_url: "/media/branding/logo.png",
+      id: 1,
+      site_name: "Acme Tracker",
+      logo: "branding/logo.png",
+      logo_url: "/media/branding/logo.png",
     });
     renderWithQuery(
       <Sidebar
@@ -152,7 +155,10 @@ describe("Sidebar", () => {
 
   it("falls back to the gradient tile when the branding logo fails to load", async () => {
     vi.mocked(dashboardService.getBranding).mockResolvedValue({
-      id: 1, site_name: "Acme Tracker", logo: "branding/logo.png", logo_url: "/media/branding/logo.png",
+      id: 1,
+      site_name: "Acme Tracker",
+      logo: "branding/logo.png",
+      logo_url: "/media/branding/logo.png",
     });
     renderWithQuery(
       <Sidebar

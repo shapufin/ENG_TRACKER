@@ -136,9 +136,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           )}
           {!collapsed && (
             <div className="min-w-0 leading-tight">
-              <span className="block truncate text-sm">
-                {branding?.site_name || "Admin Panel"}
-              </span>
+              <span className="block truncate text-sm">{branding?.site_name || "Admin Panel"}</span>
               <div className="text-foreground font-mono text-xs font-semibold tracking-wider uppercase">
                 Enterprise
               </div>
