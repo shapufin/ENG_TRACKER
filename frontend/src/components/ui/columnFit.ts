@@ -1,6 +1,6 @@
 import type { ColumnVisibilityState } from "@tanstack/react-table";
 
-export type ColumnPriority = 1 | 2 | 3;
+type ColumnPriority = 1 | 2 | 3;
 
 export interface FitColumn {
   id: string;
