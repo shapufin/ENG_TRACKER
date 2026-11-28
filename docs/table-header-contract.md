@@ -231,6 +231,34 @@ Visual check: `frontend/scripts/shot-tables.mjs` (app captures, 320+1280 ×
 light/dark) and `frontend/scripts/shot-refs.mjs` (shadcn references). Rendered
 mockup captures live in `design-screenshots/tables-plan/mocks/`.
 
+## 7a. Table fit (2026-11-28)
+
+`DataTable` fits its container instead of scrolling by default.
+(`docs/workflow-invariants.md` item 94.)
+
+- The table is `w-full` with `table-auto` layout, never `min-w-max`
+  (`table-fixed` was rejected: it spills unannotated badges and buttons on about
+  30 tables). Horizontal scroll stays the fallback when the priority-1 columns
+  alone exceed the container.
+- `meta.priority` is `1 | 2 | 3`. `undefined` means never hidden; 3 hides first,
+  right to left within a priority, then 2. Every column with a priority needs an
+  explicit `id` (dev warning otherwise). `meta.truncate` renders `max-w-0
+  truncate` with the full text in `title`.
+- **The priority rule (one rule for every table):** priority 1 = person/name,
+  date, status, hours/days, actions, select; priority 2 = type, client, team;
+  priority 3 = description/reason (also `truncate`), ticket references, payroll
+  period, blocks, code, email, timestamps, carry-over/expiry flags, Manager/Line
+  Manager assignment columns.
+- Set a realistic `size` hint on each column: auto-fit compares the summed size
+  hints of visible columns plus the real selection column width with the width of
+  the scroll container (`useContainerWidth`).
+- The Columns menu shows `Columns (n/m)` on any table with priorities. Only an
+  explicit toggle in that menu pins a column against auto-fit (versioned v2
+  override storage: `readStoredColumnOverride`/`writeStoredColumnOverride` in
+  `columnVisibilityStorage.ts`); a default `true` never pins. Reset restores auto.
+- Cell padding for fitted tables is `TABLE_CELL_FIT_PX_CLASS` inside `DataTable`;
+  hand-rolled tables keep the shared constants.
+
 ## 8. Change log
 
 - **2026-10-05** — contract created; `DataTable` + `AssignedLeadersTable` +
@@ -297,3 +325,5 @@ through, opt-out columns unchanged, no pill on coarse pointers, dark theme OK.
   the schema guard (§6).
   **Not a DataTable pill:** hand-rolled tables keep a visible action column. The
   floating pill remains `DataTable`-only.
+- **2026-11-28 (table fit)** — `meta.priority`/`meta.truncate`, container-width
+  auto-fit and the Columns (n/m) menu added; see §7a.
