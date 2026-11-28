@@ -207,9 +207,12 @@ export const NotificationSettingsAdminPage: React.FC = () => {
         const group = visible.filter((item) => item.audience === audience.value);
         if (group.length === 0) return null;
         return (
-          <GlassCard key={audience.value} delay={0.05 * index} className="space-y-3 p-4">
-            <h2 className="text-foreground text-sm font-semibold">{audience.title}</h2>
+          <GlassCard key={audience.value} delay={0.05 * index} className="overflow-hidden p-0">
+            <div className="border-border/60 border-b px-4 py-3">
+              <h2 className="text-foreground text-sm font-semibold">{audience.title}</h2>
+            </div>
             <DataTable
+              embedded
               columns={columns}
               data={group}
               getRowId={(item) => item.key}

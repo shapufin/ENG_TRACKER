@@ -58,6 +58,7 @@ export const AnalyticsControls: React.FC<AnalyticsControlsProps> = ({
       {selectedPeriod === "custom" && (
         <div className="animate-in fade-in slide-in-from-left-2 flex items-center gap-2">
           <DateRangePicker
+            controlSize="sm"
             from={dateRange.from}
             to={dateRange.to}
             onChange={onDateRangeChange}

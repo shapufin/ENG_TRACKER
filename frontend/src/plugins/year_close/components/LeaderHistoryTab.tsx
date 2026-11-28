@@ -109,8 +109,8 @@ export const LeaderHistoryTab: React.FC<LeaderHistoryTabProps> = ({ years }) => 
   }
 
   return (
-    <GlassCard delay={0} className="space-y-4 p-4">
-      <div className="flex items-center gap-2">
+    <GlassCard delay={0} className="overflow-hidden p-0">
+      <div className="border-border/60 flex items-center gap-2 border-b px-4 py-3">
         <Label htmlFor="archive-leader-year" className="text-xs">
           Year
         </Label>
@@ -128,9 +128,11 @@ export const LeaderHistoryTab: React.FC<LeaderHistoryTabProps> = ({ years }) => 
         </Select>
       </div>
       {leaders.isError ? (
-        <ErrorCard onRetry={() => leaders.refetch()} />
+        <div className="p-4">
+          <ErrorCard onRetry={() => leaders.refetch()} />
+        </div>
       ) : (
-        <DataTable columns={columns} data={leaders.data ?? []} />
+        <DataTable embedded columns={columns} data={leaders.data ?? []} />
       )}
     </GlassCard>
   );

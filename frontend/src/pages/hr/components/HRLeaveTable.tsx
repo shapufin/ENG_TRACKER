@@ -86,11 +86,12 @@ export const HRLeaveTable: React.FC<HRLeaveTableProps> = ({ leaves }) => {
   );
 
   return (
-    <GlassCard className="space-y-4 p-5">
-      <CardHeader className="p-0">
+    <GlassCard className="overflow-hidden p-0">
+      <CardHeader className="border-border/60 border-b px-5 py-3.5">
         <CardTitle className="text-sm font-semibold">Leave Requests</CardTitle>
       </CardHeader>
       <DataTable
+        embedded
         columns={columns}
         data={leaves}
         getRowId={(v) => String(v.id)}

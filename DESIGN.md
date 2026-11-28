@@ -307,6 +307,17 @@ table-cell typography is now decided once, app-wide, instead of per surface.
 
 ## Last Updated
 
+2026-11-28 — **Mockup-aligned card/accordion/toolbar polish (app-wide)**: added
+`DataTable embedded` prop (omits outer `rounded-xl border` box when nested flush
+inside `GlassCard` without an internal `FilterToolbar` — applied to Team Overview
+and 10 sibling card-wrapped tables); unified `Card` radius to `rounded-xl`;
+tightened collapsible card stacks (`space-y-2` / `space-y-2.5`) with header
+`border-b` rendered only when expanded; aligned sibling toolbar control heights
+(`DateRangePicker` `controlSize="lg"`/`"sm"`, `Button size="control"`), removed
+duplicate `<Calendar>` wrapper in `TeamFilterBar` and redundant `px-3` on
+`SelectTrigger`, tightened `TabsTrigger` count `Badge`s, and removed ad-hoc
+`shadow-xl` / `border-border/70` overrides on `GlassCard`s.
+
 2026-10-12 — **Notification preferences matrix**: the settings card is now a
 Category × Channel matrix (rows = categories, columns = In-app/Push switches;
 channel meanings stated once in the intro, group sections kept). Fits 375px

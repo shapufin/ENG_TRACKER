@@ -84,6 +84,7 @@ export const ControlRoomFilters: React.FC<Props> = ({
           <Label className="text-muted-foreground text-xs">Teams</Label>
           <div className="w-[220px]">
             <TeamMultiSelect
+              compact
               teams={teamOptions}
               value={selectedTeamIds}
               onChange={onTeamIdsChange}
@@ -110,7 +111,14 @@ export const ControlRoomFilters: React.FC<Props> = ({
             Clear
           </Button>
         )}
-        <Button variant="outline" size="icon" onClick={onRefresh} disabled={isFetching}>
+        <Button
+          variant="outline"
+          size="control"
+          className="w-9 px-0"
+          onClick={onRefresh}
+          disabled={isFetching}
+          aria-label="Refresh"
+        >
           <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
         </Button>
       </FilterToolbar>

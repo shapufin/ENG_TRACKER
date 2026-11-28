@@ -162,7 +162,8 @@ export const HRReportFilters: React.FC<HRReportFiltersProps> = ({
         </div>
         <div className="lg:col-span-1">
           <Button
-            className="shadow-primary/20 w-full px-2 whitespace-nowrap shadow-lg"
+            size="control"
+            className="w-full px-2 whitespace-nowrap"
             onClick={onGenerate}
             disabled={isLoading}
           >

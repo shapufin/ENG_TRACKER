@@ -93,9 +93,11 @@ const MonthSectionInner = <T extends GroupableRow>({
             section.rows.map((r) => getRowIdString(r))
           )
         }
-        className="border-border/60 bg-muted/30 hover:bg-muted/50 flex w-full cursor-pointer flex-wrap items-center justify-between gap-2 border-b px-4 py-2.5 text-left text-xs tabular-nums transition-colors"
+        className={`bg-muted/25 hover:bg-muted/45 flex w-full cursor-pointer flex-wrap items-center justify-between gap-2 px-4 py-3 text-left tabular-nums transition-colors ${
+          collapsed ? "" : "border-border/60 border-b"
+        }`}
       >
-        <span className="text-foreground flex items-center gap-2 font-semibold">
+        <span className="text-foreground flex items-center gap-2 text-sm font-semibold">
           {collapsed ? (
             <ChevronRight className="text-muted-foreground h-4 w-4" />
           ) : (
@@ -103,7 +105,7 @@ const MonthSectionInner = <T extends GroupableRow>({
           )}
           {section.title}
         </span>
-        <span className="text-muted-foreground flex flex-wrap items-center gap-2">
+        <span className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
           {section.summary && <span>{section.summary}</span>}
           {section.pendingLabel && (
             <span className={`font-medium ${toneTextClass.warning}`}>{section.pendingLabel}</span>
@@ -116,9 +118,9 @@ const MonthSectionInner = <T extends GroupableRow>({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={enterTransition}
-          className="p-4"
         >
           <DataTable
+            embedded
             data={section.rows}
             columns={columns}
             getRowId={getRowIdString}
@@ -264,7 +266,7 @@ export const TeamGroupedTables = <T extends GroupableRow>({
 
   if (memberGroupMode === "range" && buildSections) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-2">
         {monthlySections.map((section, index) => (
           <MonthSection
             key={section.key}
@@ -283,8 +285,9 @@ export const TeamGroupedTables = <T extends GroupableRow>({
 
   if (memberGroupMode === "none" || memberGroupMode === "range") {
     return (
-      <GlassCard className="p-4">
+      <GlassCard className="overflow-hidden p-0">
         <DataTable
+          embedded
           data={rows}
           columns={columnsBuilder(rows)}
           getRowId={(row) => row.id.toString()}
@@ -299,33 +302,34 @@ export const TeamGroupedTables = <T extends GroupableRow>({
 
   const sections = buildGroupSections(rows);
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {sections.map((section) => {
         const uniqueMembers = new Set(section.rows.map((row) => row.user)).size;
         const memberLabel = `${uniqueMembers} ${uniqueMembers === 1 ? "member" : "members"}`;
         const entryLabel = `${section.rows.length} ${section.rows.length === 1 ? "entry" : "entries"}`;
         return (
-          <GlassCard key={section.key} className="space-y-4 p-4">
-            <div className="border-border/60 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-              <div className="space-y-1">
+          <GlassCard key={section.key} className="overflow-hidden p-0">
+            <div className="border-border/60 bg-muted/25 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge
                   variant="secondary"
-                  className="w-fit rounded-full px-3 py-1 text-xs font-semibold tracking-wide uppercase"
+                  className="w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide uppercase"
                 >
                   {memberGroupMode === "team" ? "Team" : "Manager"}
                 </Badge>
-                <p className="text-lg font-semibold tracking-tight">
+                <p className="text-base font-semibold tracking-tight">
                   {section.title}
                   <span className="text-muted-foreground ml-2 text-sm font-medium">
                     — {memberLabel}
                   </span>
                 </p>
               </div>
-              <Badge variant="outline" className="rounded-full px-3 py-1 text-sm font-semibold">
+              <span className="text-muted-foreground text-xs font-medium tabular-nums">
                 {entryLabel}
-              </Badge>
+              </span>
             </div>
             <DataTable
+              embedded
               data={section.rows}
               columns={columnsBuilder(section.rows)}
               getRowId={(row) => row.id.toString()}

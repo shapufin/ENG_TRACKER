@@ -34,7 +34,12 @@ const TeamCard: React.FC<{
 
   return (
     <GlassCard delay={0}>
-      <div className="border-border/40 flex flex-row items-center justify-between gap-2 border-b p-4">
+      <div
+        className={cn(
+          "flex flex-row items-center justify-between gap-2 p-4",
+          open && "border-border/40 border-b"
+        )}
+      >
         <div className="flex items-center gap-3">
           <div className="bg-primary/10 text-primary flex h-9 w-9 items-center justify-center rounded-full">
             <Users className="h-4 w-4" />
@@ -107,7 +112,7 @@ export const CRByTeamView: React.FC<Props> = ({ coverage, roster }) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       {groups.map((g) => (
         <TeamCard key={g.team_name} group={g} coverage={coverageByName.get(g.team_name)} />
       ))}

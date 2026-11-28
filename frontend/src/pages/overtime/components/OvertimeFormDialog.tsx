@@ -151,7 +151,7 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
         <div className="space-y-2">
           <Label>Client</Label>
           <Select value={form.client} onValueChange={(v) => updateField("client", v)}>
-            <SelectTrigger className={`px-3 ${formErrors.client ? "border-destructive" : ""}`}>
+            <SelectTrigger className={formErrors.client ? "border-destructive" : undefined}>
               <SelectValue placeholder="Select client" />
             </SelectTrigger>
             <SelectContent>
@@ -194,7 +194,7 @@ export const OvertimeFormDialog: React.FC<OvertimeFormDialogProps> = ({
               updateField("evidence_type", v as "ticket" | "email" | "call" | "other")
             }
           >
-            <SelectTrigger className="px-3">
+            <SelectTrigger>
               <SelectValue placeholder="Select evidence type" />
             </SelectTrigger>
             <SelectContent>

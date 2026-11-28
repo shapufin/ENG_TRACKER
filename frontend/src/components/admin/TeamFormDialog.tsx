@@ -172,7 +172,7 @@ export const TeamFormDialog: React.FC<TeamFormDialogProps> = ({
               updateField("calendar_group", value === NEW_GROUP || value === NO_GROUP ? "" : value);
             }}
           >
-            <SelectTrigger id="team-calendar-group" className="px-3">
+            <SelectTrigger id="team-calendar-group">
               <SelectValue placeholder="No group" />
             </SelectTrigger>
             <SelectContent>

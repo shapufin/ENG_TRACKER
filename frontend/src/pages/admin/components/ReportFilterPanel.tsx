@@ -66,7 +66,7 @@ export const ReportFilterPanel: React.FC<ReportFilterPanelProps> = ({
             <Users className="h-3 w-3" /> Team
           </Label>
           <Select value={selectedTeam} onValueChange={onTeamChange}>
-            <SelectTrigger className="bg-background/50 px-3">
+            <SelectTrigger className="bg-background/50">
               <SelectValue placeholder="All Teams" />
             </SelectTrigger>
             <SelectContent>
@@ -88,7 +88,7 @@ export const ReportFilterPanel: React.FC<ReportFilterPanelProps> = ({
             value={groupBy}
             onValueChange={(v) => onGroupByChange(v as "user" | "month" | "year")}
           >
-            <SelectTrigger className="bg-background/50 px-3">
+            <SelectTrigger className="bg-background/50">
               <SelectValue placeholder="Group by..." />
             </SelectTrigger>
             <SelectContent>

@@ -92,8 +92,14 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({ rows }) 
   );
 
   return (
-    <GlassCard className="p-4">
-      <DataTable columns={columns} data={rows} pageSize={10} emptyMessage="No rows to preview." />
+    <GlassCard className="overflow-hidden p-0">
+      <DataTable
+        embedded
+        columns={columns}
+        data={rows}
+        pageSize={10}
+        emptyMessage="No rows to preview."
+      />
     </GlassCard>
   );
 };

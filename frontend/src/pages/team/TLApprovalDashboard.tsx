@@ -95,6 +95,7 @@ export const TLApprovalDashboard: React.FC = () => {
           />
           <Button
             variant="outline"
+            size="control"
             disabled={periodStatusLoading || isFinalized}
             onClick={() => setFinalizeOpen(true)}
           >

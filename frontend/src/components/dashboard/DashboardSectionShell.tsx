@@ -27,14 +27,14 @@ export const DashboardSectionShell: React.FC<DashboardSectionShellProps> = ({
   className,
   bodyClassName,
 }) => (
-  <GlassCard className={cn("border border-border/60 bg-card", className)}>
+  <GlassCard className={cn("bg-card", className)}>
     <div className="flex flex-wrap items-center justify-between gap-3 p-5">
       <div>
         <div className="flex items-center gap-2">
           <h3 className="text-lg font-semibold">{title}</h3>
           {badge}
         </div>
-        {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
+        {subtitle && <p className="text-muted-foreground mt-1 text-sm">{subtitle}</p>}
       </div>
       {controls && <div className="flex flex-wrap items-center gap-2">{controls}</div>}
     </div>
