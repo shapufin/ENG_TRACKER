@@ -708,13 +708,34 @@ def _sum_type_metric(rows, key):
     return sum(m.get(key, 0) for r in rows for m in r.metrics.values())
 
 
+def _deduped_team_size(rows):
+    """Distinct member count per month across ``rows`` (deduplicates shared
+    multi-team members via ``member_ids``; falls back to ``r.team_size`` for
+    legacy/synthetic rows that have no ``member_ids``)."""
+    by_month = defaultdict(list)
+    for r in rows:
+        by_month[r.month].append(r)
+    total = 0
+    for m_rows in by_month.values():
+        seen = set()
+        fallback = 0
+        for r in m_rows:
+            ids = getattr(r, 'member_ids', None)
+            if ids:
+                seen.update(ids)
+            else:
+                fallback += r.team_size
+        total += len(seen) + fallback
+    return total
+
+
 def aggregate_rows(rows):
     """Aggregate a set of `TLApprovalMetric` rows into one summary dict. Shared by
     the `summary` API action and the Excel export so the two can never disagree."""
     if not rows:
         return None
 
-    team_size = sum(r.team_size for r in rows)
+    team_size = _deduped_team_size(rows)
     total_decided = _sum_type_metric(rows, 'decided')
     total_approved = _sum_type_metric(rows, 'approved')
     judgeable = _sum_type_metric(rows, 'judgeable')
