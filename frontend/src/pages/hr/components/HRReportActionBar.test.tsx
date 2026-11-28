@@ -2,6 +2,11 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { HRReportActionBar } from "./HRReportActionBar";
 
+const openMenu = () => {
+  const trigger = screen.getByRole("button", { name: /Export/ });
+  fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false });
+};
+
 const baseProps = {
   exportDialogOpen: false,
   onExportDialogOpenChange: vi.fn(),
@@ -18,11 +23,13 @@ const baseProps = {
   selectedWorkspace: "all",
   italianTLs: [{ id: 1, full_name: "Mario", member_count: 5 }],
   albanianTLs: [{ id: 2, full_name: "Bledi", member_count: 3 }],
+  workspaces: [{ id: 7, name: "Tirana Hub" }],
 };
 
 describe("HRReportActionBar", () => {
-  it("renders all export buttons", () => {
+  it("opens export dropdown and renders all 4 export options", () => {
     render(<HRReportActionBar {...baseProps} />);
+    openMenu();
     expect(screen.getByText("Export by Work Date")).toBeInTheDocument();
     expect(screen.getByText("Export Pending (by Work Date)")).toBeInTheDocument();
     expect(screen.getByText("Export Leave")).toBeInTheDocument();
@@ -32,7 +39,7 @@ describe("HRReportActionBar", () => {
   it("opens export dialog and exports", () => {
     const onExport = vi.fn();
     render(<HRReportActionBar {...baseProps} exportDialogOpen={true} onExport={onExport} />);
-    fireEvent.click(screen.getByText("Export"));
+    fireEvent.click(screen.getByRole("button", { name: "Export" }));
     expect(onExport).toHaveBeenCalled();
   });
 
@@ -56,7 +63,7 @@ describe("HRReportActionBar", () => {
     expect(screen.getByText(/Pending only/)).toBeInTheDocument();
   });
 
-  it("renders export dialog with specific TLs and workspace", () => {
+  it("renders export dialog with specific TLs and resolved workspace name", () => {
     render(
       <HRReportActionBar
         {...baseProps}
@@ -64,12 +71,12 @@ describe("HRReportActionBar", () => {
         exportType="ot-standby"
         selectedItalianTL="1"
         selectedAlbanianTL="2"
-        selectedWorkspace="WS"
+        selectedWorkspace="7"
       />
     );
     expect(screen.getByText(/^Manager: Mario/)).toBeInTheDocument();
     expect(screen.getByText(/Line Manager: Bledi/)).toBeInTheDocument();
-    expect(screen.getByText(/Workspace: WS/)).toBeInTheDocument();
+    expect(screen.getByText(/Workspace: Tirana Hub/)).toBeInTheDocument();
   });
 
   it("lists the selected team in the export dialog summary", () => {
@@ -127,6 +134,7 @@ describe("HRReportActionBar", () => {
         onExportDialogOpenChange={onExportDialogOpenChange}
       />
     );
+    openMenu();
     fireEvent.click(screen.getByText("Export by Work Date"));
     expect(onExportTypeChange).toHaveBeenCalledWith("ot-standby");
     expect(onExportStatusChange).toHaveBeenCalledWith("approved");
@@ -145,6 +153,7 @@ describe("HRReportActionBar", () => {
         onExportDialogOpenChange={onExportDialogOpenChange}
       />
     );
+    openMenu();
     fireEvent.click(screen.getByText("Export Pending (by Work Date)"));
     expect(onExportTypeChange).toHaveBeenCalledWith("ot-standby");
     expect(onExportStatusChange).toHaveBeenCalledWith("pending");
@@ -163,6 +172,7 @@ describe("HRReportActionBar", () => {
         onExportDialogOpenChange={onExportDialogOpenChange}
       />
     );
+    openMenu();
     fireEvent.click(screen.getByText("Export Leave"));
     expect(onExportTypeChange).toHaveBeenCalledWith("leave");
     expect(onExportStatusChange).toHaveBeenCalledWith("approved");
@@ -181,6 +191,7 @@ describe("HRReportActionBar", () => {
         onExportDialogOpenChange={onExportDialogOpenChange}
       />
     );
+    openMenu();
     fireEvent.click(screen.getByText("Export by Payroll Period"));
     expect(onExportTypeChange).toHaveBeenCalledWith("payroll");
     expect(onExportStatusChange).toHaveBeenCalledWith("approved");

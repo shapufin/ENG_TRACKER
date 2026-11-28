@@ -331,28 +331,30 @@ class DetailedReportView(HbprBlockedMixin, APIView):
         # Pre-compute aggregates
         ot_total = {r['user']: r for r in ot_qs.values('user').annotate(total_hours=Sum('hours'), entries=Count('id'))}
         ot_approved = {r['user']: r['approved_hours'] for r in ot_qs.filter(status='approved').values('user').annotate(approved_hours=Sum('hours'))}
+        ot_pending = {r['user']: r['pending_hours'] for r in ot_qs.filter(status='pending').values('user').annotate(pending_hours=Sum('hours'))}
         sb_total = {r['user']: r for r in sb_qs.values('user').annotate(total_hours=Sum('hours'), entries=Count('id'))}
         sb_approved = {r['user']: r['approved_hours'] for r in sb_qs.filter(status='approved').values('user').annotate(approved_hours=Sum('hours'))}
+        sb_pending = {r['user']: r['pending_hours'] for r in sb_qs.filter(status='pending').values('user').annotate(pending_hours=Sum('hours'))}
         
         from apps.leave_management.models import leave_days_in_window
 
         window = _window_from_params(params)
         leave_total = {}
         leave_approved = {}
+        leave_pending = {}
         # Business days only, clipped to the report window (a request crossing its edge counts only the
         # days inside) — must match LeaveRequest.days_requested / validation.
-        for v in leave_qs.values('user', 'start_date', 'end_date', 'request_type', 'days_counted'):
+        for v in leave_qs.values('user', 'start_date', 'end_date', 'request_type', 'days_counted', 'status'):
             days = leave_days_in_window(v, *window)
             uid = v['user']
             if uid not in leave_total:
                 leave_total[uid] = {'total_days': 0, 'entries': 0}
             leave_total[uid]['total_days'] += days
             leave_total[uid]['entries'] += 1
-
-        for v in leave_qs.filter(status='approved').values('user', 'start_date', 'end_date', 'request_type', 'days_counted'):
-            days = leave_days_in_window(v, *window)
-            uid = v['user']
-            leave_approved[uid] = leave_approved.get(uid, 0) + days
+            if v['status'] == 'approved':
+                leave_approved[uid] = leave_approved.get(uid, 0) + days
+            elif v['status'] == 'pending':
+                leave_pending[uid] = leave_pending.get(uid, 0) + days
 
         from apps.leave_management.services.carry_over import ensure_year_end_rollover
         ensure_year_end_rollover()
@@ -372,13 +374,28 @@ class DetailedReportView(HbprBlockedMixin, APIView):
             }
             if params['report_type'] in ('overtime', 'combined'):
                 ot = ot_total.get(u.id, {'total_hours': 0, 'entries': 0})
-                entry['overtime'] = {'total_hours': ot['total_hours'] or 0, 'approved_hours': ot_approved.get(u.id, 0) or 0, 'entries': ot['entries']}
+                entry['overtime'] = {
+                    'total_hours': ot['total_hours'] or 0,
+                    'approved_hours': ot_approved.get(u.id, 0) or 0,
+                    'pending_hours': ot_pending.get(u.id, 0) or 0,
+                    'entries': ot['entries'],
+                }
             if params['report_type'] in ('standby', 'combined'):
                 sb = sb_total.get(u.id, {'total_hours': 0, 'entries': 0})
-                entry['standby'] = {'total_hours': sb['total_hours'] or 0, 'approved_hours': sb_approved.get(u.id, 0) or 0, 'entries': sb['entries']}
+                entry['standby'] = {
+                    'total_hours': sb['total_hours'] or 0,
+                    'approved_hours': sb_approved.get(u.id, 0) or 0,
+                    'pending_hours': sb_pending.get(u.id, 0) or 0,
+                    'entries': sb['entries'],
+                }
             if params['report_type'] in ('leave', 'combined'):
                 leave = leave_total.get(u.id, {'total_days': 0, 'entries': 0})
-                entry['leave'] = {'total_days': leave['total_days'] or 0, 'approved_days': leave_approved.get(u.id, 0) or 0, 'entries': leave['entries']}
+                entry['leave'] = {
+                    'total_days': leave['total_days'] or 0,
+                    'approved_days': leave_approved.get(u.id, 0) or 0,
+                    'pending_days': leave_pending.get(u.id, 0) or 0,
+                    'entries': leave['entries'],
+                }
             report_data.append(entry)
             
         return {'users': report_data}

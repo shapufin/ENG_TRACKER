@@ -4,11 +4,13 @@ import { TeamGroupedTables, type MonthlyTableSection } from "./TeamGroupedTables
 import type { AppColumnDef } from "@/components/ui/tableTypes";
 
 const renders: Record<string, number> = {};
+const columnsMenuFlags: Record<string, boolean | undefined> = {};
 
 vi.mock("@/components/ui/DataTable", () => ({
-  DataTable: ({ data }: { data: { id: number }[] }) => {
+  DataTable: ({ data, showColumnsMenu }: { data: { id: number }[]; showColumnsMenu?: boolean }) => {
     const key = data.map((r) => r.id).join(",");
     renders[key] = (renders[key] ?? 0) + 1;
+    columnsMenuFlags[key] = showColumnsMenu;
     return (
       <table>
         <tbody>
@@ -55,6 +57,7 @@ const renderTables = (onSectionCollapse?: (ids: string[]) => void) =>
 describe("TeamGroupedTables month sections", () => {
   beforeEach(() => {
     for (const k of Object.keys(renders)) delete renders[k];
+    for (const k of Object.keys(columnsMenuFlags)) delete columnsMenuFlags[k];
   });
 
   it("only the newest month is expanded on first render", () => {
@@ -81,5 +84,16 @@ describe("TeamGroupedTables month sections", () => {
     expect(screen.getByText("row-2")).toBeInTheDocument();
     expect(renders["2,3"]).toBe(1);
     expect(renders["1"]).toBe(1);
+  });
+
+  it("enables the Columns menu on only the first expanded month section", () => {
+    renderTables();
+    fireEvent.click(screen.getByRole("button", { name: /October/ }));
+    fireEvent.click(screen.getByRole("button", { name: /September/ }));
+    const enabledCount = Object.values(columnsMenuFlags).filter(Boolean).length;
+    expect(enabledCount).toBe(1);
+    expect(columnsMenuFlags["1"]).toBe(true);
+    expect(columnsMenuFlags["2,3"]).toBe(false);
+    expect(columnsMenuFlags["4"]).toBe(false);
   });
 });

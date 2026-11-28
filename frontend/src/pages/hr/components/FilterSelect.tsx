@@ -4,7 +4,7 @@ import { SearchableCombobox, type ComboboxOption } from "@/components/ui/Searcha
 
 interface FilterSelectProps<T extends { id: number | string }> {
   label: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
@@ -31,9 +31,10 @@ export const FilterSelect = <T extends { id: number | string }>({
     ...(options ?? []).map((item) => ({ value: String(item.id), label: renderOption(item) })),
   ];
   return (
-    <div className="space-y-2">
-      <Label className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
-        {icon} {label}
+    <div className="space-y-1.5">
+      <Label className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+        {icon}
+        {label}
       </Label>
       <SearchableCombobox
         ariaLabel={label}
